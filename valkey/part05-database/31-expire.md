@@ -43,7 +43,7 @@ flowchart TD
 ```
 
 レプリカは、この能動失効を自分では実行せず、また失効済みキーをアクセス時にも消さない。
-削除は主が送る `DEL`／`UNLINK` を待つ。
+削除はプライマリが送る `DEL`／`UNLINK` を待つ。
 その理由は本章の後半で扱う。
 
 ## 失効時刻はどこに、どう保持されるか
@@ -226,13 +226,13 @@ void expireGenericCommand(client *c, mstime_t basetime, int unit) {
 }
 ```
 
-`checkAlreadyExpired(when)` が真、つまり指定時刻がすでに過去で、かつ自分が主であり読み込み中でないときは、`deleteExpiredKeyFromOverwriteAndPropagate` でキーを即座に消す。
+`checkAlreadyExpired(when)` が真、つまり指定時刻がすでに過去で、かつ自分がプライマリであり読み込み中でないときは、`deleteExpiredKeyFromOverwriteAndPropagate` でキーを即座に消す。
 そうでなければ `setExpire` で失効時刻を設定する。
 
 設定が成立したときは、伝播のためにコマンドを `PEXPIREAT` のミリ秒絶対時刻へ書き換える。
 `rewriteClientCommandArgument` で `argv[0]` を `pexpireat` に、引数の時刻を正規化済みの `when` に差し替える。
 こうすると、EXPIRE のような相対指定であっても、レプリカや AOF には絶対時刻の `PEXPIREAT` として伝わる。
-相対指定のまま伝播すると、主とレプリカで基準となる現在時刻がずれて失効時刻が食い違うので、絶対時刻に直してから伝える。
+相対指定のまま伝播すると、プライマリとレプリカで基準となる現在時刻がずれて失効時刻が食い違うので、絶対時刻に直してから伝える。
 
 ## 残り時間を返すコマンド
 
@@ -356,7 +356,7 @@ static keyStatus expireIfNeededWithDictIndex(serverDb *db, robj *key, robj *val,
 実際に削除すると判断したときは、`deleteExpiredKeyAndPropagateWithDictIndex` を呼んで `KEY_DELETED` を返す。
 この削除関数は、次節で見る能動失効とも共有する伝播経路である。
 
-方針を決める `getExpirationPolicyWithFlags` が、レプリカと主の違いを吸収している。
+方針を決める `getExpirationPolicyWithFlags` が、レプリカとプライマリの違いを吸収している。
 
 [`src/expire.c` L981-L1032](https://github.com/valkey-io/valkey/blob/9.1.0/src/expire.c#L981-L1032)
 
@@ -389,10 +389,10 @@ expirationPolicy getExpirationPolicyWithFlags(int flags) {
 }
 ```
 
-自分が主であれば（`server.primary_host` が `NULL`）、通常は `POLICY_DELETE_EXPIRED` まで進み、削除する。
-自分がレプリカであれば（`server.primary_host` が非 `NULL`）、主からのコマンド実行中は `POLICY_IGNORE_EXPIRE`、それ以外では `POLICY_KEEP_EXPIRED` を返す。
+自分がプライマリであれば（`server.primary_host` が `NULL`）、通常は `POLICY_DELETE_EXPIRED` まで進み、削除する。
+自分がレプリカであれば（`server.primary_host` が非 `NULL`）、プライマリからのコマンド実行中は `POLICY_IGNORE_EXPIRE`、それ以外では `POLICY_KEEP_EXPIRED` を返す。
 つまりレプリカは、失効済みのキーを論理的には失効として扱いながらも、自分の判断では削除しない。
-削除は主が送る `DEL`／`UNLINK` を待つ。
+削除はプライマリが送る `DEL`／`UNLINK` を待つ。
 この方針は後の「レプリカでの失効の扱い」で改めて述べる。
 
 ## 能動失効：サンプリングで掃除する
@@ -429,7 +429,7 @@ expirationPolicy getExpirationPolicyWithFlags(int flags) {
 
 遅いサイクルは `server.hz`（既定で毎秒10回）の頻度で `databasesCron` から呼ばれ、CPU 時間の予算を多めに取る。
 速いサイクルはイベントループの各周回で `beforeSleep` から呼ばれ、短い予算で頻繁に走る。
-どちらも `iAmPrimary()` が条件にあり、能動失効を実行するのは主だけである。
+どちらも `iAmPrimary()` が条件にあり、能動失効を実行するのはプライマリだけである。
 レプリカは `expireReplicaKeys`、つまり書き込み可能レプリカで自分が作ったキーの後始末だけを行う。
 
 `ACTIVE_EXPIRE_CYCLE_SLOW` と `ACTIVE_EXPIRE_CYCLE_FAST` の値は次のとおりである。
@@ -589,7 +589,7 @@ int activeExpireCycleTryExpire(serverDb *db, robj *val, mstime_t now, int didx) 
 ## 失効による削除の伝播
 
 レイジー失効と能動失効が共有する削除経路を、最後に見る。
-失効による削除は、主が単独で消して終わりではない。
+失効による削除は、プライマリが単独で消して終わりではない。
 レプリカと AOF へ削除を伝え、全体の整合を保つ必要がある。
 
 その削除と伝播をまとめているのが `deleteExpiredKeyAndPropagateWithDictIndex` である。
@@ -635,10 +635,10 @@ void propagateDeletion(serverDb *db, robj *key, int lazy, int slot) {
 
 設定 `lazyfree-lazy-expire` が有効なら `UNLINK`（非同期解放）、無効なら `DEL`（同期解放）を伝える。
 `alsoPropagate` のフラグに `PROPAGATE_AOF | PROPAGATE_REPL` を渡すので、伝播先は AOF とレプリケーションストリームの両方である。
-主が失効で消したと決めた以上、モジュールが伝播を求めなくても必ず伝えるために、いったん `server.replication_allowed` を `1` に上書きする。
+プライマリが失効で消したと決めた以上、モジュールが伝播を求めなくても必ず伝えるために、いったん `server.replication_allowed` を `1` に上書きする。
 
 失効による削除をすべて明示的な `DEL`／`UNLINK` として伝えるのが、ここでの設計の要点である。
-削除の発生源を主の1か所に集約し、AOF とレプリケーションがいずれも順序を保つので、削除済みのキーへ書き込みが来ても全体で整合する。
+削除の発生源をプライマリの1か所に集約し、AOF とレプリケーションがいずれも順序を保つので、削除済みのキーへ書き込みが来ても全体で整合する。
 関数冒頭のコメントが、この理由を述べている。
 
 [`src/db.c` L1985-L2003](https://github.com/valkey-io/valkey/blob/9.1.0/src/db.c#L1985-L2003)
@@ -667,9 +667,9 @@ void propagateDeletion(serverDb *db, robj *key, int lazy, int slot) {
 
 ## レプリカでの失効の扱い
 
-主が削除を集約する設計から、レプリカの振る舞いが決まる。
-レプリカは失効済みキーを自分の判断で消さず、主が送る `DEL`／`UNLINK` を待つ。
-もしレプリカが勝手に消すと、主の削除がまだ届いていない瞬間に、主とレプリカでキーの有無がずれるからである。
+プライマリが削除を集約する設計から、レプリカの振る舞いが決まる。
+レプリカは失効済みキーを自分の判断で消さず、プライマリが送る `DEL`／`UNLINK` を待つ。
+もしレプリカが勝手に消すと、プライマリの削除がまだ届いていない瞬間に、プライマリとレプリカでキーの有無がずれるからである。
 
 とはいえレプリカでも、読み取りの結果は正しく見せたい。
 そこで `lookupKey` のコメントが述べるように、レプリカは失効済みキーを削除しないまま、論理的には失効として扱う。
@@ -687,25 +687,25 @@ void propagateDeletion(serverDb *db, robj *key, int lazy, int slot) {
 これを実現するのが、前に見た `getExpirationPolicyWithFlags` の `POLICY_KEEP_EXPIRED` である。
 レプリカで失効済みキーを読むと、この方針により `expireIfNeeded` が `KEY_EXPIRED` を返し、`lookupKey` は `NULL` を返す。
 キーは実体としては残るが、利用者からは存在しないように見える。
-主からの `DEL` が届けば、そのときに実体も消える。
+プライマリからの `DEL` が届けば、そのときに実体も消える。
 
 例外は2つある。
-1つは、主からのコマンドを実行している最中（`server.current_client->flag.primary`）で、このとき方針は `POLICY_IGNORE_EXPIRE` になり、レプリカは失効をいっさい無視する。
-主の `DEL` に素直に従うためである。
+1つは、プライマリからのコマンドを実行している最中（`server.current_client->flag.primary`）で、このとき方針は `POLICY_IGNORE_EXPIRE` になり、レプリカは失効をいっさい無視する。
+プライマリの `DEL` に素直に従うためである。
 もう1つは書き込み可能レプリカで、書き込みコマンドの一貫性のために `EXPIRE_FORCE_DELETE_EXPIRED` で削除を許す。
 
 ## まとめ
 
 - 失効時刻は値オブジェクト `robj` に埋め込まれ、失効時刻つきキーへのポインタだけを `expires` kvstore が別に集める。`setExpire` で設定し、`getExpire` で読み、`removeExpire` で外す。失効なしは `-1` で表す。
-- EXPIRE、PEXPIRE、EXPIREAT、PEXPIREAT は `expireGenericCommand` に集約され、内部でミリ秒の絶対時刻に正規化したうえで、伝播時には `PEXPIREAT` へ書き換える。これで主とレプリカの基準時刻のずれを防ぐ。
+- EXPIRE、PEXPIRE、EXPIREAT、PEXPIREAT は `expireGenericCommand` に集約され、内部でミリ秒の絶対時刻に正規化したうえで、伝播時には `PEXPIREAT` へ書き換える。これでプライマリとレプリカの基準時刻のずれを防ぐ。
 - レイジー失効は `lookupKey` から `expireIfNeeded` を呼び、アクセスした瞬間に失効済みキーを消す。アクセスされないキーはこの経路では残る。
 - 能動失効は `activeExpireCycle` が `expires` をサンプリングし、失効済みの割合が高いデータベースに努力を集中させる。遅いサイクルと速いサイクルが CPU 予算内で適応的に働き、`active-expire-effort` で積極性を調整できる。
-- 失効による削除は `propagateDeletion` が `DEL`／`UNLINK` として AOF とレプリカへ伝える。削除の発生源を主の1か所に集約し、順序保証によって全体の整合を保つ。
-- レプリカは失効済みキーを自分で消さず、読み取りでは論理的に失効として見せながら、実体の削除は主の `DEL` に従う。
+- 失効による削除は `propagateDeletion` が `DEL`／`UNLINK` として AOF とレプリカへ伝える。削除の発生源をプライマリの1か所に集約し、順序保証によって全体の整合を保つ。
+- レプリカは失効済みキーを自分で消さず、読み取りでは論理的に失効として見せながら、実体の削除はプライマリの `DEL` に従う。
 
 ## 関連する章
 
 - [第30章 データベース](./30-database.md)：`keys` と `expires` の kvstore、キー探索の詳細。
 - [第32章 メモリ退避](./32-eviction.md)：メモリ上限到達時に失効時刻と無関係にキーを退避する経路。
 - [第36章 AOF](../part06-persistence/36-aof.md)：失効削除が `DEL`／`UNLINK` として追記される先。
-- [第38章 レプリケーション](../part07-replication-cluster/38-replication.md)：主からレプリカへ削除が伝播するしくみ。
+- [第38章 レプリケーション](../part07-replication-cluster/38-replication.md)：プライマリからレプリカへ削除が伝播するしくみ。
