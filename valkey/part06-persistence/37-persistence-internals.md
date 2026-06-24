@@ -174,8 +174,8 @@ AOF の毎秒同期（`appendfsync everysec`）では、メインスレッドは
             if (job_type == BIO_CLOSE_AOF) close(job->fd_args.fd);
         } else if (job_type == BIO_LAZY_FREE) {
             job->free_args.free_fn(job->free_args.free_args);
-        }
         // ... (中略) ...
+        }
         zfree(job);
         atomic_fetch_sub(&bio_jobs_counter[job_type], 1);
     }
@@ -530,8 +530,8 @@ void updateChildInfo(childInfoType information_type, size_t cow, monotime cow_up
         server.stat_aof_cow_bytes = server.stat_current_cow_peak;
     } else if (information_type == CHILD_INFO_TYPE_RDB_COW_SIZE) {
         server.stat_rdb_cow_bytes = server.stat_current_cow_peak;
-    }
     // ... (中略) ...
+    }
 }
 ```
 

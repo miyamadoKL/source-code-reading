@@ -459,7 +459,6 @@ SMEMBERS は全要素を返す。
                 else
                     addReplyBulkLongLong(c, intobj);
                 cardinality++;
-            }
             // ... (中略) ...
         }
     }
