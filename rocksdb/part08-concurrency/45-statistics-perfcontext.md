@@ -1,6 +1,7 @@
 # 第45章 統計と計測
 
 > **本章で読むソース**
+>
 > - [`include/rocksdb/statistics.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/statistics.h)
 > - [`monitoring/statistics_impl.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/monitoring/statistics_impl.h)
 > - [`monitoring/statistics.cc`](https://github.com/facebook/rocksdb/blob/v11.1.1/monitoring/statistics.cc)
@@ -430,4 +431,5 @@ io_s = WriteGroupToWAL(write_group, wal_context.writer, wal_used,
 - [第8章 書き込みパイプライン](../part02-write-path/08-write-pipeline.md)、[第23章 Get](../part04-read-path/23-get.md)（計測が埋め込まれるパス）
 - [第43章 ThreadLocal とスレッドプール](../part08-concurrency/43-threadlocal-threadpool.md)（スレッドローカル記憶域）
 </content>
+
 </invoke>

@@ -1,6 +1,7 @@
 # 第49章 ワイドカラム
 
 > **本章で読むソース**
+>
 > - [`include/rocksdb/wide_columns.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/wide_columns.h)
 > - [`db/wide/wide_column_serialization.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/db/wide/wide_column_serialization.h)
 > - [`db/wide/wide_column_serialization.cc`](https://github.com/facebook/rocksdb/blob/v11.1.1/db/wide/wide_column_serialization.cc)

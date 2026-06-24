@@ -1,6 +1,7 @@
 # 第22章 他のテーブル形式
 
 > **本章で読むソース**
+>
 > - [`include/rocksdb/table.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/table.h)
 > - [`table/plain/plain_table_factory.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/table/plain/plain_table_factory.h)
 > - [`table/plain/plain_table_reader.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/table/plain/plain_table_reader.h)

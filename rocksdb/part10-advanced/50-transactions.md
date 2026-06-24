@@ -1,6 +1,7 @@
 # 第50章 トランザクション（楽観/悲観/2PC）
 
 > **本章で読むソース**
+>
 > - [`include/rocksdb/utilities/transaction.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/utilities/transaction.h)
 > - [`include/rocksdb/utilities/transaction_db.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/utilities/transaction_db.h)
 > - [`include/rocksdb/utilities/optimistic_transaction_db.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/utilities/optimistic_transaction_db.h)

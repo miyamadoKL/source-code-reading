@@ -1,6 +1,7 @@
 # 第34章 MANIFEST と VersionEdit
 
 > **本章で読むソース**
+>
 > - [`db/version_edit.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/db/version_edit.h)
 > - [`db/version_edit.cc`](https://github.com/facebook/rocksdb/blob/v11.1.1/db/version_edit.cc)
 > - [`db/version_set.cc`](https://github.com/facebook/rocksdb/blob/v11.1.1/db/version_set.cc)

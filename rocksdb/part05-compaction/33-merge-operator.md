@@ -1,6 +1,7 @@
 # 第33章 マージ演算子
 
 > **本章で読むソース**
+>
 > - [`include/rocksdb/merge_operator.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/merge_operator.h)
 > - [`db/merge_operator.cc`](https://github.com/facebook/rocksdb/blob/v11.1.1/db/merge_operator.cc)
 > - [`db/merge_context.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/db/merge_context.h)

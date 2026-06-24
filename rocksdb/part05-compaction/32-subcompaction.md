@@ -1,6 +1,7 @@
 # 第32章 サブコンパクションと並列化
 
 > **本章で読むソース**
+>
 > - [`db/compaction/compaction_job.cc`](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_job.cc)
 > - [`db/compaction/subcompaction_state.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/subcompaction_state.h)
 > - [`db/compaction/compaction_state.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_state.h)
