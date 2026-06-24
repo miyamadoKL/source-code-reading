@@ -3,7 +3,8 @@
   // 詳細: https://github.com/DavidAnson/markdownlint-cli2
   "globs": [
     "README.md",
-    "rocksdb/**/*.md"
+    "rocksdb/**/*.md",
+    "valkey/**/*.md"
   ],
   "config": {
     "default": true,
