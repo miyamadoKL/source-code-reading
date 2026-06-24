@@ -162,8 +162,8 @@ class DB {
   // instance is unaffected. See also OpenAsSecondary.
 ```
 
-セカンダリの `OpenAsSecondary` も読み取り専用だが、書き込み中の主インスタンスへ追従できる点が異なる。
-`TryCatchUpWithPrimary()` を呼ぶと、主インスタンスがその後に進めた状態を取り込む。
+セカンダリの `OpenAsSecondary` も読み取り専用だが、書き込み中のプライマリインスタンスへ追従できる点が異なる。
+`TryCatchUpWithPrimary()` を呼ぶと、プライマリインスタンスがその後に進めた状態を取り込む。
 同じデータベースに対して複数のセカンダリを同時に立てられる。
 
 [`include/rocksdb/db.h` L192-L201](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/db.h#L192-L201)
