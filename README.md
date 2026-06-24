@@ -9,6 +9,7 @@
 | OSS | 対象バージョン | 概要 | 入口 |
 |---|---|---|---|
 | [RocksDB](rocksdb/README.md) | v11.1.1 | LSM-tree ベースの組み込み永続キーバリューストア。全11部・52章。 | [目次](rocksdb/README.md) |
+| [Valkey](valkey/README.md) | 9.1.0 | RESP プロトコルで話すインメモリのデータ構造ストア。全10部・52章。 | [目次](valkey/README.md) |
 
 今後、他の OSS のソースコード読解ドキュメントを `<oss-name>/` 配下に追加していく。
 
