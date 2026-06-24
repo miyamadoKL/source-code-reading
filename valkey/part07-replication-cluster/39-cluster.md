@@ -202,7 +202,6 @@ clusterNode *getNodeByQuery(client *c, int *error_code) {
         addReplyErrorSds(c,
                          sdscatprintf(sdsempty(), "-%s %d %s:%d", (error_code == CLUSTER_REDIR_ASK) ? "ASK" : "MOVED",
                                       hashslot, clusterNodePreferredEndpoint(n, c), port));
-    }
 ```
 
 返答は `-MOVED 3999 127.0.0.1:6381` のような形になり、スロット番号と宛先ノードの接続先を含む。
@@ -259,7 +258,7 @@ void clusterCron(void) {
 ただし ping を全ノードへ毎回送るわけではない。
 10 回に 1 回、つまりおよそ毎秒一回だけ、ランダムに選んだ少数のノードの中から最も古い pong を持つ相手を一つだけ選んで ping する。
 
-[`src/cluster_legacy.c` L6185-L6207](https://github.com/valkey-io/valkey/blob/9.1.0/src/cluster_legacy.c#L6185-L6207)
+[`src/cluster_legacy.c` L6185-L6208](https://github.com/valkey-io/valkey/blob/9.1.0/src/cluster_legacy.c#L6185-L6208)
 
 ```c
     /* Ping some random node 1 time every 10 iterations, so that we usually ping
@@ -470,7 +469,6 @@ void clusterHandleReplicaFailover(void) {
                   humanNodename(node), (unsigned long long)server.cluster->currentEpoch);
         return;
     }
-
 ```
 
 同じ `currentEpoch` ですでに投票済みなら棄権する。
@@ -491,7 +489,7 @@ void clusterHandleReplicaFailover(void) {
 `lastVoteEpoch` を現在の世代に更新してから `clusterSendFailoverAuth` で票（ACK）を返す。
 要求元のレプリカは届いた票を数える。
 
-[`src/cluster_legacy.c` L4417-L4421](https://github.com/valkey-io/valkey/blob/9.1.0/src/cluster_legacy.c#L4417-L4421)
+[`src/cluster_legacy.c` L4417-L4422](https://github.com/valkey-io/valkey/blob/9.1.0/src/cluster_legacy.c#L4417-L4422)
 
 ```c
         if (clusterNodeIsVotingPrimary(sender) && sender_claimed_current_epoch >= server.cluster->failover_auth_epoch) {

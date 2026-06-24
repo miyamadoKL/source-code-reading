@@ -284,7 +284,7 @@ void ttlGenericCommand(client *c, int output_ms, int output_abs) {
 
 レイジー失効は `lookupKey` から呼ばれる。
 
-[`src/db.c` L81-L101](https://github.com/valkey-io/valkey/blob/9.1.0/src/db.c#L81-L101)
+[`src/db.c` L81-L126](https://github.com/valkey-io/valkey/blob/9.1.0/src/db.c#L81-L126)
 
 ```c
 robj *lookupKey(serverDb *db, robj *key, int flags) {

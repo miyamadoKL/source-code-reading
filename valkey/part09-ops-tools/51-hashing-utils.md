@@ -140,10 +140,10 @@ uint8_t *dictGetHashFunctionSeed(void) {
 [`src/server.c` L7465-L7468](https://github.com/valkey-io/valkey/blob/9.1.0/src/server.c#L7465-L7468) が `getRandomBytes` で 16 バイトを生成し、dict と hashtable の双方に渡している。
 
 ```c
-uint8_t hashseed[16];
-getRandomBytes(hashseed, sizeof(hashseed));
-dictSetHashFunctionSeed(hashseed);
-hashtableSetHashFunctionSeed(hashseed);
+    uint8_t hashseed[16];
+    getRandomBytes(hashseed, sizeof(hashseed));
+    dictSetHashFunctionSeed(hashseed);
+    hashtableSetHashFunctionSeed(hashseed);
 ```
 
 これで、あるキーがどのバケットに落ちるかは起動ごとに変わる。
@@ -200,11 +200,11 @@ RDB ファイルは末尾 8 バイトに本体全体の CRC64 を書き込み、
 書き込み側は [`src/rdb.c` L1504-L1508](https://github.com/valkey-io/valkey/blob/9.1.0/src/rdb.c#L1504-L1508) で末尾にチェックサムを付ける。
 
 ```c
-/* CRC64 checksum. It will be zero if checksum computation is disabled, the
- * loading code skips the check in this case. */
-cksum = rdb->cksum;
-memrev64ifbe(&cksum);
-if (rioWrite(rdb, &cksum, 8) == 0) goto werr;
+    /* CRC64 checksum. It will be zero if checksum computation is disabled, the
+     * loading code skips the check in this case. */
+    cksum = rdb->cksum;
+    memrev64ifbe(&cksum);
+    if (rioWrite(rdb, &cksum, 8) == 0) goto werr;
 ```
 
 読み込み側は [`src/rdb.c` L3547-L3564](https://github.com/valkey-io/valkey/blob/9.1.0/src/rdb.c#L3547-L3564) で再計算した値と末尾の値を突き合わせ、食い違えば破損とみなして読み込みを中止する。
@@ -346,20 +346,35 @@ int ull2string(char *dst, size_t dstlen, unsigned long long value) {
 [`src/util.c` L73-L101](https://github.com/valkey-io/valkey/blob/9.1.0/src/util.c#L73-L101) の `*` の処理を読む。
 
 ```c
-case '*':
-    while (patternLen && pattern[1] == '*') {
-        pattern++;
-        patternLen--;
-    }
-    if (patternLen == 1) return 1; /* match */
-    while (stringLen) {
-        if (stringmatchlen_impl(pattern + 1, patternLen - 1, string, stringLen, nocase, skipLongerMatches,
-                                nesting + 1))
-            return 1;                     /* match */
-        if (*skipLongerMatches) return 0; /* no match */
-        string++;
-        stringLen--;
-    }
+    while (patternLen && stringLen) {
+        switch (pattern[0]) {
+        case '*':
+            while (patternLen && pattern[1] == '*') {
+                pattern++;
+                patternLen--;
+            }
+            if (patternLen == 1) return 1; /* match */
+            while (stringLen) {
+                if (stringmatchlen_impl(pattern + 1, patternLen - 1, string, stringLen, nocase, skipLongerMatches,
+                                        nesting + 1))
+                    return 1;                     /* match */
+                if (*skipLongerMatches) return 0; /* no match */
+                string++;
+                stringLen--;
+            }
+            /* There was no match for the rest of the pattern starting
+             * from anywhere in the rest of the string. If there were
+             * any '*' earlier in the pattern, we can terminate the
+             * search early without trying to match them to longer
+             * substrings. This is because a longer match for the
+             * earlier part of the pattern would require the rest of the
+             * pattern to match starting later in the string, and we
+             * have just determined that there is no match for the rest
+             * of the pattern starting from anywhere in the current
+             * string. */
+            *skipLongerMatches = 1;
+            return 0; /* no match */
+            break;
 ```
 
 `*` は任意長の並びに一致するため、残りパターンを文字列の各位置から試す再帰になる。

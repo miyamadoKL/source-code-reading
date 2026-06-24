@@ -26,7 +26,7 @@
 スクリプト側はキーを `KEYS`、引数を `ARGV` という配列で受け取る。
 入口の `evalCommand` は `evalGenericCommand` に処理を委ね、引数の振り分けはそこで行われる。
 
-[`src/eval.c` L472-L491](https://github.com/valkey-io/valkey/blob/9.1.0/src/eval.c#L472-L491)
+[`src/eval.c` L472-L539](https://github.com/valkey-io/valkey/blob/9.1.0/src/eval.c#L472-L539)
 
 ```c
 static void evalGenericCommand(client *c, int evalsha) {
@@ -206,7 +206,7 @@ static void evalCalcScriptHash(int evalsha, sds script, char *out_sha) {
 
 Lua エンジン側の `compile_code` にあたる `luaEngineCompileCode` は、`luaL_loadbuffer` で本文をコンパイルし、得た Lua 関数を Lua レジストリに登録して、その参照番号を `compiledFunction` として返す。
 
-[`src/modules/lua/engine_lua.c` L253-L281](https://github.com/valkey-io/valkey/blob/9.1.0/src/modules/lua/engine_lua.c#L253-L281)
+[`src/modules/lua/engine_lua.c` L253-L288](https://github.com/valkey-io/valkey/blob/9.1.0/src/modules/lua/engine_lua.c#L253-L288)
 
 ```c
     if (type == VMSE_EVAL) {

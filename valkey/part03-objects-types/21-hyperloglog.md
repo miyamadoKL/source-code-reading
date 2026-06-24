@@ -297,7 +297,7 @@ robj *createHLLObject(void) {
     if (count > HLL_SPARSE_VAL_MAX_VALUE) goto promote;
 ```
 
-[`src/hyperloglog.c` L937-L951](https://github.com/valkey-io/valkey/blob/9.1.0/src/hyperloglog.c#L937-L951)
+[`src/hyperloglog.c` L937-L950](https://github.com/valkey-io/valkey/blob/9.1.0/src/hyperloglog.c#L937-L950)
 
 ```c
 promote:                                         /* Promote to dense representation. */
@@ -432,7 +432,7 @@ uint64_t hllCount(struct hllhdr *hdr, int *invalid) {
 そのような場合に基数は変わらないので、キャッシュをそのまま使える。
 更新が起きたときだけ `HLL_INVALIDATE_CACHE` でキャッシュ済み基数の最上位ビットを立て、無効を記録する。
 
-[`src/hyperloglog.c` L1688-L1696](https://github.com/valkey-io/valkey/blob/9.1.0/src/hyperloglog.c#L1688-L1696)
+[`src/hyperloglog.c` L1688-L1695](https://github.com/valkey-io/valkey/blob/9.1.0/src/hyperloglog.c#L1688-L1695)
 
 ```c
     hdr = objectGetVal(o);
@@ -449,7 +449,7 @@ uint64_t hllCount(struct hllhdr *hdr, int *invalid) {
 有効ならリトルエンディアンで格納された値を読み出して返し、レジスタ走査を完全に省く。
 無効なら `hllCount` で計算し直し、結果をキャッシュへ書き戻して最上位ビットをクリアする。
 
-[`src/hyperloglog.c` L1756-L1789](https://github.com/valkey-io/valkey/blob/9.1.0/src/hyperloglog.c#L1756-L1789)
+[`src/hyperloglog.c` L1756-L1790](https://github.com/valkey-io/valkey/blob/9.1.0/src/hyperloglog.c#L1756-L1790)
 
 ```c
         /* Check if the cached cardinality is valid. */

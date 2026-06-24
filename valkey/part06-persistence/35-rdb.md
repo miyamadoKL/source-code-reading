@@ -352,7 +352,7 @@ ssize_t rdbSaveRawString(rio *rdb, unsigned char *s, size_t len) {
 かといって書き出し中にデータが変わると、ファイルが時点として一貫しなくなる。
 `rdbSaveBackground` は `fork` でこの矛盾を解く。
 
-[`src/rdb.c` L1664-L1700](https://github.com/valkey-io/valkey/blob/9.1.0/src/rdb.c#L1664-L1700)
+[`src/rdb.c` L1664-L1701](https://github.com/valkey-io/valkey/blob/9.1.0/src/rdb.c#L1664-L1701)
 
 ```c
 int rdbSaveBackground(int req, char *filename, rdbSaveInfo *rsi, int rdbflags) {
@@ -571,7 +571,7 @@ sequenceDiagram
             if ((expires_size = rdbLoadLen(rdb, NULL)) == RDB_LENERR) goto eoferr;
             should_expand_db = 1;
             continue; /* Read next opcode. */
-        }
+        // ... (中略: SLOT_INFO, AUX などその他のオペコード) ...
 ```
 
 オペコードはどれも処理の後に `continue` でループ先頭へ戻り、次の先頭バイトを読む。

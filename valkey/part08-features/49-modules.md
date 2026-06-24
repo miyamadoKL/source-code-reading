@@ -240,7 +240,7 @@ struct ValkeyModuleCtx {
 この関数はモジュールの初期化中（`OnLoad` の最中）にしか呼べない。
 冒頭でその制約を確認している `ctx->module->onload` のチェックがそれである。
 
-[`src/module.c` L1397-L1426](https://github.com/valkey-io/valkey/blob/9.1.0/src/module.c#L1397-L1426)
+[`src/module.c` L1397-L1427](https://github.com/valkey-io/valkey/blob/9.1.0/src/module.c#L1397-L1427)
 
 ```c
 int VM_CreateCommand(ValkeyModuleCtx *ctx,

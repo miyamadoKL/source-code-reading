@@ -84,7 +84,7 @@ robj *lookupStringForBitCommand(client *c, uint64_t maxbit, int *dirty) {
 キーが存在しなければ `maxbit` を含めるのに必要な `byte + 1` バイトを零で確保し、存在すれば `sdsgrowzero` で同じ長さまで伸ばして零埋めする。
 これでアドレス可能になったバイトに対して、`setbitCommand` 本体が目的のビットを立てるか落とすかを行う。
 
-[`src/bitops.c` L710-L731](https://github.com/valkey-io/valkey/blob/9.1.0/src/bitops.c#L710-L731)
+[`src/bitops.c` L710-L730](https://github.com/valkey-io/valkey/blob/9.1.0/src/bitops.c#L710-L730)
 
 ```c
     /* Get current values */
@@ -367,7 +367,7 @@ interleave 後（偶数位置に lat、奇数位置に lon）:
 
 `geoaddCommand` は、座標をスコアに直してから `ZADD` の引数列を組み立て、`zaddCommand` を呼ぶだけである。
 
-[`src/geo.c` L486-L513](https://github.com/valkey-io/valkey/blob/9.1.0/src/geo.c#L486-L513)
+[`src/geo.c` L486-L512](https://github.com/valkey-io/valkey/blob/9.1.0/src/geo.c#L486-L512)
 
 ```c
     /* Create the argument vector to call ZADD in order to add all

@@ -481,7 +481,7 @@ static int boolConfigSet(standardConfig *config, sds *argv, int argc, const char
 検証関数の中身は設定固有の前提を確かめる。
 たとえば `activedefrag` の検証関数は、アクティブデフラグに対応した Jemalloc でビルドされていなければ有効化を拒む。
 
-[`src/config.c` L2393-L2406](https://github.com/valkey-io/valkey/blob/9.1.0/src/config.c#L2393-L2406)
+[`src/config.c` L2393-L2407](https://github.com/valkey-io/valkey/blob/9.1.0/src/config.c#L2393-L2407)
 
 ```c
 static int isValidActiveDefrag(int val, const char **err) {

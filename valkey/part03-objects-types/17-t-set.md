@@ -99,7 +99,7 @@ intset の上限が listpack の上限より大きいのは、要素がすべて
 ## 要素の追加と表現の昇格
 
 要素の追加は `setTypeAdd` が入口になる。
-これは値の長さを測って汎用版の `setTypeAddAux` に委譲するだけの薄いラッパである。
+これは値の長さを測って汎用版の `setTypeAddAux` に委譲するだけの薄いラッパーである。
 
 [`src/t_set.c` L117-L119](https://github.com/valkey-io/valkey/blob/9.1.0/src/t_set.c#L117-L119)
 
@@ -152,7 +152,6 @@ int setTypeAdd(robj *subject, sds value) {
                 return 1;
             }
         }
-    }
 ```
 
 値が整数なら `intsetAdd` で挿入し、新しく追加できたときだけ `maybeConvertIntset` を呼ぶ。
@@ -220,7 +219,6 @@ static size_t intsetMaxEntries(void) {
             }
             return 1;
         }
-    }
 ```
 
 重複がなければ三つの条件を確かめる。
@@ -250,7 +248,6 @@ listpack はいったん hashtable に上がると intset や listpack へ戻る
             sdsfree(sdsval);
             return 0;
         }
-    }
 ```
 
 挿入位置を一度の探索で求めてからその場に挿入することで、重複確認と挿入のために二度ハッシュ計算する無駄を避けている。

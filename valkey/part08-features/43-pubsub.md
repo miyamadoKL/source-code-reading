@@ -24,13 +24,13 @@ Pub/Sub の中心にあるのは、チャンネル名から、そのチャンネ
 [`src/server.h` L2258-L2264](https://github.com/valkey-io/valkey/blob/9.1.0/src/server.h#L2258-L2264)
 
 ```c
-/* Pubsub */
-kvstore *pubsub_channels;      /* Map channels to list of subscribed clients */
-dict *pubsub_patterns;         /* A dict of pubsub_patterns */
-int notify_keyspace_events;    /* Events to propagate via Pub/Sub. This is an
-                                  xor of NOTIFY_... flags. */
-kvstore *pubsubshard_channels; /* Map shard channels in every slot to list of subscribed clients */
-unsigned int pubsub_clients;   /* # of clients in Pub/Sub mode */
+    /* Pubsub */
+    kvstore *pubsub_channels;      /* Map channels to list of subscribed clients */
+    dict *pubsub_patterns;         /* A dict of pubsub_patterns */
+    int notify_keyspace_events;    /* Events to propagate via Pub/Sub. This is an
+                                      xor of NOTIFY_... flags. */
+    kvstore *pubsubshard_channels; /* Map shard channels in every slot to list of subscribed clients */
+    unsigned int pubsub_clients;   /* # of clients in Pub/Sub mode */
 ```
 
 `pubsub_channels` は `kvstore`、つまりスロットごとに分割されたハッシュテーブルの集まりである。
@@ -63,7 +63,7 @@ Pub/Sub を一度も使わないクライアントにこの領域を持たせな
 
 `SUBSCRIBE channel [channel ...]` を処理する `subscribeCommand` は、引数のチャンネルを一つずつ `pubsubSubscribeChannel` に渡すだけである。
 
-[`src/pubsub.c` L575-L590](https://github.com/valkey-io/valkey/blob/9.1.0/src/pubsub.c#L575-L590)
+[`src/pubsub.c` L574-L590](https://github.com/valkey-io/valkey/blob/9.1.0/src/pubsub.c#L574-L590)
 
 ```c
 /* SUBSCRIBE channel [channel ...] */

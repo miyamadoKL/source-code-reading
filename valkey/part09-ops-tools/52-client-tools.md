@@ -113,7 +113,7 @@ RESP の組み立てと解釈は[第26章 RESP プロトコル](../part04-server
 `cliSendCommand` は引数の配列をそのまま RESP の配列にして送る。
 組み立てと送信は `valkeyAppendCommandArgv` が行う。
 
-[`src/valkey-cli.c` L2391-L2399](https://github.com/valkey-io/valkey/blob/9.1.0/src/valkey-cli.c#L2391-L2399)
+[`src/valkey-cli.c` L2391-L2398](https://github.com/valkey-io/valkey/blob/9.1.0/src/valkey-cli.c#L2391-L2398)
 
 ```c
     /* Setup argument length */
@@ -258,7 +258,6 @@ flowchart TD
             config.cluster_send_asking = 1;
         }
         cliRefreshPrompt();
-    }
 ```
 
 エラー文字列から目的ノードのアドレスとスロット番号を切り出し、接続情報を書き換える。
@@ -296,7 +295,6 @@ flowchart TD
             continue;
         }
         break;
-    }
 ```
 
 再送フラグが立っていれば、書き換えた接続情報で `cliConnect(CC_FORCE)` を呼んで新しいノードへ張り替える。
@@ -362,8 +360,6 @@ flowchart TD
                     freeReplyObject(reply);
                 }
             } while (reply);
-            // ... (中略) ...
-        }
 ```
 
 送るべきデータと読むべき応答を同じループで扱うので、送信が応答を待たない。
