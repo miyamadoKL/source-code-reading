@@ -35,7 +35,7 @@ typedef struct client {
     int argc;            /* Num of arguments of current command. */
     // ... (中略) ...
     /* Output buffer and reply handling */
-    long duration;
+    long duration;                       /* Current command duration. Used for measuring latency of blocking/non-blocking cmds */
     char *buf;                           /* Output buffer */
     size_t buf_usable_size;              /* Usable size of buffer. */
     list *reply;                         /* List of reply objects to send to the client. */
@@ -170,7 +170,7 @@ I/O スレッドへの委譲は第28章で扱う。
 読んだ内容を処理するのは `processInputBuffer` である。
 `querybuf` のうち未処理の領域（`qb_pos` から末尾まで）が残っている間ループし、コマンドを一つ切り出しては実行へ渡す。
 
-[`src/networking.c` L4146-L4189](https://github.com/valkey-io/valkey/blob/9.1.0/src/networking.c#L4146-L4189)
+[`src/networking.c` L4146-L4192](https://github.com/valkey-io/valkey/blob/9.1.0/src/networking.c#L4146-L4192)
 
 ```c
 int processInputBuffer(client *c) {
@@ -562,7 +562,7 @@ clientBufferLimitsConfig clientBufferLimitsDefaults[CLIENT_TYPE_OBUF_COUNT] = {
 接続中のクライアントを定期的に世話するのが `clientsCron` である。
 サーバの周期タスクから呼ばれ、クライアントを少しずつ巡回しては、タイムアウト処理、受信バッファと送信バッファの縮小、出力バッファ上限の確認を行う。
 
-[`src/server.c` L1204-L1221](https://github.com/valkey-io/valkey/blob/9.1.0/src/server.c#L1204-L1221)
+[`src/server.c` L1204-L1220](https://github.com/valkey-io/valkey/blob/9.1.0/src/server.c#L1204-L1220)
 
 ```c
         /* The following functions do different service checks on the client.
@@ -600,8 +600,8 @@ int clientsCronHandleTimeout(client *c, mstime_t now_ms) {
         serverLog(LL_VERBOSE, "Closing idle client");
         freeClient(c);
         return 1;
-    }
     // ... (中略) ...
+    }
     return 0;
 }
 ```

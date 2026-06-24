@@ -563,7 +563,7 @@ static void createMissingClients(client c) {
 
 読めるイベントでは `readHandler` が応答をパースし、`pending` を減らしながらレイテンシを記録する。
 
-[`src/valkey-benchmark.c` L689-L702](https://github.com/valkey-io/valkey/blob/9.1.0/src/valkey-benchmark.c#L689-L702)
+[`src/valkey-benchmark.c` L689-L701](https://github.com/valkey-io/valkey/blob/9.1.0/src/valkey-benchmark.c#L689-L701)
 
 ```c
     /* Calculate latency only for the first read event. This means that the
@@ -615,7 +615,7 @@ static void createMissingClients(client c) {
 
 `clientDone` は、まだ目標の要求数に達していなければ、同じクライアントを `resetClient` で初期化して次の送信に備える。
 
-[`src/valkey-benchmark.c` L572-L578](https://github.com/valkey-io/valkey/blob/9.1.0/src/valkey-benchmark.c#L572-L578)
+[`src/valkey-benchmark.c` L572-L579](https://github.com/valkey-io/valkey/blob/9.1.0/src/valkey-benchmark.c#L572-L579)
 
 ```c
 static void resetClient(client c) {

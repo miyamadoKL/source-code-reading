@@ -226,7 +226,7 @@ robj *createRawStringObject(const char *ptr, size_t len) {
 `embstr` 側は `createEmbeddedStringObjectWithKeyAndExpire` が、`robj` と SDS をまとめて確保できる大きさの領域を1回だけ確保し、`robj` の直後に SDS を書き込む。
 このとき `val_ptr` のポインタ領域は値の埋め込みに転用され（`size = sizeof(robj) - sizeof(void *)` がそれを表す）、`encoding` には `OBJ_ENCODING_EMBSTR` が設定される。
 
-[`src/object.c` L180-L187](https://github.com/valkey-io/valkey/blob/9.1.0/src/object.c#L180-L187)
+[`src/object.c` L180-L186](https://github.com/valkey-io/valkey/blob/9.1.0/src/object.c#L180-L186)
 
 ```c
     o->type = OBJ_STRING;

@@ -64,7 +64,7 @@ jemalloc の実体は `deps/jemalloc/` に置かれている。
 このカウンタはスレッドごとに分けて持たれる。
 配列 `used_memory_thread` の各要素が、各スレッドが確保したバイト数を保持する。
 
-[`src/zmalloc.c` L106-L116](https://github.com/valkey-io/valkey/blob/9.1.0/src/zmalloc.c#L106-L116)
+[`src/zmalloc.c` L106-L113](https://github.com/valkey-io/valkey/blob/9.1.0/src/zmalloc.c#L106-L113)
 
 ```c
 #if defined(__i386__) || defined(__x86_64__) || defined(__amd64__) || defined(__POWERPC__) || defined(__arm__) || \
@@ -314,9 +314,7 @@ size_t zmalloc_usable_size(void *ptr);
  * the compiler recognizes this extra memory. However, if we use the pointer
  * obtained from z[*]_usable() family functions, there is no need for this step. */
 #define zmalloc_usable_size(p) zmalloc_size(p)
-
-/* derived from https://github.com/systemd/systemd/pull/25688
- * ... (中略) ... */
+// ... (中略) ...
 __attribute__((alloc_size(2), noinline)) void *extend_to_usable(void *ptr, size_t size);
 #endif
 ```

@@ -99,7 +99,7 @@ void streamNextID(streamID *last_id, streamID *new_id) {
 
 ID を rax のキーにするとき、`ms` と `seq` をそれぞれビッグエンディアンに変換して128ビットの連続したバイト列にする。
 
-[`src/t_stream.c` L356-L363](https://github.com/valkey-io/valkey/blob/9.1.0/src/t_stream.c#L356-L363)
+[`src/t_stream.c` L358-L363](https://github.com/valkey-io/valkey/blob/9.1.0/src/t_stream.c#L358-L363)
 
 ```c
 void streamEncodeID(void *buf, streamID *id) {
@@ -564,7 +564,7 @@ streamCG *streamCreateCG(stream *s, char *name, size_t namelen, streamID *id, lo
 
 `XACK` は、処理を終えたメッセージを PEL から取り除く。
 
-[`src/t_stream.c` L2844-L2862](https://github.com/valkey-io/valkey/blob/9.1.0/src/t_stream.c#L2844-L2862)
+[`src/t_stream.c` L2844-L2861](https://github.com/valkey-io/valkey/blob/9.1.0/src/t_stream.c#L2844-L2861)
 
 ```c
     int acknowledged = 0;

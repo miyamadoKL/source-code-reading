@@ -287,7 +287,7 @@ flowchart TB
 `parseMultibulkBuffer` は1コマンドを解析したあと、`querybuf` にまだ `*` で始まる次のコマンドが残っていれば、続けて解析してコマンドキューに積む。
 クライアントが複数のコマンドを一度に送る**パイプライン**を、追加の受信を待たずにまとめて取り込む。
 
-[`src/networking.c` L3578-L3599](https://github.com/valkey-io/valkey/blob/9.1.0/src/networking.c#L3578-L3599)
+[`src/networking.c` L3575-L3599](https://github.com/valkey-io/valkey/blob/9.1.0/src/networking.c#L3575-L3599)
 
 ```c
     /* Try parsing pipelined commands. */
@@ -436,7 +436,7 @@ void *addReplyDeferredLen(client *c) {
      * ready to be sent, since we are sure that before returning to the
      * event loop setDeferredAggregateLen() will be called. */
     if (prepareClientToWrite(c) != C_OK) return NULL;
-    /* ... (中略) ... */
+    // ... (中略) ...
     list *reply_list = clientGetReplyList(c);
     trimReplyUnusedTailSpace(c);
     listAddNodeTail(reply_list, NULL); /* NULL is our placeholder. */
@@ -447,7 +447,7 @@ void *addReplyDeferredLen(client *c) {
 `addReplyDeferredLen` は応答リストに `NULL` のプレースホルダノードを1個挿し、その位置を呼び出し側に返す。
 呼び出し側は要素をすべて書いたあとで `setDeferredAggregateLen` を呼び、数えあげた要素数と集約型のプレフィックスをプレースホルダに書き込む。
 
-[`src/networking.c` L1207-L1238](https://github.com/valkey-io/valkey/blob/9.1.0/src/networking.c#L1207-L1238)
+[`src/networking.c` L1206-L1238](https://github.com/valkey-io/valkey/blob/9.1.0/src/networking.c#L1206-L1238)
 
 ```c
 /* Populate the length object and try gluing it to the next chunk. */
@@ -467,7 +467,7 @@ void setDeferredAggregateLen(client *c, void *node, long length, char prefix) {
         setDeferredReply(c, node, objectGetVal(shared.mbulkhdr[length]), hdr_len);
         return;
     }
-    /* ... (中略) ... */
+    // ... (中略) ...
     char lenstr[128];
     lenstr[0] = prefix;
     size_t lenstr_len = ll2string(lenstr + 1, sizeof(lenstr) - 1, length);
@@ -610,7 +610,7 @@ void addReplyMapLen(client *c, long length) {
 
 double も、RESP3 では `,` プレフィックスでそのまま数値を書くが、RESP2 では数値型がないためバルク文字列にして返す。
 
-[`src/networking.c` L1276-L1284](https://github.com/valkey-io/valkey/blob/9.1.0/src/networking.c#L1276-L1284)
+[`src/networking.c` L1276-L1285](https://github.com/valkey-io/valkey/blob/9.1.0/src/networking.c#L1276-L1285)
 
 ```c
 void addReplyDouble(client *c, double d) {
@@ -709,7 +709,7 @@ static int parseArray(ReplyParser *parser, void *p_ctx) {
  * PARSING USER INPUT.
 ```
 
-クライアントからの要求は、これとは別に `parseMultibulk` が、先頭バイト・長さ・CRLF を逐一検査しながら読む。
+クライアントからの要求は、これとは別に `parseMultibulk` が、先頭バイト、長さ、CRLF を逐一検査しながら読む。
 要求の検査の厳密さと応答パーサの省略との差は、信頼境界の内側か外側かという、入力の出どころの違いから来る。
 
 ## まとめ
@@ -719,7 +719,7 @@ static int parseArray(ReplyParser *parser, void *p_ctx) {
 - 32 KiB 以上の巨大な引数では、受信バッファ `querybuf` をそのまま引数本体に転用し、大きな `memcpy` を省く。
 - 応答は `addReply` 系が型ごとに正しいプレフィックスとペイロードを書く。集約型は長さの場所を予約してあとから埋める手法を持ち、要素を二度持たずに済ませる。
 - `+OK\r\n` などの定型応答と小さな長さヘッダは起動時に共有オブジェクトとして前計算し、応答ごとの整形と複製を省く。
-- RESP2 と RESP3 は `HELLO` の `protover` で交渉し、結果を `c->resp` に保持する。応答関数は `c->resp` を見て、null・ブール・double・マップなどの出力を世代ごとに切り替える。
+- RESP2 と RESP3 は `HELLO` の `protover` で交渉し、結果を `c->resp` に保持する。応答関数は `c->resp` を見て、null、ブール、double、マップなどの出力を世代ごとに切り替える。
 
 ## 関連する章
 

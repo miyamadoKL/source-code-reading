@@ -154,7 +154,7 @@ void pexpireatCommand(client *c) {
 `expireGenericCommand` は受け取った値を内部で常にミリ秒の絶対時刻 `when` に正規化する。
 秒指定なら 1000 倍し、基準時刻を足す。
 
-[`src/expire.c` L764-L799](https://github.com/valkey-io/valkey/blob/9.1.0/src/expire.c#L764-L799)
+[`src/expire.c` L764-L798](https://github.com/valkey-io/valkey/blob/9.1.0/src/expire.c#L764-L798)
 
 ```c
 void expireGenericCommand(client *c, mstime_t basetime, int unit) {
@@ -178,7 +178,10 @@ void expireGenericCommand(client *c, mstime_t basetime, int unit) {
     }
     // ... (中略) ...
     when += basetime;
-    /* A negative expiration time should cause a key to expire and be deleted immediately. */
+    /* A negative expiration time should cause a key to expire and be deleted immediately.
+     * However, in some cases (such as import-mode), we might need to pause expiration,
+     * and we don't want keys with negative expiration times (could cause a crash during active expiration).
+     * Therefore, we simply change the expiration time to 0 to mark the key as expired. */
     if (when < 0) {
         when = 0;
     }
@@ -289,7 +292,13 @@ robj *lookupKey(serverDb *db, robj *key, int flags) {
     robj *val = dbFindWithDictIndex(db, objectGetVal(key), dict_index);
     if (val) {
         /* Forcing deletion of expired keys on a replica makes the replica
-         * inconsistent with the primary. */
+         * inconsistent with the primary. We forbid it on readonly replicas, but
+         * we have to allow it on writable replicas to make write commands
+         * behave consistently.
+         *
+         * It's possible that the WRITE flag is set even during a readonly
+         * command, since the command may trigger events that cause modules to
+         * perform additional writes. */
         int is_ro_replica = server.primary_host && server.repl_replica_ro;
         int expire_flags = 0;
         if (flags & LOOKUP_WRITE && !is_ro_replica) expire_flags |= EXPIRE_FORCE_DELETE_EXPIRED;
@@ -358,7 +367,15 @@ expirationPolicy getExpirationPolicyWithFlags(int flags) {
     /* If we are running in the context of a replica, instead of
      * evicting the expired key from the database, we return ASAP:
      * the replica key expiration is controlled by the primary that will
-     * send us synthesized DEL operations for expired keys. */
+     * send us synthesized DEL operations for expired keys. The
+     * exception is when write operations are performed on writable
+     * replicas.
+     *
+     * Still we try to reflect the correct state to the caller,
+     * that is, POLICY_KEEP_EXPIRED so that the key will be ignored, but not deleted.
+     *
+     * When replicating commands from the primary, keys are never considered
+     * expired, so we return POLICY_IGNORE_EXPIRE */
     if (server.primary_host != NULL) {
         if (server.current_client && (server.current_client->flag.primary)) return POLICY_IGNORE_EXPIRE;
         if (!(flags & EXPIRE_FORCE_DELETE_EXPIRED)) return POLICY_KEEP_EXPIRED;
@@ -387,7 +404,7 @@ expirationPolicy getExpirationPolicyWithFlags(int flags) {
 このサイクルには2つの呼び口がある。
 1つは serverCron 経由の遅いサイクル、もう1つは beforeSleep 経由の速いサイクルである。
 
-[`src/server.c` L1272-L1280](https://github.com/valkey-io/valkey/blob/9.1.0/src/server.c#L1272-L1280)
+[`src/server.c` L1273-L1279](https://github.com/valkey-io/valkey/blob/9.1.0/src/server.c#L1273-L1279)
 
 ```c
     if (server.active_expire_enabled) {
@@ -432,11 +449,14 @@ expirationPolicy getExpirationPolicyWithFlags(int flags) {
 
 ```c
 ustime_t activeExpireCycle(int type) {
-    /* If 'expire' action is paused, for whatever reason, then don't expire any key. */
+    /* If 'expire' action is paused, for whatever reason, then don't expire any key.
+     * Typically, at the end of the pause we will properly expire the key OR we
+     * will have failed over and the new primary will send us the expire. */
     if (isPausedActionsWithUpdate(PAUSE_ACTION_EXPIRE)) return 0;
 
     /* Adjust the running parameters according to the configured expire
-     * effort. */
+     * effort. The default effort is 1, and the maximum configurable effort
+     * is 10. Also make sure not to run fast cycles back to back. */
     ustime_t timelimit_us;
     if (type == ACTIVE_EXPIRE_CYCLE_FAST) {
         ustime_t config_cycle_fast_duration = ACTIVE_EXPIRE_CYCLE_FAST_DURATION + ACTIVE_EXPIRE_CYCLE_FAST_DURATION / 4 * activeExpireEffort();
@@ -451,7 +471,9 @@ ustime_t activeExpireCycle(int type) {
         timelimit_us = config_cycle_fast_duration;
     } else {
         /* We can use at max 'config_cycle_slow_time_perc' percentage of CPU
-         * time per iteration. */
+         * time per iteration. Since this function gets called with a frequency of
+         * server.hz times per second, the following is the max amount of
+         * microseconds we can spend in this function. */
         int config_cycle_slow_time_perc = ACTIVE_EXPIRE_CYCLE_SLOW_TIME_PERC + 2 * activeExpireEffort();
         timelimit_us = config_cycle_slow_time_perc * 1000000 / server.hz / 100;
     }
@@ -481,7 +503,7 @@ ustime_t activeExpireCycle(int type) {
 予算を決めたら、`activeExpireCycleJob` がデータベースを順に巡って `expires` をサンプリングする。
 このループの肝は、失効済みキーの割合が高いデータベースに努力を集中させる点にある。
 
-[`src/expire.c` L302-L361](https://github.com/valkey-io/valkey/blob/9.1.0/src/expire.c#L302-L361)
+[`src/expire.c` L302-L409](https://github.com/valkey-io/valkey/blob/9.1.0/src/expire.c#L302-L409)
 
 ```c
         do {
@@ -619,7 +641,7 @@ void propagateDeletion(serverDb *db, robj *key, int lazy, int slot) {
 削除の発生源を主の1か所に集約し、AOF とレプリケーションがいずれも順序を保つので、削除済みのキーへ書き込みが来ても全体で整合する。
 関数冒頭のコメントが、この理由を述べている。
 
-[`src/db.c` L1985-L1993](https://github.com/valkey-io/valkey/blob/9.1.0/src/db.c#L1985-L1993)
+[`src/db.c` L1985-L2003](https://github.com/valkey-io/valkey/blob/9.1.0/src/db.c#L1985-L2003)
 
 ```c
 /* Propagate an implicit key deletion into replicas and the AOF file.
@@ -630,7 +652,17 @@ void propagateDeletion(serverDb *db, robj *key, int lazy, int slot) {
  * This way the key deletion is centralized in one place, and since both
  * AOF and the replication link guarantee operation ordering, everything
  * will be consistent even if we allow write operations against deleted
- * keys. */
+ * keys.
+ *
+ * This function may be called from:
+ * 1. Within call(): Example: Lazy-expire on key access.
+ *    In this case the caller doesn't have to do anything
+ *    because call() handles server.also_propagate(); or
+ * 2. Outside of call(): Example: Active-expire, eviction, slot ownership changed.
+ *    In this the caller must remember to call
+ *    postExecutionUnitOperations, preferably just after a
+ *    single deletion batch, so that DEL/UNLINK will NOT be wrapped
+ *    in MULTI/EXEC */
 ```
 
 ## レプリカでの失効の扱い
@@ -642,7 +674,7 @@ void propagateDeletion(serverDb *db, robj *key, int lazy, int slot) {
 とはいえレプリカでも、読み取りの結果は正しく見せたい。
 そこで `lookupKey` のコメントが述べるように、レプリカは失効済みキーを削除しないまま、論理的には失効として扱う。
 
-[`src/db.c` L75-L80](https://github.com/valkey-io/valkey/blob/9.1.0/src/db.c#L75-L80)
+[`src/db.c` L76-L80](https://github.com/valkey-io/valkey/blob/9.1.0/src/db.c#L76-L80)
 
 ```c
  * Note: this function also returns NULL if the key is logically expired but

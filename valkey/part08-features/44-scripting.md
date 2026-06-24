@@ -274,7 +274,7 @@ static listNode *scriptsLRUAdd(client *c, sds sha) {
 実行に入る前に、`scriptPrepareForRun` が実行コンテキスト `scriptRunCtx` を整える。
 ここで書き込み可否や決定性に関わるフラグを確定し、現在走行中のスクリプトとして登録する。
 
-[`src/script.c` L213-L245](https://github.com/valkey-io/valkey/blob/9.1.0/src/script.c#L213-L245)
+[`src/script.c` L213-L244](https://github.com/valkey-io/valkey/blob/9.1.0/src/script.c#L213-L244)
 
 ```c
     run_ctx->engine = engine;
@@ -307,7 +307,7 @@ static listNode *scriptsLRUAdd(client *c, sds sha) {
 
 準備が整うと `evalGenericCommand` はエンジンの関数呼び出し層に実行を委ね、終わると後始末する。
 
-[`src/eval.c` L512-L538](https://github.com/valkey-io/valkey/blob/9.1.0/src/eval.c#L512-L538)
+[`src/eval.c` L512-L531](https://github.com/valkey-io/valkey/blob/9.1.0/src/eval.c#L512-L531)
 
 ```c
     evalScript *es = dictGetVal(entry);
@@ -356,7 +356,7 @@ static listNode *scriptsLRUAdd(client *c, sds sha) {
 割り込まれない実行は一貫性を保証する一方、無限ループや重いスクリプトはサーバを止めてしまう。
 そこで実行中に定期的に呼ばれる `scriptInterrupt` が、経過時間が閾値を超えたらビジー状態に入り、限られたコマンドだけ応答できるよう一時的にイベントループへ戻る。
 
-[`src/script.c` L83-L108](https://github.com/valkey-io/valkey/blob/9.1.0/src/script.c#L83-L108)
+[`src/script.c` L83-L107](https://github.com/valkey-io/valkey/blob/9.1.0/src/script.c#L83-L107)
 
 ```c
     if (server.busy_reply_threshold == 0) {
@@ -428,7 +428,7 @@ static listNode *scriptsLRUAdd(client *c, sds sha) {
 `CallArgv` の先では、スクリプトモードのとき書き込み可否やクラスタのスロット整合を検査する。
 読み取り専用スクリプトが書き込みコマンドを呼べば、ここで弾く。
 
-[`src/module.c` L6825-L6838](https://github.com/valkey-io/valkey/blob/9.1.0/src/module.c#L6825-L6838)
+[`src/module.c` L6824-L6839](https://github.com/valkey-io/valkey/blob/9.1.0/src/module.c#L6824-L6839)
 
 ```c
     /* Script mode tests */
@@ -482,7 +482,7 @@ static listNode *scriptsLRUAdd(client *c, sds sha) {
 `call()` は、実行したコマンドがデータセットを変更した（`dirty`）ときに、そのコマンド自身を伝播キューへ積む。
 積むのは `alsoPropagate` であり、伝播の有無は先ほど立てた `CMD_CALL_PROPAGATE_*` フラグで決まる。
 
-[`src/server.c` L4014-L4037](https://github.com/valkey-io/valkey/blob/9.1.0/src/server.c#L4014-L4037)
+[`src/server.c` L4014-L4038](https://github.com/valkey-io/valkey/blob/9.1.0/src/server.c#L4014-L4038)
 
 ```c
     if (flags & CMD_CALL_PROPAGATE && !c->flag.prevent_prop && c->cmd->proc != execCommand &&
@@ -510,7 +510,7 @@ static listNode *scriptsLRUAdd(client *c, sds sha) {
 スクリプトはこの伝播先を `server.set_repl` で切り替えられる。
 切り替えは `scriptRunCtx` ではなく Lua 側の呼び出しコンテキストの `replication_flags` を書き換え、以後の `server.call` に効く。
 
-[`src/modules/lua/script_lua.c` L1359-L1378](https://github.com/valkey-io/valkey/blob/9.1.0/src/modules/lua/script_lua.c#L1359-L1378)
+[`src/modules/lua/script_lua.c` L1359-L1379](https://github.com/valkey-io/valkey/blob/9.1.0/src/modules/lua/script_lua.c#L1359-L1379)
 
 ```c
 static int luaRedisSetReplCommand(lua_State *lua) {

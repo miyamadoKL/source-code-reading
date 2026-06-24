@@ -39,7 +39,14 @@
  * +--------+--------+
  * |00000001|01110000|
  * +--------+--------+
- * ...
+ *
+ * When offsets and integer sizes are aligned to bytes boundaries, this is the
+ * same as big endian, however when such alignment does not exist, its important
+ * to also understand how the bits inside a byte are ordered.
+ *
+ * Note that this format follows the same convention as SETBIT and related
+ * commands.
+ */
 ```
 
 ビット番号からバイト位置とバイト内ビット位置への変換は、すべてこの約束に従う。
@@ -410,7 +417,17 @@ void scoresOfGeoHashBox(GeoHashBits hash, GeoHashFix52Bits *min, GeoHashFix52Bit
      * is 101010, since our score is 52 bits we want every element which
      * is in binary: 101010?????????????????????????????????????????????
      * Where ? can be 0 or 1.
-     * ...
+     *
+     * To get the min score we just use the initial hash value left
+     * shifted enough to get the 52 bit value. Later we increment the
+     * 6 bit prefix (see the hash.bits++ statement), and get the new
+     * prefix: 101011, which we align again to 52 bits to get the maximum
+     * value (which is excluded from the search). So we get everything
+     * between the two following scores (represented in binary):
+     *
+     * 1010100000000000000000000000000000000000000000000000 (included)
+     * and
+     * 1010110000000000000000000000000000000000000000000000 (excluded).
      */
     *min = geohashAlign52Bits(hash);
     hash.bits++;
@@ -459,7 +476,6 @@ int geoGetPointsInRange(robj *zobj, double min, double max, GeoShape *shape, geo
             if (ga->used && limit && ga->used >= limit) break;
             zzlNext(zl, &eptr, &sptr);
         }
-    }
     // ... (中略：skiplist 側も同じ構造で zslNthInRange から走査) ...
 ```
 
@@ -475,7 +491,7 @@ geohash の区画はあくまで矩形の近似で、要求された半径や矩
 
 検索半径から区画の細かさ（step）を見積もるのが `geohashEstimateStepsByRadius` である。
 
-[`src/geohash_helper.c` L62-L85](https://github.com/valkey-io/valkey/blob/9.1.0/src/geohash_helper.c#L62-L85)
+[`src/geohash_helper.c` L64-L85](https://github.com/valkey-io/valkey/blob/9.1.0/src/geohash_helper.c#L64-L85)
 
 ```c
 uint8_t geohashEstimateStepsByRadius(double range_meters, double lat) {

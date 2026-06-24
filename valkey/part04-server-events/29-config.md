@@ -9,7 +9,7 @@
 ## この章の狙い
 
 Valkey の設定項目は 200 を超える。
-それでも設定ごとに読み込み・取得・更新・ファイル書き戻しのコードを書く必要はない。
+それでも設定ごとに読み込み、取得、更新、ファイル書き戻しのコードを書く必要はない。
 本章では、すべての設定を一つの型つきテーブル `static_configs[]` に宣言し、設定ファイルの読み込みと `CONFIG GET`/`SET`/`REWRITE` がそのテーブルを共通の入口として処理する仕組みを読む。
 新しい設定を足すときに表へ一行を加えるだけで済む理由を、機構のレベルで理解できるようにする。
 
@@ -85,7 +85,7 @@ typedef enum {
 ```
 
 型ごとの `data` は共用体 `typeData` にまとめられ、`type` の値でどのメンバが有効かが決まる。
-真偽値なら値ポインタ・既定値・検証関数を、数値なら加えて型タグと上下限を持つ。
+真偽値なら値ポインタ、既定値、検証関数を、数値なら加えて型タグと上下限を持つ。
 
 [`src/config.c` L271-L277](https://github.com/valkey-io/valkey/blob/9.1.0/src/config.c#L271-L277)
 
@@ -129,7 +129,7 @@ flowchart TD
 ## 登録マクロが行を生む
 
 `static_configs[]` の一行は、型ごとの登録マクロで書く。
-真偽値設定なら `createBoolConfig` を使い、名前・別名・フラグ・格納先のサーバ変数・既定値・検証関数・適用関数を並べる。
+真偽値設定なら `createBoolConfig` を使い、名前、別名、フラグ、格納先のサーバ変数、既定値、検証関数、適用関数を並べる。
 
 [`src/config.c` L3260-L3268](https://github.com/valkey-io/valkey/blob/9.1.0/src/config.c#L3260-L3268)
 
@@ -146,7 +146,7 @@ standardConfig static_configs[] = {
 ```
 
 マクロの正体は `standardConfig` のリテラル初期化子である。
-`createBoolConfig` は、真偽値型に固定した `interface`（`boolConfigInit`/`boolConfigSet`/`boolConfigGet`/`boolConfigRewrite`）を埋め込み、`type` を `BOOL_CONFIG` に設定し、引数で受けた格納先・既定値・検証関数を `data.yesno` に詰める。
+`createBoolConfig` は、真偽値型に固定した `interface`（`boolConfigInit`/`boolConfigSet`/`boolConfigGet`/`boolConfigRewrite`）を埋め込み、`type` を `BOOL_CONFIG` に設定し、引数で受けた格納先、既定値、検証関数を `data.yesno` に詰める。
 
 [`src/config.c` L1890-L1900](https://github.com/valkey-io/valkey/blob/9.1.0/src/config.c#L1890-L1900)
 
@@ -165,7 +165,7 @@ standardConfig static_configs[] = {
 ```
 
 共通部分は二つの補助マクロに切り出されている。
-`embedCommonConfig` が名前・別名・フラグを、`embedConfigInterface` が四つの関数ポインタと適用関数を埋める。
+`embedCommonConfig` が名前、別名、フラグを、`embedConfigInterface` が四つの関数ポインタと適用関数を埋める。
 
 [`src/config.c` L1836-L1840](https://github.com/valkey-io/valkey/blob/9.1.0/src/config.c#L1836-L1840)
 
@@ -327,7 +327,7 @@ static standardConfig *lookupConfig(sds name) {
 ここでも処理側は型を意識しない。
 真偽値か数値かにかかわらず、テーブルが持つ関数ポインタを通じて値が書き込まれる。
 
-[`src/config.c` L503-L528](https://github.com/valkey-io/valkey/blob/9.1.0/src/config.c#L503-L528)
+[`src/config.c` L503-L533](https://github.com/valkey-io/valkey/blob/9.1.0/src/config.c#L503-L533)
 
 ```c
         if (config) {
@@ -551,7 +551,7 @@ static int isValidActiveDefrag(int val, const char **err) {
 `rewriteConfig` は四段階で進む。
 まず古いファイルを読み込んで行ごとに保持し、次に全設定について `interface.rewrite` を呼んで状態を更新し、使われなくなった行を取り除き、最後にファイルへ書き戻す。
 
-[`src/config.c` L1791-L1827](https://github.com/valkey-io/valkey/blob/9.1.0/src/config.c#L1791-L1827)
+[`src/config.c` L1791-L1823](https://github.com/valkey-io/valkey/blob/9.1.0/src/config.c#L1791-L1823)
 
 ```c
     /* Step 1: read the old config into our rewrite state. */
@@ -637,7 +637,7 @@ int rewriteConfigRewriteLine(struct rewriteConfigState *state, const char *optio
 ## まとめ
 
 - Valkey はすべての設定を `standardConfig` の型つきテーブル `static_configs[]` に宣言し、読み込みと `CONFIG GET`/`SET`/`REWRITE` をこの一つの表で一元的に扱う。
-- 各設定は登録マクロ（`createBoolConfig`/`createIntConfig`/`createEnumConfig` など）で一行記述され、型ごとの `interface`（init/set/get/rewrite と apply）と格納先・既定値・上下限・検証関数がデータとして埋め込まれる。
+- 各設定は登録マクロ（`createBoolConfig`/`createIntConfig`/`createEnumConfig` など）で一行記述され、型ごとの `interface`（init/set/get/rewrite と apply）と格納先、既定値、上下限、検証関数がデータとして埋め込まれる。
 - 起動時に `initConfigValues` がテーブルを辞書 `configs` に展開し、以後の名前引きは `lookupConfig` に集約される。別名は `ALIAS_CONFIG` フラグつきで両方登録される。
 - `loadServerConfigFromString` は設定ファイルと起動引数を行ごとに解釈し、設定名で表を引いて `interface.set` を呼ぶ。型に依存しないこの入口が、設定ごとの個別コードを不要にしている。
 - `CONFIG SET` は検証（`is_valid_fn`）と適用（`apply`）を分け、全項目をいったん設定してから重複を除いた適用関数をまとめて呼ぶ。途中失敗時は退避値で巻き戻す。

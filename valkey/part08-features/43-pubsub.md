@@ -48,7 +48,7 @@ typedef struct ClientPubSubData {
     hashtable *pubsub_channels;      /* channels a client is interested in (SUBSCRIBE) */
     hashtable *pubsub_patterns;      /* patterns a client is interested in (PSUBSCRIBE) */
     hashtable *pubsubshard_channels; /* shard level channels a client is interested in (SSUBSCRIBE) */
-    /* ... (中略) ... */
+    // ... (中略) ...
 } ClientPubSubData;
 ```
 
@@ -70,7 +70,7 @@ Pub/Sub を一度も使わないクライアントにこの領域を持たせな
 void subscribeCommand(client *c) {
     int j;
     if (c->flag.deny_blocking && !c->flag.multi) {
-        /* ... (中略：DENY BLOCKING クライアントは購読できない) ... */
+        // ... (中略) ...
         addReplyError(c, "SUBSCRIBE isn't allowed for a DENY BLOCKING client");
         return;
     }
@@ -82,7 +82,7 @@ void subscribeCommand(client *c) {
 `pubsubSubscribeChannel` の第3引数 `pubSubType` は、通常の Pub/Sub とシャード Pub/Sub で処理本体を共有するための型である。
 どちらの種別でも登録の手順は同じで、違いはどのサーバ側辞書を使うか、購読通知に何という語を返すかだけにまとめてある。
 
-[`src/pubsub.c` L76-L97](https://github.com/valkey-io/valkey/blob/9.1.0/src/pubsub.c#L76-L97)
+[`src/pubsub.c` L73-L97](https://github.com/valkey-io/valkey/blob/9.1.0/src/pubsub.c#L73-L97)
 
 ```c
 /*
@@ -209,7 +209,7 @@ int pubsubPublishMessageInternal(robj *channel, robj *message, pubsubtype type) 
         /* Shard pubsub ignores patterns. */
         return receivers;
     }
-    /* ... (中略：パターン購読への配信が続く) ... */
+    // ... (中略) ...
 ```
 
 配信はチャンネル名で `pubsub_channels` を引き、見つかった購読者集合だけを走査する。
@@ -397,10 +397,10 @@ int pubsubUnsubscribeChannel(client *c, robj *channel, int notify, pubsubtype ty
     int retval = 0;
     int slot = 0;
 
-    /* ... (中略) ... */
+    // ... (中略) ...
     if (hashtableDelete(type.clientPubSubChannels(c), channel)) {
         retval = 1;
-        /* ... (中略：シャードならスロットを求める) ... */
+        // ... (中略) ...
         void *found = NULL;
         kvstoreHashtableFind(*type.serverPubSubChannels, slot, channel, &found);
         serverAssertWithInfo(c, NULL, found);
@@ -413,7 +413,7 @@ int pubsubUnsubscribeChannel(client *c, robj *channel, int notify, pubsubtype ty
             kvstoreHashtableDelete(*type.serverPubSubChannels, slot, channel);
         }
     }
-    /* ... (中略) ... */
+    // ... (中略) ...
     return retval;
 }
 ```
@@ -433,7 +433,7 @@ void freeClientPubSubData(client *c) {
     pubsubUnsubscribeShardAllChannels(c, 0);
     pubsubUnsubscribeAllPatterns(c, 0);
     unmarkClientAsPubSub(c);
-    /* ... (中略：各 hashtable を解放) ... */
+    // ... (中略) ...
     zfree(c->pubsub_data);
     c->pubsub_data = NULL;
 }
