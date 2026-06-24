@@ -108,8 +108,8 @@ flowchart TD
     onload -->|VM_CreateDataType| types["データ型レジストリ<br/>module types"]
     table -->|実行時| disp["ValkeyModuleCommandDispatcher"]
     disp -->|モジュール実装を呼ぶ| impl["モジュールのコマンド実装"]
-    impl -->|VM_Call| call["call (第27章)"]
-    call --> keyspace["キー空間"]
+    impl -->|VM_Call| vmcall["call (第27章)"]
+    vmcall --> keyspace["キー空間"]
     types -.->|RDB / AOF / DUMP| persist["永続化 (第35・36章)"]
 ```
 

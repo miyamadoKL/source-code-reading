@@ -63,11 +63,11 @@ using WideColumns = std::vector<WideColumn>;
 
 ```mermaid
 flowchart LR
-  K["キー \"user:42\""] --> WC["WideColumns（列の集合）"]
-  WC --> C0["既定列<br/>name = \"\"（空）<br/>value = ..."]
-  WC --> C1["列 \"age\"<br/>value = \"30\""]
-  WC --> C2["列 \"city\"<br/>value = \"Tokyo\""]
-  WC --> C3["列 \"name\"<br/>value = \"Alice\""]
+  K["キー 「user:42」"] --> WC["WideColumns（列の集合）"]
+  WC --> C0["既定列<br/>name = 「」（空）<br/>value = ..."]
+  WC --> C1["列 「age」<br/>value = 「30」"]
+  WC --> C2["列 「city」<br/>value = 「Tokyo」"]
+  WC --> C3["列 「name」<br/>value = 「Alice」"]
 ```
 
 書き込みは `PutEntity`、読み出しは `GetEntity` で行う。
