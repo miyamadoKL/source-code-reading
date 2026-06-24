@@ -110,7 +110,7 @@ void functionLoadCommand(client *c) {
         addReplyErrorFormat(c, "Unknown option given: %s", (char *)objectGetVal(next_arg));
         return;
     }
-    // ... (中略: コード引数の取り出し) ...
+    // ... (中略) ...
     robj *code = c->argv[argc_pos];
     sds err = NULL;
     sds library_name = NULL;
@@ -281,7 +281,7 @@ int scriptingEngineManagerRegister(const char *engine_name,
         .module_ctx_cache = {0},
     };
     scriptingEngineInitializeEngineMethods(e, engine_methods);
-    // ... (中略: モジュールコンテキストのキャッシュ確保とメモリ統計) ...
+    // ... (中略) ...
     dictAdd(engineMgr.engines, engine_name_sds, e);
     // ... (中略) ...
     return C_OK;
@@ -325,7 +325,7 @@ compiledFunction **scriptingEngineCallCompileCode(scriptingEngine *engine,
     serverAssert(type == VMSE_EVAL || type == VMSE_FUNCTION);
     compiledFunction **functions = NULL;
     ValkeyModuleCtx *module_ctx = engineSetupModuleCtx(COMMON_MODULE_CTX_INDEX, engine, false, NULL);
-    // ... (中略: ABI バージョン分岐) ...
+    // ... (中略) ...
         functions = engine->impl.methods.compile_code(
             module_ctx,
             engine->impl.ctx,
@@ -372,7 +372,7 @@ static void fcallCommandGeneric(client *c, int ro) {
         addReplyError(c, "Bad number of keys provided");
         return;
     }
-    // ... (中略: numkeys の範囲検証) ...
+    // ... (中略) ...
 
     scriptRunCtx run_ctx;
     if (scriptPrepareForRun(&run_ctx,
@@ -474,7 +474,7 @@ werr:
 本文にはシバン行が含まれ、そこにエンジン名とライブラリ名が書かれている。
 復元時はこの本文を読み戻し、ロードと同じ経路で再びコンパイルする。
 
-[`src/rdb.c` L3069-L3089](https://github.com/valkey-io/valkey/blob/9.1.0/src/rdb.c#L3069-L3089)
+[`src/rdb.c` L3069-L3104](https://github.com/valkey-io/valkey/blob/9.1.0/src/rdb.c#L3069-L3104)
 
 ```c
 int rdbFunctionLoad(rio *rdb, int ver, functionsLibCtx *lib_ctx, int rdbflags, sds *err) {
@@ -498,7 +498,7 @@ int rdbFunctionLoad(rio *rdb, int ver, functionsLibCtx *lib_ctx, int rdbflags, s
         }
         sdsfree(library_name);
     }
-    // ... (中略: 後始末とエラー処理) ...
+    // ... (中略) ...
 }
 ```
 

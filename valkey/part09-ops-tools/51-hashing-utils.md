@@ -1,4 +1,4 @@
-# 第51章 ハッシュ・チェックサム・ユーティリティ
+# 第51章 ハッシュ、チェックサム、ユーティリティ
 
 > **本章で読むソース**
 >
@@ -13,7 +13,7 @@
 ## この章の狙い
 
 Valkey は数バイトの値を要約する関数を何種類も使い分けている。
-本章では、5つのハッシュ・チェックサム関数がそれぞれどの用途に割り当てられ、その用途がどんな性質を要求するかを対応づけて読む。
+本章では、5つのハッシュ、チェックサム関数がそれぞれどの用途に割り当てられ、その用途がどんな性質を要求するかを対応づけて読む。
 あわせて、ハッシュテーブルを衝突攻撃から守る仕組みと、数値と文字列の高速変換、グロブ照合の実装を扱う。
 
 ## 前提
@@ -63,30 +63,33 @@ flowchart LR
 
 dict と hashtable のキー分配には**SipHash**を使う。
 SipHash は鍵つきの擬似ランダム関数であり、16 バイトの鍵 `k` を知らない攻撃者には出力を予測できない。
-本体は [`src/siphash.c` L126-L183](https://github.com/valkey-io/valkey/blob/9.1.0/src/siphash.c#L126-L183) にある。
+本体は [`src/siphash.c` L126-L176](https://github.com/valkey-io/valkey/blob/9.1.0/src/siphash.c#L126-L176) にある。
 
 ```c
 uint64_t siphash(const uint8_t *in, const size_t inlen, const uint8_t *k) {
+    // ... (中略) ...
     uint64_t v0 = 0x736f6d6570736575ULL;
     uint64_t v1 = 0x646f72616e646f6dULL;
     uint64_t v2 = 0x6c7967656e657261ULL;
     uint64_t v3 = 0x7465646279746573ULL;
     uint64_t k0 = U8TO64_LE(k);
     uint64_t k1 = U8TO64_LE(k + 8);
-    /* ... (中略) ... */
+    // ... (中略) ...
     for (; in != end; in += 8) {
         m = U8TO64_LE(in);
         v3 ^= m;
+
         SIPROUND;
+
         v0 ^= m;
     }
-    /* ... (中略：末尾の端数バイトとファイナライズ) ... */
+    // ... (中略) ...
     b = v0 ^ v1 ^ v2 ^ v3;
 ```
 
 処理の流れはこうだ。
 4 つの 64 ビット内部状態 `v0`〜`v3` を鍵 `k0`/`k1` で初期化し、入力を 8 バイトずつ取り込んでは攪拌関数 `SIPROUND` を回す。
-`SIPROUND` の中身は加算・回転・排他的論理和の組み合わせで、[`src/siphash.c` L107-L123](https://github.com/valkey-io/valkey/blob/9.1.0/src/siphash.c#L107-L123) に定義されている。
+`SIPROUND` の中身は加算、回転、排他的論理和の組み合わせで、[`src/siphash.c` L107-L123](https://github.com/valkey-io/valkey/blob/9.1.0/src/siphash.c#L107-L123) に定義されている。
 末尾の端数バイトと入力長を混ぜてから最終ラウンドを通し、4 つの状態を排他的論理和でまとめて 64 ビットのハッシュを返す。
 
 Valkey が使うのは攪拌回数を削った SipHash 1-2 である。
@@ -162,11 +165,13 @@ Valkey は幅の違う2つの CRC を別々の用途に割り当てている。
 ```c
 unsigned int keyHashSlot(const char *key, int keylen) {
     int s, e; /* start-end indexes of { and } */
+
     for (s = 0; s < keylen; s++)
         if (key[s] == '{') break;
+
     /* No '{' ? Hash the whole key. This is the base case. */
     if (s == keylen) return crc16(key, keylen) & 0x3FFF;
-    /* ... (中略：{} の中身だけを取り出す処理) ... */
+    // ... (中略) ...
     return crc16(key + s + 1, e - s - 1) & 0x3FFF;
 }
 ```
@@ -259,7 +264,7 @@ void sha1hex(char *digest, char *script, size_t len) {
 
 パスワードの保管には**SHA256**を使う。
 ACL はパスワードを平文では持たず、SHA256 の十六進表現で保存する。
-[`src/acl.c` L217-L234](https://github.com/valkey-io/valkey/blob/9.1.0/src/acl.c#L217-L234) の `ACLHashPassword` がこの変換を担う。
+[`src/acl.c` L219-L234](https://github.com/valkey-io/valkey/blob/9.1.0/src/acl.c#L219-L234) の `ACLHashPassword` がこの変換を担う。
 
 ```c
 static sds ACLHashPassword(unsigned char *cleartext, size_t len) {
@@ -288,14 +293,16 @@ static sds ACLHashPassword(unsigned char *cleartext, size_t len) {
 ここからは要約関数を離れ、ホットパスで多用される文字列ユーティリティを読む。
 
 整数を文字列へ直す `ll2string` は、`INCR` の応答整形や整数エンコーディングの判定で頻繁に呼ばれる。
-符号を処理したあと本体の `ull2string` に委ね、[`src/util.c` L396-L425](https://github.com/valkey-io/valkey/blob/9.1.0/src/util.c#L396-L425) が変換する。
+符号を処理したあと本体の `ull2string` に委ね、[`src/util.c` L396-L416](https://github.com/valkey-io/valkey/blob/9.1.0/src/util.c#L396-L416) が変換する。
 
 ```c
 int ull2string(char *dst, size_t dstlen, unsigned long long value) {
     static const char digits[201] = "0001020304050607080910111213141516171819"
-                                    /* ... (中略) ... */
+                                    "2021222324252627282930313233343536373839"
+                                    "4041424344454647484950515253545556575859"
+                                    "6061626364656667686970717273747576777879"
                                     "8081828384858687888990919293949596979899";
-    /* ... (中略：長さ計算とヌル終端) ... */
+    // ... (中略) ...
     while (value >= 100) {
         int const i = (value % 100) * 2;
         value /= 100;
@@ -310,19 +317,22 @@ int ull2string(char *dst, size_t dstlen, unsigned long long value) {
 
 逆方向の `string2ll` は文字列を整数に直す。
 [`src/util.c` L571-L635](https://github.com/valkey-io/valkey/blob/9.1.0/src/util.c#L571-L635) の `string2llScalar` が桁ごとに値を組み立て、各ステップで乗算と加算の桁あふれを検査する。
+桁を取り込むループ本体は [`src/util.c` L606-L618](https://github.com/valkey-io/valkey/blob/9.1.0/src/util.c#L606-L618) にある。
 
 ```c
-/* Parse all the other digits, checking for overflow at every step. */
-while (plen < slen && p[0] >= '0' && p[0] <= '9') {
-    if (v > (ULLONG_MAX / 10)) /* Overflow. */
-        return 0;
-    v *= 10;
-    if (v > (ULLONG_MAX - (p[0] - '0'))) /* Overflow. */
-        return 0;
-    v += p[0] - '0';
-    p++;
-    plen++;
-}
+    /* Parse all the other digits, checking for overflow at every step. */
+    while (plen < slen && p[0] >= '0' && p[0] <= '9') {
+        if (v > (ULLONG_MAX / 10)) /* Overflow. */
+            return 0;
+        v *= 10;
+
+        if (v > (ULLONG_MAX - (p[0] - '0'))) /* Overflow. */
+            return 0;
+        v += p[0] - '0';
+
+        p++;
+        plen++;
+    }
 ```
 
 桁あふれをその場で検出して 0 を返すため、`strtoll` のように `errno` を経由しなくても安全に変換できる。

@@ -72,7 +72,7 @@ rax *raxNew(void) {
 まず圧縮をかけない素朴な表現を見る。
 文字列 `"foo"`、`"foobar"`、`"footer"` を挿入した後の木で、キーを表すノードは `[]`、そうでないノードは `()` で書かれている。
 
-[`src/rax.h` L41-L56](https://github.com/valkey-io/valkey/blob/9.1.0/src/rax.h#L41-L56)
+[`src/rax.h` L41-L55](https://github.com/valkey-io/valkey/blob/9.1.0/src/rax.h#L41-L55)
 
 ```text
  * This is the vanilla representation:
@@ -96,7 +96,7 @@ rax *raxNew(void) {
 この一本道を1つのノードにまとめたのがプレフィックス圧縮である。
 同じ木は次のように圧縮される。
 
-[`src/rax.h` L57-L71](https://github.com/valkey-io/valkey/blob/9.1.0/src/rax.h#L57-L71)
+[`src/rax.h` L57-L70](https://github.com/valkey-io/valkey/blob/9.1.0/src/rax.h#L57-L70)
 
 ```text
  * However, this implementation implements a very common optimization where
@@ -163,7 +163,15 @@ typedef struct raxNode {
      * the current compressed node.
      *
      * [header iscompr=1][xyz][z-ptr](value-ptr?)
-     * ... (中略) ...
+     *
+     * Both compressed and not compressed nodes can represent a key
+     * with associated data in the radix tree at any level (not just terminal
+     * nodes).
+     *
+     * If the node has an associated key (iskey=1) and is not NULL
+     * (isnull=0), then after the raxNode pointers pointing to the
+     * children, an additional value pointer is present (as you can see
+     * in the representation above as "value-ptr" field).
      */
     unsigned char data[];
 } raxNode;
@@ -224,7 +232,7 @@ raxLowWalk(rax *rax, unsigned char *s, size_t len, raxNode **stopnode, raxNode *
             }
             if (j != h->size) break;
         } else {
-            /* ... (中略：非圧縮ノードの線形走査。後述) ... */
+            // ... (中略) ...
             for (j = 0; j < h->size; j++) {
                 if (v[j] == s[i]) break;
             }
@@ -330,7 +338,7 @@ int raxGenericInsert(rax *rax, unsigned char *s, size_t len, void *data, void **
                 rax->alloc_size = rax->alloc_size - oldalloc + rax_ptr_alloc_size(h);
             }
         }
-        /* ... (中略：OOM 処理) ... */
+        // ... (中略) ...
 
         /* Update the existing key if there is already one. */
         if (h->iskey) {
@@ -355,13 +363,14 @@ int raxGenericInsert(rax *rax, unsigned char *s, size_t len, void *data, void **
 
 冒頭コメントは、`"foo"` を持つ木に `"first"` を加える例で分割を図示している。
 
-[`src/rax.h` L72-L89](https://github.com/valkey-io/valkey/blob/9.1.0/src/rax.h#L72-L89)
+[`src/rax.h` L73-L89](https://github.com/valkey-io/valkey/blob/9.1.0/src/rax.h#L73-L89)
 
 ```text
  * For instance if a key "first" is added in the above radix tree, a
  * "node splitting" operation is needed, since the "foo" prefix is no longer
  * composed of nodes having a single child one after the other. This is the
  * above tree and the resulting node splitting after this event happens:
+ *
  *
  *                    (f) ""
  *                    /
@@ -395,16 +404,41 @@ int raxGenericInsert(rax *rax, unsigned char *s, size_t len, void *data, void **
  *
  * Let $SPLITPOS be the zero-based index at which, in the
  * compressed node array of characters, we found the mismatching
- * character.
- * ... (中略) ...
- * 1. Save the current compressed node $NEXT pointer ...
- * 2. Create "split node" having as child the non common letter ...
- * 3a. IF $SPLITPOS == 0: Replace the old node with the split node ...
- * 3b. IF $SPLITPOS != 0: Trim the compressed node ...
- * 4a. IF the postfix len ... is non zero, create a "postfix node" ...
+ * character. For example if the node contains "ANNIBALE" and we add
+ * "ANNIENTARE" the $SPLITPOS is 4, that is, the index at which the
+ * mismatching character is found.
+ *
+ * 1. Save the current compressed node $NEXT pointer (the pointer to the
+ *    child element, that is always present in compressed nodes).
+ *
+ * 2. Create "split node" having as child the non common letter
+ *    at the compressed node. The other non common letter (at the key)
+ *    will be added later as we continue the normal insertion algorithm
+ *    at step "6".
+ *
+ * 3a. IF $SPLITPOS == 0:
+ *     Replace the old node with the split node, by copying the auxiliary
+ *     data if any. Fix parent's reference. Free old node eventually
+ *     (we still need its data for the next steps of the algorithm).
+ *
+ * 3b. IF $SPLITPOS != 0:
+ *     Trim the compressed node (reallocating it as well) in order to
+ *     contain $splitpos characters. Change child pointer in order to link
+ *     to the split node. If new compressed node len is just 1, set
+ *     iscompr to 0 (layout is the same). Fix parent's reference.
+ *
+ * 4a. IF the postfix len (the length of the remaining string of the
+ *     original compressed node after the split character) is non zero,
+ *     create a "postfix node". If the postfix node has just one character
+ *     set iscompr to 0, otherwise iscompr to 1. Set the postfix node
+ *     child pointer to $NEXT.
+ *
  * 4b. IF the postfix len is zero, just use $NEXT as postfix pointer.
+ *
  * 5. Set child[0] of split node to postfix node.
- * 6. Set the split node as the current node ... and continue ...
+ *
+ * 6. Set the split node as the current node, set current index at child[1]
+ *    and continue insertion algorithm as usually.
 ```
 
 実装はこのアルゴリズムをそのままなぞる。
@@ -412,14 +446,14 @@ int raxGenericInsert(rax *rax, unsigned char *s, size_t len, void *data, void **
 分割点の手前の共通文字列を持つ「trimmed ノード」、分岐点になる「split ノード」、分割点の後ろの残り文字列を持つ「postfix ノード」である。
 コードでは、まず元の圧縮ノードの子ポインタ（`$NEXT`）を退避し、分割位置と後置文字列の長さを求める。
 
-[`src/rax.c` L672-L685](https://github.com/valkey-io/valkey/blob/9.1.0/src/rax.c#L672-L685)
+[`src/rax.c` L672-L686](https://github.com/valkey-io/valkey/blob/9.1.0/src/rax.c#L672-L686)
 
 ```c
         /* 1: Save next pointer. */
         raxNode **childfield = raxNodeLastChildPtr(h);
         raxNode *next;
         memcpy(&next, childfield, sizeof(next));
-        /* ... (中略) ... */
+        // ... (中略) ...
 
         /* Set the length of the additional nodes we will need. */
         size_t trimmedlen = j;
@@ -431,7 +465,7 @@ int raxGenericInsert(rax *rax, unsigned char *s, size_t len, void *data, void **
 分割位置が0でなければ、手前の `j` 文字を trimmed ノードに移し、その唯一の子を split ノードに付け替える。
 trimmed ノードの長さが1なら圧縮の必要がないので `iscompr` を0にする。
 
-[`src/rax.c` L723-L739](https://github.com/valkey-io/valkey/blob/9.1.0/src/rax.c#L723-L739)
+[`src/rax.c` L723-L740](https://github.com/valkey-io/valkey/blob/9.1.0/src/rax.c#L723-L740)
 
 ```c
         } else {
@@ -546,7 +580,7 @@ void raxStart(raxIterator *it, rax *rt) {
 前進1歩は `raxIteratorNextStep` が担う。
 基本方針は深さ優先で、各ノードでは常に最初の子（文字が最小の子）へ降りる。
 
-[`src/rax.c` L1319-L1339](https://github.com/valkey-io/valkey/blob/9.1.0/src/rax.c#L1319-L1339)
+[`src/rax.c` L1319-L1340](https://github.com/valkey-io/valkey/blob/9.1.0/src/rax.c#L1319-L1340)
 
 ```c
     while (1) {
@@ -560,7 +594,7 @@ void raxStart(raxIterator *it, rax *rt) {
             raxNode **cp = raxNodeFirstChildPtr(it->node);
             if (!raxIteratorAddChars(it, it->node->data, it->node->iscompr ? it->node->size : 1)) return 0;
             memcpy(&it->node, cp, sizeof(it->node));
-            /* ... (中略：node callback) ... */
+            // ... (中略) ...
             if (it->node->iskey) {
                 it->data = raxGetData(it->node);
                 return 1;
@@ -575,7 +609,7 @@ void raxStart(raxIterator *it, rax *rt) {
 
 子をすべて見終わったノードでは、親へ戻りながら次に大きい子を探す。
 
-[`src/rax.c` L1356-L1393](https://github.com/valkey-io/valkey/blob/9.1.0/src/rax.c#L1356-L1393)
+[`src/rax.c` L1358-L1394](https://github.com/valkey-io/valkey/blob/9.1.0/src/rax.c#L1358-L1394)
 
 ```c
                 unsigned char prevchild = it->key[it->key_len - 1];
@@ -584,7 +618,8 @@ void raxStart(raxIterator *it, rax *rt) {
                 } else {
                     noup = 0;
                 }
-                /* Adjust the current key to represent the node we are at. */
+                /* Adjust the current key to represent the node we are
+                 * at. */
                 int todel = it->node->iscompr ? it->node->size : 1;
                 raxIteratorDelChars(it, todel);
 
@@ -594,13 +629,15 @@ void raxStart(raxIterator *it, rax *rt) {
                     raxNode **cp = raxNodeFirstChildPtr(it->node);
                     int i = 0;
                     while (i < it->node->size) {
+                        debugf("SCAN NEXT %c\n", it->node->data[i]);
                         if (it->node->data[i] > prevchild) break;
                         i++;
                         cp++;
                     }
                     if (i != it->node->size) {
+                        debugf("SCAN found a new node\n");
                         raxIteratorAddChars(it, it->node->data + i, 1);
-                        /* ... (中略：スタックに積み直し、降りる) ... */
+                        // ... (中略) ...
                         if (it->node->iskey) {
                             it->data = raxGetData(it->node);
                             return 1;

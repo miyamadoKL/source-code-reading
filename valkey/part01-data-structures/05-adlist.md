@@ -266,7 +266,7 @@ void listUnlinkNode(list *list, listNode *node) {
 `listRotateTailToHead` は、末尾のノードを切り離して先頭に付け替える操作である。
 要素の値を移動するのではなく、ポインタのつなぎ替えだけで末尾を先頭に回す。
 
-[`src/adlist.c` L363-L376](https://github.com/valkey-io/valkey/blob/9.1.0/src/adlist.c#L363-L376)
+[`src/adlist.c` L364-L376](https://github.com/valkey-io/valkey/blob/9.1.0/src/adlist.c#L364-L376)
 
 ```c
 void listRotateTailToHead(list *list) {

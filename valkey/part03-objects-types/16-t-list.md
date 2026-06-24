@@ -377,7 +377,7 @@ int listTypeNext(listTypeIterator *li, listTypeEntry *entry) {
 範囲取得の `LRANGE` は `addListRangeReply` を経て応答を組み立てる。
 ここではイテレータでなく、応答生成を速くするためにエンコーディング別の専用関数へ直接振り分ける。
 
-[`src/t_list.c` L724-L729](https://github.com/valkey-io/valkey/blob/9.1.0/src/t_list.c#L724-L729)
+[`src/t_list.c` L723-L729](https://github.com/valkey-io/valkey/blob/9.1.0/src/t_list.c#L723-L729)
 
 ```c
     int from = reverse ? end : start;

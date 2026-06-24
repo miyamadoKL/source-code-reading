@@ -203,7 +203,9 @@ static void rehashEntriesInBucketAtIndex(dict *d, uint64_t idx) {
         if (d->ht_size_exp[1] > d->ht_size_exp[0]) {
             h = dictHashKey(d, key) & DICTHT_SIZE_MASK(d->ht_size_exp[1]);
         } else {
-            /* We're shrinking the table. */
+            /* We're shrinking the table. The tables sizes are powers of
+             * two, so we simply mask the bucket index in the larger table
+             * to get the bucket index in the smaller table. */
             h = idx & DICTHT_SIZE_MASK(d->ht_size_exp[1]);
         }
         dictSetNext(de, d->ht_table[1][h]);
@@ -333,7 +335,7 @@ flowchart TD
 `dictScan` の核心は、カーソルを下位ビットからではなく上位ビットから増やす点にある。
 コードでは、カーソルのビットを反転し、`1` を足し、もう一度反転する。
 
-[`src/dict.c` L1217-L1222](https://github.com/valkey-io/valkey/blob/9.1.0/src/dict.c#L1217-L1222)
+[`src/dict.c` L1215-L1222](https://github.com/valkey-io/valkey/blob/9.1.0/src/dict.c#L1215-L1222)
 
 ```c
         /* Set unmasked bits so incrementing the reversed cursor

@@ -260,7 +260,7 @@ static inline void lpEncodeString(unsigned char *buf, unsigned char *s, uint32_t
 格納された要素を読み出すのが `lpGet` である。
 先頭バイトのエンコーディング種別を見て、整数なら値を復元し、文字列なら領域内の文字列本体へのポインタを返す。
 
-[`src/listpack.c` L510-L552](https://github.com/valkey-io/valkey/blob/9.1.0/src/listpack.c#L510-L552)
+[`src/listpack.c` L510-L557](https://github.com/valkey-io/valkey/blob/9.1.0/src/listpack.c#L510-L557)
 
 ```c
     if (LP_ENCODING_IS_7BIT_UINT(p[0])) {
@@ -300,7 +300,7 @@ static inline void lpEncodeString(unsigned char *buf, unsigned char *s, uint32_t
 back length は可変長で、1バイトから5バイトで表す。
 書き込むのが `lpEncodeBacklen` である。
 
-[`src/listpack.c` L264-L304](https://github.com/valkey-io/valkey/blob/9.1.0/src/listpack.c#L264-L304)
+[`src/listpack.c` L269-L304](https://github.com/valkey-io/valkey/blob/9.1.0/src/listpack.c#L269-L304)
 
 ```c
 static inline unsigned long lpEncodeBacklen(unsigned char *buf, uint64_t l) {
@@ -334,7 +334,7 @@ static inline unsigned long lpEncodeBacklen(unsigned char *buf, uint64_t l) {
 
 この並びを末尾側から読んでいくのが `lpDecodeBacklen` である。
 
-[`src/listpack.c` L306-L319](https://github.com/valkey-io/valkey/blob/9.1.0/src/listpack.c#L306-L319)
+[`src/listpack.c` L308-L319](https://github.com/valkey-io/valkey/blob/9.1.0/src/listpack.c#L308-L319)
 
 ```c
 static inline uint64_t lpDecodeBacklen(unsigned char *p) {
@@ -391,6 +391,8 @@ unsigned char *lpSkip(unsigned char *p) {
     p += entrylen;
     return p;
 }
+
+// ... (中略) ...
 
 unsigned char *lpNext(unsigned char *lp, unsigned char *p) {
     assert(p);

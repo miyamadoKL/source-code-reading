@@ -21,7 +21,7 @@
 
 `hashtable.c` の冒頭コメントが、この実装の目的を述べている。
 
-[`src/hashtable.c` L7-L24](https://github.com/valkey-io/valkey/blob/9.1.0/src/hashtable.c#L7-L24)
+[`src/hashtable.c` L7-L25](https://github.com/valkey-io/valkey/blob/9.1.0/src/hashtable.c#L7-L25)
 
 ```c
 /* Hashtable
@@ -42,7 +42,8 @@
  *   inserting this object into the hash table. A callback for fetching the key
  *   from within the entry object is provided by the caller when creating the
  *   hash table.
- */
+ *
+// ... (中略) ...
 ```
 
 設計の狙いは、速度と低いメモリオーバーヘッドである。
@@ -126,7 +127,8 @@ static inline uint64_t hashKey(hashtable *ht, const void *key) {
  * entry can be inserted in any of the free slots. Additionally, the bucket
  * contains metadata for the entries. This includes a few bits of the hash of
  * the key of each entry, which are used to rule out false positives when
- * looking up entries. */
+ * looking up entries.
+// ... (中略) ...
 ```
 
 1バケットは64バイト、つまり1キャッシュラインである。
@@ -304,7 +306,8 @@ static inline int checkCandidateInBucket(hashtable *ht, bucket *b, int pos, cons
  *
  * Each key hashes to a bucket in the hash table. If a bucket is full, the last
  * entry is replaced by a pointer to a separately allocated child bucket.
- * Child buckets form a bucket chain. */
+ * Child buckets form a bucket chain.
+// ... (中略) ...
 ```
 
 子バケットの取得は `getChildBucket` が担う。
@@ -389,6 +392,7 @@ bool hashtableAdd(hashtable *ht, void *entry) {
     return hashtableAddOrFind(ht, entry, NULL);
 }
 
+// ... (中略) ...
 bool hashtableAddOrFind(hashtable *ht, void *entry, void **existing) {
     const void *key = entryGetKey(ht, entry);
     uint64_t hash = hashKey(ht, key);
@@ -461,7 +465,7 @@ static bucket *findBucketForInsert(hashtable *ht, uint64_t hash, int *pos_in_buc
 バケットが満杯ならば、連鎖をたどって空きを探す。
 連鎖がまだなければ `bucketConvertToChained` で子バケットを作る。
 
-[`src/hashtable.c` L954-L965](https://github.com/valkey-io/valkey/blob/9.1.0/src/hashtable.c#L954-L965)
+[`src/hashtable.c` L955-L965](https://github.com/valkey-io/valkey/blob/9.1.0/src/hashtable.c#L955-L965)
 
 ```c
 static void bucketConvertToChained(hashtable *ht, bucket *b) {
@@ -667,10 +671,12 @@ int hashtableRehashMicroseconds(hashtable *ht, uint64_t us) {
 リハッシュには2種類のメモリにまつわる工夫がある。
 一つは fork 中のコピーオンライト（CoW）を避けるリサイズポリシーである。
 
-[`src/hashtable.c` L129-L148](https://github.com/valkey-io/valkey/blob/9.1.0/src/hashtable.c#L129-L148)
+[`src/hashtable.c` L127-L142](https://github.com/valkey-io/valkey/blob/9.1.0/src/hashtable.c#L127-L142)
 
 ```c
-/*   - HASHTABLE_RESIZE_ALLOW: Rehash as required for optimal performance.
+/* The global resize policy is one of
+ *
+ *   - HASHTABLE_RESIZE_ALLOW: Rehash as required for optimal performance.
  *
  *   - HASHTABLE_RESIZE_AVOID: Don't rehash and move memory if it can be avoided;
  *     used when there is a fork running and we want to avoid affecting
@@ -683,7 +689,8 @@ int hashtableRehashMicroseconds(hashtable *ht, uint64_t us) {
  * and entries are incrementally moved from the old to the new table.
  *
  * To avoid affecting copy-on-write, we avoid rehashing when there is a forked
- * child process. */
+ * child process.
+// ... (中略) ...
 ```
 
 リハッシュはエントリを書き換えるので、書き換えたメモリページはコピーオンライトで複製され、fork 中の親子でメモリ使用量が増える。
@@ -691,7 +698,7 @@ int hashtableRehashMicroseconds(hashtable *ht, uint64_t us) {
 
 もう一つは、拡張リハッシュをバッチで処理してメモリアクセスを最適化する `rehashStepExpand` である。
 
-[`src/hashtable.c` L643-L662](https://github.com/valkey-io/valkey/blob/9.1.0/src/hashtable.c#L643-L662)
+[`src/hashtable.c` L643-L665](https://github.com/valkey-io/valkey/blob/9.1.0/src/hashtable.c#L643-L665)
 
 ```c
 static void rehashStepExpand(hashtable *ht) {

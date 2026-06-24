@@ -36,12 +36,18 @@ typedef struct multiCmd {
 typedef struct multiState {
     multiCmd *commands;             /* Array of MULTI commands */
     int count;                      /* Total number of MULTI commands */
-    int cmd_flags;                  /* The accumulated command flags OR-ed together. */
-    int cmd_inv_flags;              /* Same as cmd_flags, OR-ing the ~flags. */
+    int cmd_flags;                  /* The accumulated command flags OR-ed together.
+                                       So if at least a command has a given flag, it
+                                       will be set in this field. */
+    int cmd_inv_flags;              /* Same as cmd_flags, OR-ing the ~flags. so that it
+                                       is possible to know if all the commands have a
+                                       certain flag. */
     size_t argv_len_sums;           /* mem used by all commands arguments */
     int alloc_count;                /* total number of multiCmd struct memory reserved. */
     list watched_keys;              /* List of watchedKey for iteration and cleanup. */
-    hashtable **watched_keys_by_db; /* Per-db hashtable for O(1) watched key lookup. */
+    hashtable **watched_keys_by_db; /* Per-db hashtable for O(1) watched key lookup.
+                                       Array of size server.dbnum, lazily allocated.
+                                       Each hashtable stores watchedKey* directly. */
     int transaction_db_id;          /* Currently SELECTed DB id in transaction context */
 } multiState;
 ```
@@ -92,14 +98,17 @@ void multiCommand(client *c) {
 
 `queueMultiCommand` はクライアントの引数をキューへ移し替える。
 
-[`src/multi.c` L91-L137](https://github.com/valkey-io/valkey/blob/9.1.0/src/multi.c#L91-L137)
+[`src/multi.c` L90-L137](https://github.com/valkey-io/valkey/blob/9.1.0/src/multi.c#L90-L137)
 
 ```c
 /* Add a new command into the MULTI commands queue */
 void queueMultiCommand(client *c, uint64_t cmd_flags) {
     multiCmd *mc;
 
-    /* No sense to waste memory if the transaction is already aborted. */
+    /* No sense to waste memory if the transaction is already aborted.
+     * this is useful in case client sends these in a pipeline, or doesn't
+     * bother to read previous responses and didn't notice the multi was already
+     * aborted. */
     if (c->flag.dirty_cas || c->flag.dirty_exec) return;
     if (!c->mstate) initClientMultiState(c);
     if (c->mstate->count == 0) {
@@ -163,13 +172,17 @@ void execCommand(client *c) {
 
     /* Check if we need to abort the EXEC because:
      * 1) Some WATCHed key was touched.
-     * 2) There was a previous error while queueing commands. */
+     * 2) There was a previous error while queueing commands.
+     * A failed EXEC in the first case returns a multi bulk nil object
+     * (technically it is not an error but a special behavior), while
+     * in the second an EXECABORT error is returned. */
     if (c->flag.dirty_cas || c->flag.dirty_exec) {
         if (c->flag.dirty_exec) {
             addReplyErrorObject(c, shared.execaborterr);
         } else {
             addReply(c, shared.nullarray[c->resp]);
         }
+
         discardTransaction(c);
         return;
     }
@@ -209,7 +222,12 @@ void execCommand(client *c) {
         int acl_retval = ACLCheckAllPerm(c, &acl_errpos);
         if (acl_retval != ACL_OK) {
             // ... (中略) ...
-            addReplyErrorFormat(c, "-NOPERM ACLs rules changed ...");
+            addReplyErrorFormat(c,
+                                "-NOPERM ACLs rules changed between the moment the "
+                                "transaction was accumulated and the EXEC call. "
+                                "This command is no longer allowed for the "
+                                "following reason: %s",
+                                reason);
         } else {
             if (c->id == CLIENT_ID_AOF)
                 call(c, CMD_CALL_NONE);
@@ -377,6 +395,7 @@ void touchWatchedKey(serverDb *db, robj *key) {
     if (!clients) return;
 
     /* Mark all the clients watching this key as CLIENT_DIRTY_CAS */
+    /* Check if we are already watching for this key */
     listRewind(clients, &li);
     while ((ln = listNext(&li))) {
         watchedKey *wk = server_member2struct(watchedKey, node, ln);

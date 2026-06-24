@@ -51,7 +51,7 @@ void infoCommand(client *c) {
 この関数は要求されたセクション名を `dict`（キー集合）に積み、`all` と `everything` のキーワードを `all_sections` / `everything` フラグに変換する。
 引数が省略されたときは既定のセクション一覧を使い、しかもその `dict` を一度だけ作って使い回す。
 
-[`src/server.c` L5998-L6021](https://github.com/valkey-io/valkey/blob/9.1.0/src/server.c#L5998-L6021)
+[`src/server.c` L5998-L6023](https://github.com/valkey-io/valkey/blob/9.1.0/src/server.c#L5998-L6023)
 
 ```c
 dict *genInfoSectionDict(robj **argv, int argc, char **defaults, int *out_all, int *out_everything) {
@@ -99,7 +99,7 @@ sds genValkeyInfoString(dict *section_dict, int all_sections, int everything) {
 出力対象かを判定し、すでに一つ以上出力していれば区切りの `\r\n` を挟み、`sdscatprintf` で「`# セクション名`」に続けて行ごとの指標を連結する。
 たとえば統計セクションは、累計接続数や毎秒処理コマンド数といった指標をこの形で並べる。
 
-[`src/server.c` L6422-L6431](https://github.com/valkey-io/valkey/blob/9.1.0/src/server.c#L6422-L6431)
+[`src/server.c` L6422-L6428](https://github.com/valkey-io/valkey/blob/9.1.0/src/server.c#L6422-L6428)
 
 ```c
         if (sections++) info = sdscat(info, "\r\n");
@@ -193,7 +193,7 @@ void latencyAddSample(const char *event, ustime_t latency_us) {
 このマクロが実際に置かれるのが、コマンド実行直後の経路である。
 高速コマンドかどうかでイベント名を選び、計測した遅延を渡す。
 
-[`src/server.c` L3969-L3977](https://github.com/valkey-io/valkey/blob/9.1.0/src/server.c#L3969-L3977)
+[`src/server.c` L3969-L3978](https://github.com/valkey-io/valkey/blob/9.1.0/src/server.c#L3969-L3978)
 
 ```c
     if (update_command_stats) {

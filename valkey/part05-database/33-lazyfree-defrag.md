@@ -92,7 +92,7 @@ size_t lazyfreeGetFreeEffort(robj *key, robj *obj, int dbid) {
 
 この見積もりを使い、`freeObjAsync` は閾値で経路を分ける。
 
-[`src/lazyfree.c` L184-L204](https://github.com/valkey-io/valkey/blob/9.1.0/src/lazyfree.c#L184-L204)
+[`src/lazyfree.c` L189-L204](https://github.com/valkey-io/valkey/blob/9.1.0/src/lazyfree.c#L189-L204)
 
 ```c
 #define LAZYFREE_THRESHOLD 64
@@ -208,7 +208,7 @@ void emptyDbAsync(serverDb *db) {
 判定はアロケータ（jemalloc）に問い合わせる。
 `activeDefragAllocWithoutFree` が、その問い合わせと移動の中核である。
 
-[`src/defrag.c` L163-L192](https://github.com/valkey-io/valkey/blob/9.1.0/src/defrag.c#L163-L192)
+[`src/defrag.c` L163-L180](https://github.com/valkey-io/valkey/blob/9.1.0/src/defrag.c#L163-L180)
 
 ```c
 static void *activeDefragAllocWithoutFree(void *ptr, size_t *allocation_size) {
@@ -290,7 +290,7 @@ int allocatorShouldDefrag(void *ptr) {
 }
 ```
 
-問い合わせの実体は jemalloc の `util_batch_query` で、対象ポインタが属するスラブの長さ・領域数・空き数を返す。
+問い合わせの実体は jemalloc の `util_batch_query` で、対象ポインタが属するスラブの長さ、領域数、空き数を返す。
 ここから領域サイズを求めてスラブの bin を特定し、その bin の利用統計とともに `makeDefragDecision` へ渡す。
 この判定は、以前の jemalloc が提供していた `je_get_defrag_hint` と同じ役割を、Valkey 側で再実装したものである。
 

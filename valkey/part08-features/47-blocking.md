@@ -47,8 +47,25 @@
  * 2) It unblocks the client by unsetting the CLIENT_BLOCKED flag.
  * 3) It puts the client into a list of just unblocked clients that are
  *    processed ASAP in the beforeSleep() event loop callback, so that
- *    if there is some query buffer to process, we do it.
- * ... (中略) ...
+ *    if there is some query buffer to process, we do it. This is also
+ *    required because otherwise there is no 'readable' event fired, we
+ *    already read the pending commands. We also set the CLIENT_UNBLOCKED
+ *    flag to remember the client is in the unblocked_clients list.
+ *
+ * processUnblockedClients() is called inside the beforeSleep() function
+ * to process the query buffer from unblocked clients and remove the clients
+ * from the blocked_clients queue.
+ *
+ * replyToBlockedClientTimedOut() is called by the cron function when
+ * a client blocked reaches the specified timeout (if the timeout is set
+ * to 0, no timeout is processed).
+ * It usually just needs to send a reply to the client.
+ *
+ * When implementing a new type of blocking operation, the implementation
+ * should modify unblockClient() and replyToBlockedClientTimedOut() in order
+ * to handle the btype-specific behavior of this two functions.
+ * If the blocking operation waits for certain keys to change state, the
+ * clusterRedirectBlockedClientIfNeeded() function should also be updated.
  */
 ```
 
@@ -99,11 +116,11 @@ void blockingPopGenericCommand(client *c, robj **keys, int numkeys, int where, i
 
         /* Non-existing key, move to next key. */
         if (o == NULL) continue;
-        /* ... (中略：型チェックと空リストの読み飛ばし) ... */
+        // ... (中略：型チェックと空リストの読み飛ばし) ...
 
         /* Non empty list, this is like a normal [LR]POP. */
         robj *value = listTypePop(o, where);
-        /* ... (中略：応答を書き、[LR]POP として伝播) ... */
+        // ... (中略：応答を書き、[LR]POP として伝播) ...
         return;
     }
     // ... (中略：ブロックの判断は次のコードへ続く) ...
@@ -150,6 +167,8 @@ void blockForKeys(client *c, int btype, robj **keys, int numkeys, mstime_t timeo
     initClientBlockingState(c);
 
     if (!c->flag.reexecuting_command) {
+        /* If the client is re-processing the command, we do not set the timeout
+         * because we need to retain the client's original timeout. */
         c->bstate->timeout = timeout;
     }
 
@@ -173,7 +192,7 @@ void blockForKeys(client *c, int btype, robj **keys, int numkeys, mstime_t timeo
         }
         listAddNodeTail(l, c);
         dictSetVal(c->bstate->keys, client_blocked_entry, listLast(l));
-        /* ... (中略：unblock_on_nokey の登録) ... */
+        // ... (中略：unblock_on_nokey の登録) ...
     }
     c->bstate->unblock_on_nokey = unblock_on_nokey;
     if (btype != BLOCKED_MODULE) c->flag.pending_command = 1;
@@ -252,7 +271,7 @@ static void signalKeyAsReadyLogic(serverDb *db, robj *key, int type, int deleted
         // ... (中略：BLOCKED_MODULE の補足コメント) ...
         return;
     }
-    /* ... (中略：deleted の分岐) ... */
+    // ... (中略：deleted の分岐) ...
     } else {
         /* No clients blocking for this key? No need to queue it. */
         if (dictFind(db->blocking_keys, key) == NULL) return;
@@ -372,7 +391,7 @@ static void handleClientsBlockedOnKey(readyList *rl) {
         while ((ln = listNext(&li)) && count--) {
             client *receiver = listNodeValue(ln);
             robj *o = lookupKeyReadWithFlags(rl->db, rl->key, LOOKUP_NOEFFECTS);
-            /* ... (中略：待ち型とキーの型が一致するか確認) ... */
+            // ... (中略：待ち型とキーの型が一致するか確認) ...
             if ((o != NULL && (receiver->bstate->btype == getBlockedTypeByType(o->type))) ||
                 (o != NULL && (receiver->bstate->btype == BLOCKED_MODULE)) || (receiver->bstate->unblock_on_nokey)) {
                 if (receiver->bstate->btype != BLOCKED_MODULE)
@@ -430,7 +449,11 @@ B のプッシュが起床候補を積み、コマンド処理の区切りで起
  * composed as such:
  *
  *  [8 byte big endian expire time]+[8 byte client ID]
- * ... (中略) ...
+ *
+ * We don't do any cleanup in the Radix tree: when we run the clients that
+ * reached the timeout already, if they are no longer existing or no longer
+ * blocked with such timeout, we just go forward.
+ *
  * Every time a client blocks with a timeout, we add the client in
  * the tree. In beforeSleep() we call handleBlockedClientsTimeout() to run
  * the tree and unblock the clients. */
@@ -468,7 +491,7 @@ void handleBlockedClientsTimeout(void) {
 クライアントが明示的に待ちを打ち切られることもある。
 `CLIENT UNBLOCK <id>` がそれで、対象クライアントがタイムアウト可能なブロック型のときに、タイムアウト扱いかエラー扱いで起こす。
 
-[`src/networking.c` L5434-L5440](https://github.com/valkey-io/valkey/blob/9.1.0/src/networking.c#L5434-L5440)
+[`src/networking.c` L5434-L5443](https://github.com/valkey-io/valkey/blob/9.1.0/src/networking.c#L5434-L5443)
 
 ```c
     if (target && target->flag.blocked && blockedClientMayTimeout(target)) {
@@ -478,6 +501,8 @@ void handleBlockedClientsTimeout(void) {
             unblockClientOnTimeout(target);
 
         addReply(c, shared.cone);
+    } else {
+        addReply(c, shared.czero);
     }
 ```
 
@@ -493,7 +518,7 @@ void unblockClient(client *c, int queue_for_reprocessing) {
     } else if (c->bstate->btype == BLOCKED_WAIT) {
         unblockClientWaitingReplicas(c);
     }
-    /* ... (中略：モジュール・POSTPONE・SHUTDOWN の後始末) ... */
+    // ... (中略：モジュール・POSTPONE・SHUTDOWN の後始末) ...
 
     /* We count blocked client stats on regular clients and not on module clients */
     if (!c->flag.module) server.blocked_clients--;
@@ -524,9 +549,17 @@ void blockedBeforeSleep(void) {
     if (listLength(server.clients_waiting_acks)) processClientsWaitingReplicas();
 
     /* Try to process blocked clients every once in while.
-     * ... (中略：モジュールのタイマーコールバックからの起床に関する説明) ... */
+     *
+     * Example: A module calls RM_SignalKeyAsReady from within a timer callback
+     * (So we don't visit processCommand() at all).
+     *
+     * This may unblock clients, so must be done before processUnblockedClients */
     handleClientsBlockedOnKeys();
-    // ... (中略：モジュールがブロックを解除したクライアントの処理) ...
+
+    /* Check if there are clients unblocked by modules that implement
+     * blocking commands. */
+    if (moduleCount()) moduleHandleBlockedClients();
+
     /* Try to process pending commands for clients that were just unblocked. */
     if (listLength(server.unblocked_clients)) processUnblockedClients();
 }

@@ -98,7 +98,7 @@ flowchart LR
 `fill` の既定値は `-2` であり、後述するとおり「ノードあたり8KB」という大きさ基準を意味する。
 `compress` の既定値は `0` で、初期状態では圧縮を行わない。
 
-[`src/quicklist.c` L121-L134](https://github.com/valkey-io/valkey/blob/9.1.0/src/quicklist.c#L121-L134)
+[`src/quicklist.c` L123-L134](https://github.com/valkey-io/valkey/blob/9.1.0/src/quicklist.c#L123-L134)
 
 ```c
 quicklist *quicklistCreate(void) {
@@ -124,7 +124,7 @@ quicklist *quicklistCreate(void) {
 `fill` は正負で意味が変わる。
 `quicklistNodeLimit` は、`fill` が0以上なら要素数の上限（`count`）として、負なら大きさの上限（`size`）として解釈する。
 
-[`src/quicklist.c` L444-L456](https://github.com/valkey-io/valkey/blob/9.1.0/src/quicklist.c#L444-L456)
+[`src/quicklist.c` L446-L456](https://github.com/valkey-io/valkey/blob/9.1.0/src/quicklist.c#L446-L456)
 
 ```c
 void quicklistNodeLimit(int fill, size_t *size, unsigned int *count) {
@@ -257,7 +257,7 @@ int quicklistPushHead(quicklist *quicklist, void *value, size_t sz) {
 `isLargeElement` はこうした値を見分ける。
 `fill` が負なら、その大きさ上限を1要素で超えるかどうかで判定する。
 
-[`src/quicklist.c` L479-L488](https://github.com/valkey-io/valkey/blob/9.1.0/src/quicklist.c#L479-L488)
+[`src/quicklist.c` L482-L488](https://github.com/valkey-io/valkey/blob/9.1.0/src/quicklist.c#L482-L488)
 
 ```c
 static int isLargeElement(size_t sz, int fill) {
@@ -317,7 +317,7 @@ typedef struct quicklistLZF {
 小さすぎる listpack（`MIN_COMPRESS_BYTES` 未満）は圧縮の手間に見合わないので素通しする。
 また、圧縮を試みても十分に縮まらなかった場合（縮小量が `MIN_COMPRESS_IMPROVE` に満たない、あるいは圧縮後の方が大きい場合）は、圧縮結果を捨てて生のまま残す。
 
-[`src/quicklist.c` L209-L238](https://github.com/valkey-io/valkey/blob/9.1.0/src/quicklist.c#L209-L238)
+[`src/quicklist.c` L212-L238](https://github.com/valkey-io/valkey/blob/9.1.0/src/quicklist.c#L212-L238)
 
 ```c
 static int __quicklistCompressNode(quicklistNode *node) {

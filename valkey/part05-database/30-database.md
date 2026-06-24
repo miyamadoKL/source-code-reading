@@ -109,7 +109,7 @@ robj *lookupKeyRead(serverDb *db, robj *key) {
     return lookupKeyReadWithFlags(db, key, LOOKUP_NONE);
 }
 
-/* ... (中略) ... */
+// ... (中略) ...
 robj *lookupKeyWriteWithFlags(serverDb *db, robj *key, int flags) {
     return lookupKey(db, key, flags | LOOKUP_WRITE);
 }
@@ -132,7 +132,7 @@ robj *lookupKey(serverDb *db, robj *key, int flags) {
     int dict_index = getKVStoreIndexForKey(objectGetVal(key));
     robj *val = dbFindWithDictIndex(db, objectGetVal(key), dict_index);
     if (val) {
-        /* ... (中略) ... */
+        // ... (中略) ...
         int is_ro_replica = server.primary_host && server.repl_replica_ro;
         int expire_flags = 0;
         if (flags & LOOKUP_WRITE && !is_ro_replica) expire_flags |= EXPIRE_FORCE_DELETE_EXPIRED;
@@ -175,7 +175,7 @@ static robj *dbFindWithDictIndex(serverDb *db, sds key, int dict_index) {
 
 ```c
     if (val) {
-        /* ... (中略) ... */
+        // ... (中略) ...
         if (!hasActiveChildProcess() && !(flags & LOOKUP_NOTOUCH)) {
             /* Shared objects can't be stored in the database. */
             serverAssert(val->refcount != OBJ_SHARED_REFCOUNT);
@@ -242,7 +242,7 @@ static void dbAddInternal(serverDb *db, robj *key, robj **valref, int update_if_
     /* Not existing. Convert val to valkey object and insert. */
     robj *val = *valref;
     val = objectSetKeyAndExpire(val, objectGetVal(key), -1);
-    /* ... (中略) ... */
+    // ... (中略) ...
     initObjectLRUOrLFU(val);
     kvstoreHashtableAdd(db->keys, dict_index, val);
     signalKeyAsReady(db, key, val->type);
@@ -342,9 +342,9 @@ void setKey(client *c, serverDb *db, robj *key, robj **valref, int flags) {
 ```c
 void keysCommand(client *c) {
     sds pattern = objectGetVal(c->argv[1]);
-    /* ... (中略) ... */
+    // ... (中略) ...
     kvstoreIterator *kvs_it = NULL;
-    /* ... (中略) ... */
+    // ... (中略) ...
     kvs_it = kvstoreIteratorInit(c->db->keys, HASHTABLE_ITER_SAFE);
     void *next;
     while (kvs_di ? kvstoreHashtableIteratorNext(kvs_di, &next) : kvstoreIteratorNext(kvs_it, &next)) {
@@ -358,7 +358,7 @@ void keysCommand(client *c) {
         }
         if (c->flag.close_asap) break;
     }
-    /* ... (中略) ... */
+    // ... (中略) ...
 }
 ```
 
@@ -428,9 +428,11 @@ unsigned long long kvstoreScan(kvstore *kvs,
                                void *privdata) {
     unsigned long long next_cursor = 0;
     /* During hash table traversal, 48 upper bits in the cursor are used for positioning in the HT.
-     * ... (中略) ... */
+     * Following lower bits are used for the hashtable index number, ranging from 0 to 2^num_hashtables_bits-1.
+     * Hashtable index is always 0 at the start of iteration and can be incremented only if there are
+     * multiple hashtables. */
     int didx = getAndClearHashtableIndexFromCursor(kvs, &cursor);
-    /* ... (中略) ... */
+    // ... (中略) ...
     hashtable *ht = kvstoreGetHashtable(kvs, didx);
     kvstoreScanCallbackData cb_data = {.scan_cb = scan_cb, .privdata = privdata, .didx = didx};
 
@@ -442,9 +444,9 @@ unsigned long long kvstoreScan(kvstore *kvs,
     }
     /* scanning done for the current hash table or if the scanning wasn't possible, move to the next hashtable index. */
     if (next_cursor == 0 || skip) {
-        /* ... (中略) ... */
+        // ... (中略) ...
         int nextdidx = kvstoreGetNextNonEmptyHashtableIndex(kvs, didx);
-        /* ... (中略) ... */
+        // ... (中略) ...
         didx = nextdidx;
     }
     if (didx == KVSTORE_INDEX_NOT_FOUND) {

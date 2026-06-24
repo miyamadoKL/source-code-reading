@@ -147,7 +147,7 @@ int trySendReadToIOThreads(client *c) {
     if (c->io_write_state == CLIENT_PENDING_IO) return C_OK;
     /* For simplicity, don't offload replica clients reads as read traffic from replica is negligible */
     if (getClientType(c) == CLIENT_TYPE_REPLICA) return C_ERR;
-    /* ... (中略) ... */
+    // ... (中略) ...
     c->io_read_state = CLIENT_PENDING_IO;
     connSetPostponeUpdateState(c->conn, 1);
 
@@ -177,7 +177,7 @@ int trySendReadToIOThreads(client *c) {
 書き出しの委譲も同じ形をとる。
 `trySendWriteToIOThreads` は、応答が残っているクライアントの書き出しジョブを共有 inbox に積む。
 
-[`src/io_threads.c` L555-L576](https://github.com/valkey-io/valkey/blob/9.1.0/src/io_threads.c#L555-L576)
+[`src/io_threads.c` L556-L576](https://github.com/valkey-io/valkey/blob/9.1.0/src/io_threads.c#L556-L576)
 
 ```c
         /* Save the last block of the reply list to io_last_reply_block and the used
@@ -244,7 +244,7 @@ I/O スレッドは `c->bufpos` ではなくこの控えた位置までしか書
                 case JOB_REQ_FREE_ARGV:
                     ioThreadFreeArgv((robj **)data);
                     break;
-                /* ... (中略) ... */
+                // ... (中略) ...
                 }
             }
             processed += batch_count;
@@ -265,7 +265,7 @@ I/O スレッドは `c->bufpos` ではなくこの控えた位置までしか書
             case JOB_REQ_WRITE_CLIENT:
                 ioThreadWriteToClient((client *)data);
                 break;
-            /* ... (中略) ... */
+            // ... (中略) ...
             }
             processed++;
         }
@@ -290,13 +290,13 @@ void ioThreadReadQueryFromClient(client *c) {
 
     /* Read */
     readToQueryBuf(c);
-    /* ... (中略) ... */
+    // ... (中略) ...
     parseInputBuffer(c);
     trimCommandQueue(c);
     prepareCommandQueue(c);
-    /* ... (中略) ... */
+    // ... (中略) ...
 done:
-    /* ... (中略) ... */
+    // ... (中略) ...
     c->io_read_state = CLIENT_COMPLETED_IO;
     c->cur_tid = getCurTid();
     sendToMainThread(c, JOB_RES_READ_CLIENT);
@@ -337,7 +337,7 @@ done:
 I/O スレッドが outbox に積んだ結果は、メインスレッドが `processIOThreadsResponses` でまとめて引き取る。
 この関数はイベントループの `beforeSleep` から呼ばれ（[`src/server.c` L1844](https://github.com/valkey-io/valkey/blob/9.1.0/src/server.c#L1844)）、読み取り完了と書き出し完了を仕分ける。
 
-[`src/io_threads.c` L891-L906](https://github.com/valkey-io/valkey/blob/9.1.0/src/io_threads.c#L891-L906)
+[`src/io_threads.c` L891-L905](https://github.com/valkey-io/valkey/blob/9.1.0/src/io_threads.c#L891-L905)
 
 ```c
             for (int i = 0; i < dequeued_count; i++) {
@@ -419,13 +419,13 @@ void processClientsCommandsBatch(void) {
     }
 
     resetCommandsBatch();
-    /* ... (中略) ... */
+    // ... (中略) ...
 }
 ```
 
 先読みの本体 `prefetchCommands` は、引数オブジェクト、引数の文字列本体、そしてキーが入っているハッシュテーブルの該当領域を順にキャッシュへ引き寄せる。
 
-[`src/memory_prefetch.c` L181-L213](https://github.com/valkey-io/valkey/blob/9.1.0/src/memory_prefetch.c#L181-L213)
+[`src/memory_prefetch.c` L181-L214](https://github.com/valkey-io/valkey/blob/9.1.0/src/memory_prefetch.c#L181-L214)
 
 ```c
 static void prefetchCommands(void) {
@@ -438,7 +438,7 @@ static void prefetchCommands(void) {
             valkey_prefetch(c->argv[j]);
         }
     }
-    /* ... (中略) ... */
+    // ... (中略) ...
     /* Prefetch hashtable keys for all commands. Prefetching is beneficial only if there are more than one key. */
     if (batch->key_count > 1) {
         server.stat_total_prefetch_batches++;

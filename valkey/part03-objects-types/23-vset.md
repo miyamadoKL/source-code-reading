@@ -30,7 +30,7 @@
 
 `vset.h` の冒頭は、この構造の役割をこう説明している。
 
-[`src/vset.h` L11-L24](https://github.com/valkey-io/valkey/blob/9.1.0/src/vset.h#L11-L24)
+[`src/vset.h` L11-L19](https://github.com/valkey-io/valkey/blob/9.1.0/src/vset.h#L11-L19)
 
 ```c
 /*
@@ -346,11 +346,9 @@ static inline vsetBucket *insertToBucket_RAX(vsetGetExpiryFunc getExpiry, vsetBu
                 /* we split the bucket. go and find again a bucket to place the entry since there can be new options now. */
                 return insertToBucket_RAX(getExpiry, target, entry, expiry);
             }
-        }
         // ... (中略：満杯でなければ整列挿入) ...
     } else if (vsetBucketType(bucket) == VSET_BUCKET_HT) {
         bucket = insertToBucket_HASHTABLE(getExpiry, bucket, entry, expiry);
-    }
     // ... (中略) ...
 }
 ```
@@ -361,7 +359,7 @@ static inline vsetBucket *insertToBucket_RAX(vsetGetExpiryFunc getExpiry, vsetBu
 分割は、要素が複数の細かい窓にまたがっている場合にのみ成り立つ。
 すべての要素が同じ細かい窓に収まってしまうと、分割しても要素を分けられないので失敗する。
 
-[`src/vset.c` L1119-L1167](https://github.com/valkey-io/valkey/blob/9.1.0/src/vset.c#L1119-L1167)
+[`src/vset.c` L1119-L1172](https://github.com/valkey-io/valkey/blob/9.1.0/src/vset.c#L1119-L1172)
 
 ```c
 static bool splitBucketIfPossible(vsetBucket *parent, vsetGetExpiryFunc getExpiry, vsetBucket *bucket, long long bucket_ts, raxNode *node) {
@@ -633,7 +631,7 @@ long long vsetEstimatedEarliestExpiry(vset *set, vsetGetExpiryFunc getExpiry) {
 
 `VECTOR` 表現の配列 `pVector` も、長さと確保サイズをヘッダの中にビットフィールドで詰めて持つ。
 
-[`src/vset.c` L217-L227](https://github.com/valkey-io/valkey/blob/9.1.0/src/vset.c#L217-L227)
+[`src/vset.c` L217-L225](https://github.com/valkey-io/valkey/blob/9.1.0/src/vset.c#L217-L225)
 
 ```c
 #define PV_CARD_BITS 30

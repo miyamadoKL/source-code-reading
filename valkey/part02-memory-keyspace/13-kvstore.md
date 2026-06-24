@@ -36,7 +36,7 @@
  * all keys that map to the same hash-slot in a separate hash table within the kvstore
  * struct.
  * This enables us to easily access all keys that map to a specific hash-slot.
- */
+// ... (中略) ...
 ```
 
 ここで述べられている設計の要点は2つある。
@@ -212,7 +212,7 @@ bool kvstoreHashtableAdd(kvstore *kvs, int didx, void *entry) {
 
 テーブルの遅延確保は `createHashtableIfNeeded` が担う。
 
-[`src/kvstore.c` L190-L204](https://github.com/valkey-io/valkey/blob/9.1.0/src/kvstore.c#L190-L204)
+[`src/kvstore.c` L189-L204](https://github.com/valkey-io/valkey/blob/9.1.0/src/kvstore.c#L189-L204)
 
 ```c
 /* Create the hashtable if it does not exist and return it. */
@@ -252,7 +252,7 @@ void kvstoreHashtableRehashingStarted(hashtable *ht) {
     metadata->rehashing_node = listLast(kvs->rehashing);
     // ... (中略) ...
 }
-
+// ... (中略) ...
 void kvstoreHashtableRehashingCompleted(hashtable *ht) {
     kvstoreHashtableMetadata *metadata = (kvstoreHashtableMetadata *)hashtableMetadata(ht);
     kvstore *kvs = metadata->kvs;

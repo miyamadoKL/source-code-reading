@@ -21,12 +21,13 @@
 
 コマンドの実体は、コマンド名から `struct serverCommand` への対応である。
 `processCommand` が動き出す前に、まず「どの実装関数を呼ぶか」を名前から決めなければならない。
-この対応表の各エントリが持つ情報を [`src/server.h` L2673-L2698](https://github.com/valkey-io/valkey/blob/9.1.0/src/server.h#L2673-L2698) で確認する。
+この対応表の各エントリが持つ情報を [`src/server.h` L2673-L2728](https://github.com/valkey-io/valkey/blob/9.1.0/src/server.h#L2673-L2728) で確認する。
 
 ```c
 struct serverCommand {
     /* Declarative data */
-    const char *declared_name;    /* A string representing the command declared_name. */
+    const char *declared_name;    /* A string representing the command declared_name.
+                                   * It is a const char * for native commands and SDS for module commands. */
     // ... (中略) ...
     serverCommandProc *proc;        /* Command implementation */
     int arity;                      /* Number of arguments, it is possible to use -N to say >= N */
@@ -344,7 +345,9 @@ int commandCheckArity(struct serverCommand *cmd, int argc, sds *err) {
     if (update_command_stats && !c->flag.blocked) commandlogPushCurrentCommand(c, real_cmd);
 
     /* Send the command to clients in MONITOR mode if applicable,
-     * since some administrative commands are considered too dangerous to be shown. */
+     * since some administrative commands are considered too dangerous to be shown.
+     * Other exceptions is a client which is unblocked and retrying to process the command
+     * or we are currently in the process of loading AOF. */
     if (update_command_stats && !reprocessing_command && !(c->cmd->flags & (CMD_SKIP_MONITOR | CMD_ADMIN))) {
         robj **argv = c->original_argv ? c->original_argv : c->argv;
         int argc = c->original_argv ? c->original_argc : c->argc;
@@ -358,7 +361,10 @@ int commandCheckArity(struct serverCommand *cmd, int argc, sds *err) {
 [`src/server.c` L4010-L4038](https://github.com/valkey-io/valkey/blob/9.1.0/src/server.c#L4010-L4038)
 
 ```c
-    /* Propagate the command into the AOF and replication link. */
+    /* Propagate the command into the AOF and replication link.
+     * We never propagate EXEC explicitly, it will be implicitly
+     * propagated if needed (see propagatePendingCommands).
+     * Also, module commands take care of themselves */
     if (flags & CMD_CALL_PROPAGATE && !c->flag.prevent_prop && c->cmd->proc != execCommand &&
         !(c->cmd->flags & CMD_MODULE)) {
         int propagate_flags = PROPAGATE_NONE;
@@ -451,7 +457,8 @@ static void propagatePendingCommands(void) {
     int transaction = server.also_propagate.numops > 1;
     // ... (中略) ...
     if (transaction) {
-        /* We use dbid=-1 to indicate we do not want to replicate SELECT. */
+        /* We use dbid=-1 to indicate we do not want to replicate SELECT.
+         * It'll be inserted together with the next command (inside the MULTI) */
         propagateNow(-1, &shared.multi, 1, PROPAGATE_AOF | PROPAGATE_REPL, -1);
     }
 
