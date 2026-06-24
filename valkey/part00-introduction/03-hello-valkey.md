@@ -112,14 +112,14 @@ sequenceDiagram
     participant main as main()
     participant config as loadServerConfig()
     participant init as initServer()
-    participant loop as aeMain()
+    participant ael as aeMain()
     OS->>main: argc, argv で起動
     main->>config: 設定ファイルとオプションを渡す
     config-->>main: server.* に設定値が反映
     main->>init: サーバ構造体とサブシステムを初期化
     init-->>main: DB、イベントループ、待ち受けソケットを用意
-    main->>loop: server.el を渡して制御を移す
-    loop-->>loop: 接続とコマンドを待ち続ける
+    main->>ael: server.el を渡して制御を移す
+    ael-->>ael: 接続とコマンドを待ち続ける
 ```
 
 Valkey はコマンドの実行を単一スレッドのイベントループに集約している。

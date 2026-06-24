@@ -272,7 +272,7 @@ flowchart TD
     listpack -->|要素数と値長が<br/>閾値内| listpack
     listpack -->|要素数または値長が<br/>閾値超過| hashtable
 
-    hashtable -->|常に O(1) で追加| hashtable
+    hashtable -->|"常に O(1) で追加"| hashtable
 ```
 
 整数だけの小さな集合は intset で密に持ち、文字列が混ざるか少し大きくなれば listpack で省メモリに持ち、要素が増えれば hashtable で O(1) のアクセスに切り替える。

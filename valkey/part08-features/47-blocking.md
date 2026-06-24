@@ -416,20 +416,20 @@ static void handleClientsBlockedOnKey(readyList *rl) {
 ```mermaid
 sequenceDiagram
     participant A as クライアントA (BLPOP)
-    participant Loop as イベントループ
+    participant EL as イベントループ
     participant DB as データベース
     participant B as クライアントB (LPUSH)
 
-    A->>Loop: BLPOP mylist 0
-    Loop->>DB: mylist を参照（空）
-    Loop->>DB: blockForKeys（blocking_keys に登録）
-    Note over A,Loop: A は CLIENT_BLOCKED。応答を保留し、ループは他へ進む
-    B->>Loop: LPUSH mylist x
-    Loop->>DB: dbAdd → signalKeyAsReady
-    DB-->>Loop: ready_keys に mylist を積む
-    Note over Loop: call() 直後、handleClientsBlockedOnKeys
-    Loop->>DB: mylist を待っていた A を起こす
-    Loop->>A: BLPOP を再実行し x をポップして返す
+    A->>EL: BLPOP mylist 0
+    EL->>DB: mylist を参照（空）
+    EL->>DB: blockForKeys（blocking_keys に登録）
+    Note over A,EL: A は CLIENT_BLOCKED。応答を保留し、ループは他へ進む
+    B->>EL: LPUSH mylist x
+    EL->>DB: dbAdd → signalKeyAsReady
+    DB-->>EL: ready_keys に mylist を積む
+    Note over EL: call() 直後、handleClientsBlockedOnKeys
+    EL->>DB: mylist を待っていた A を起こす
+    EL->>A: BLPOP を再実行し x をポップして返す
 ```
 
 待ちのあいだ A は何もポーリングしていない。

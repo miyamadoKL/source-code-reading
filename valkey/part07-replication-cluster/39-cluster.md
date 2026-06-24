@@ -117,7 +117,7 @@ int clusterAddSlot(clusterNode *n, int slot) {
 
 ```mermaid
 flowchart LR
-    K["キー \"{user1000}.following\""] -->|ハッシュタグ抽出| T["user1000"]
+    K["キー 「{user1000}.following」"] -->|ハッシュタグ抽出| T["user1000"]
     T -->|crc16| C["CRC16 値"]
     C -->|"& 0x3FFF（下位14ビット）"| S["スロット番号 0..16383"]
     S -->|"slots[slot]"| N["担当の主ノード"]
