@@ -61,10 +61,13 @@ typedef struct user {
 
 ```c
 #define USER_COMMAND_BITS_COUNT 1024             /* The total number of command bits     \
-                                                   in the user structure. ... */
+                                                   in the user structure. The last valid \
+                                                   command ID we can set in the user     \
+                                                   is USER_COMMAND_BITS_COUNT-1. */
 #define USER_FLAG_ENABLED (1 << 0)               /* The user is active. */
 #define USER_FLAG_DISABLED (1 << 1)              /* The user is disabled. */
-#define USER_FLAG_NOPASS (1 << 2)                /* The user requires no password ... */
+#define USER_FLAG_NOPASS (1 << 2)                /* The user requires no password, any   \
+                                                    provided password will work. */
 // ... (中略) ...
 #define SELECTOR_FLAG_ROOT (1 << 0)        /* This is the root user permission selector. */
 #define SELECTOR_FLAG_ALLKEYS (1 << 1)     /* The user can mention any key. */
@@ -83,14 +86,15 @@ typedef struct user {
 typedef struct {
     uint32_t flags; /* See SELECTOR_FLAG_* */
     /* The bit in allowed_commands is set if this user has the right to
-     * execute this command. ... */
+     * execute this command. */
     uint64_t allowed_commands[USER_COMMAND_BITS_COUNT / 64];
     /* ... (中略：allowed_firstargs は特定の第1引数だけを許す場合に使う) ... */
     sds **allowed_firstargs;
-    list *patterns;    /* A list of allowed key patterns. ... */
-    list *channels;    /* A list of allowed Pub/Sub channel patterns. ... */
-    sds command_rules; /* A string representation ... used to regenerate the original ACL string */
-    intset *dbs;       /* Set of allowed database ids. ... */
+    list *patterns;    /* A list of allowed key patterns. */
+    list *channels;    /* A list of allowed Pub/Sub channel patterns. */
+    sds command_rules; /* A string representation of the ordered categories and commands, this
+                        * is used to regenerate the original ACL string for display. */
+    intset *dbs;       /* Set of allowed database ids. */
 } aclSelector;
 ```
 
@@ -291,8 +295,9 @@ int ACLCheckAllUserCommandPerm(user *u, struct serverCommand *cmd, robj **argv, 
     /* If there is no associated user, the connection can run anything. */
     if (u == NULL) return ACL_OK;
 
-    /* We have to pick a single error to log ...:
-     * 1) Prefer higher priority errors: DB < CMD < KEY < CHANNEL ... */
+    /* We have to pick a single error to log, the logic for picking is as follows:
+     * 1) Prefer higher priority errors: DB < CMD < KEY < CHANNEL
+     * 2) For errors of the same type, return the last (highest index) argument that failed. */
     int relevant_error = ACL_DENIED_DB;
     int local_idxptr = 0, last_idx = 0;
     // ... (中略：セレクタ間でキー抽出結果を共有するキャッシュ) ...
@@ -483,7 +488,8 @@ void authCommand(client *c) {
          * form if no password is configured. */
         if (DefaultUser->flags & USER_FLAG_NOPASS) {
             addReplyError(c, "AUTH <password> called without any password "
-                             "configured for the default user. ...");
+                             "configured for the default user. Are you sure "
+                             "your configuration is correct?");
             return;
         }
         username = shared.default_username;

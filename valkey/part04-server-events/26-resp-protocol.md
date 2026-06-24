@@ -75,6 +75,44 @@ _              null                 3            _\r\n
 バイト数を先に宣言するため、本体に `\r\n` を含む任意のバイナリを安全に運べる。
 配列やマップなどの集約型は、プレフィックスの直後に要素数を書き、続けて要素を要素数ぶん並べる。
 
+本章で読む2方向のデータフローを先に俯瞰しておく。
+要求は `querybuf` のバイト列から `argv` へ展開され、応答は `addReply` 系から出力バッファへ積まれる。
+
+```mermaid
+flowchart TB
+    subgraph REQ["要求の解析"]
+        QB["querybuf<br/>受信バイト列"]
+        PIB["parseInputBuffer<br/>reqtype 判定"]
+        MB["parseMultibulk<br/>マルチバルク解析"]
+        IL["parseInlineBuffer<br/>インライン解析"]
+        CSO["createStringObject<br/>バルク本体を複製"]
+        BIG["巨大引数の最適化<br/>querybuf を転用"]
+        ARGV["argv<br/>robj 配列"]
+        QB --> PIB
+        PIB -->|"先頭が *"| MB
+        PIB -->|"それ以外"| IL
+        MB --> CSO
+        MB -.->|"32 KiB 以上"| BIG
+        CSO --> ARGV
+        BIG --> ARGV
+        IL --> ARGV
+    end
+
+    subgraph RES["応答の生成"]
+        ADD["addReply 系<br/>型ごとの応答関数"]
+        PROTO["addReplyProto"]
+        PREP["prepareClientToWrite"]
+        BOL["_addReplyToBufferOrList"]
+        BUF["静的バッファ c.buf<br/>固定長の速い経路"]
+        LIST["応答リスト c.reply<br/>あふれた分"]
+        ADD --> PROTO
+        PROTO --> PREP
+        PROTO --> BOL
+        BOL -->|"入りきる"| BUF
+        BOL -->|"入りきらない"| LIST
+    end
+```
+
 ## 要求の解析
 
 クライアントが送るコマンドは、通常はバルク文字列の配列として届く。

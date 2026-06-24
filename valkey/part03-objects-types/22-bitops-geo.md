@@ -487,7 +487,9 @@ uint8_t geohashEstimateStepsByRadius(double range_meters, double lat) {
     }
     step -= 2; /* Make sure range is included in most of the base cases. */
 
-    /* Wider range towards the poles... */
+    /* Wider range towards the poles... Note: it is possible to do better
+     * than this approximation by computing the distance between meridians
+     * at this latitude, but this does the trick for now. */
     if (lat > 66 || lat < -66) {
         step--;
         if (lat > 80 || lat < -80) step--;

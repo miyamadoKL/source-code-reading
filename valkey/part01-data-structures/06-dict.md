@@ -203,7 +203,7 @@ static void rehashEntriesInBucketAtIndex(dict *d, uint64_t idx) {
         if (d->ht_size_exp[1] > d->ht_size_exp[0]) {
             h = dictHashKey(d, key) & DICTHT_SIZE_MASK(d->ht_size_exp[1]);
         } else {
-            /* We're shrinking the table. ... */
+            /* We're shrinking the table. */
             h = idx & DICTHT_SIZE_MASK(d->ht_size_exp[1]);
         }
         dictSetNext(de, d->ht_table[1][h]);

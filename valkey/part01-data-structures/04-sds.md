@@ -45,7 +45,7 @@ SDS のヘッダは文字列長に応じて5種類を使い分ける。
 これが SDS の省メモリ最適化の一つめである。
 短い文字列には小さなヘッダを、長い文字列には大きなヘッダを割り当て、長さフィールドが消費するバイト数を必要最小限に抑える。
 
-[`src/sds.h` L54-L81](https://github.com/valkey-io/valkey/blob/9.1.0/src/sds.h#L54-L81)
+[`src/sds.h` L52-L81](https://github.com/valkey-io/valkey/blob/9.1.0/src/sds.h#L52-L81)
 
 ```c
 /* Note: sdshdr5 is never used, we just access the flags byte directly.

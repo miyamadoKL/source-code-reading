@@ -47,7 +47,7 @@
  * 2) It unblocks the client by unsetting the CLIENT_BLOCKED flag.
  * 3) It puts the client into a list of just unblocked clients that are
  *    processed ASAP in the beforeSleep() event loop callback, so that
- *    if there is some query buffer to process, we do it. ...
+ *    if there is some query buffer to process, we do it.
  * ... (中略) ...
  */
 ```
@@ -106,7 +106,7 @@ void blockingPopGenericCommand(client *c, robj **keys, int numkeys, int where, i
         /* ... (中略：応答を書き、[LR]POP として伝播) ... */
         return;
     }
-    /* ... */
+    // ... (中略：ブロックの判断は次のコードへ続く) ...
 }
 ```
 
@@ -248,7 +248,8 @@ static void signalKeyAsReadyLogic(serverDb *db, robj *key, int type, int deleted
         return;
     }
     if (!server.blocked_clients_by_type[btype] && !server.blocked_clients_by_type[BLOCKED_MODULE]) {
-        /* No clients block on this type. ... */
+        /* No clients block on this type. */
+        // ... (中略：BLOCKED_MODULE の補足コメント) ...
         return;
     }
     /* ... (中略：deleted の分岐) ... */
@@ -311,13 +312,14 @@ void handleClientsBlockedOnKeys(void) {
     static int in_handling_blocked_clients = 0;
     if (in_handling_blocked_clients) return;
     in_handling_blocked_clients = 1;
-    /* ... */
+    // ... (中略：also_propagate の状態確認と BLMOVE の連鎖に関するコメント) ...
     while (listLength(server.ready_keys) != 0) {
         list *l;
 
         /* Point server.ready_keys to a fresh list and save the current one
          * locally. This way as we run the old list we are free to call
-         * signalKeyAsReady() ... */
+         * signalKeyAsReady() that may push new elements in server.ready_keys
+         * when handling clients blocked into BLMOVE. */
         l = server.ready_keys;
         server.ready_keys = listCreate();
 
@@ -325,7 +327,8 @@ void handleClientsBlockedOnKeys(void) {
             listNode *ln = listFirst(l);
             readyList *rl = ln->value;
 
-            /* First of all remove this key from db->ready_keys ... */
+            /* First of all remove this key from db->ready_keys so that
+             * we can safely call signalKeyAsReady() against this key. */
             dictDelete(rl->db->ready_keys, rl->key);
 
             handleClientsBlockedOnKey(rl);
@@ -495,7 +498,8 @@ void unblockClient(client *c, int queue_for_reprocessing) {
     /* We count blocked client stats on regular clients and not on module clients */
     if (!c->flag.module) server.blocked_clients--;
     server.blocked_clients_by_type[c->bstate->btype]--;
-    /* Clear the flags, and put the client in the unblocked list ... */
+    /* Clear the flags, and put the client in the unblocked list so that
+     * we'll process new commands in its query buffer ASAP. */
     c->flag.blocked = 0;
     c->bstate->btype = BLOCKED_NONE;
     c->bstate->unblock_on_nokey = 0;
@@ -520,9 +524,9 @@ void blockedBeforeSleep(void) {
     if (listLength(server.clients_waiting_acks)) processClientsWaitingReplicas();
 
     /* Try to process blocked clients every once in while.
-     * ... */
+     * ... (中略：モジュールのタイマーコールバックからの起床に関する説明) ... */
     handleClientsBlockedOnKeys();
-    /* ... */
+    // ... (中略：モジュールがブロックを解除したクライアントの処理) ...
     /* Try to process pending commands for clients that were just unblocked. */
     if (listLength(server.unblocked_clients)) processUnblockedClients();
 }

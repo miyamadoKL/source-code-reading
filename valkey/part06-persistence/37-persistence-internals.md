@@ -264,7 +264,7 @@ struct _rio {
     off_t (*tell)(struct _rio *);
     int (*flush)(struct _rio *);
     /* The update_cksum method if not NULL is used to compute the checksum of
-     * all the data that was read or written so far. ... */
+     * all the data that was read or written so far. */
     void (*update_cksum)(struct _rio *, const void *buf, size_t len);
 
     /* The current checksum and flags (see RIO_FLAG_*) */

@@ -284,6 +284,21 @@ HAVE_MALLOC_SIZE 版 (jemalloc など。PREFIX_SIZE = 0)
   サイズは前置き領域から読み出す
 ```
 
+確保時の分岐を流れで示すと次のようになる。
+
+```mermaid
+flowchart TD
+    A["zmalloc(size)"] --> B["ztrymalloc_usable_internal"]
+    B --> C["malloc(MALLOC_MIN_SIZE(size) + PREFIX_SIZE)"]
+    C --> D{"HAVE_MALLOC_SIZE か"}
+    D -- "問い合わせ可能（jemalloc 等）" --> E["zmalloc_size(ptr) で実確保量を取得"]
+    E --> F["update_zmalloc_stat_alloc で加算"]
+    F --> G["malloc の先頭をそのまま返す<br/>PREFIX_SIZE は 0"]
+    D -- "問い合わせ不可" --> H["先頭の size_t にデータ部サイズを記録"]
+    H --> I["update_zmalloc_stat_alloc で size + PREFIX_SIZE を加算"]
+    I --> J["先頭 + PREFIX_SIZE を返す"]
+```
+
 なお、サイズを問い合わせる版でも利用者がサイズを知りたい場面はある。
 ヘッダ `zmalloc.h` には、問い合わせる版のときに `zmalloc_usable_size(p)` を `zmalloc_size(p)` へ展開する定義と、確保サイズより大きい領域まで使うことをコンパイラに伝える `extend_to_usable` の宣言が置かれている。
 

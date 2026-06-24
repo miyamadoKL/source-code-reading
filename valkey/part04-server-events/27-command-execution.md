@@ -26,7 +26,7 @@
 ```c
 struct serverCommand {
     /* Declarative data */
-    const char *declared_name;    /* A string representing the command declared_name. ... */
+    const char *declared_name;    /* A string representing the command declared_name. */
     // ... (中略) ...
     serverCommandProc *proc;        /* Command implementation */
     int arity;                      /* Number of arguments, it is possible to use -N to say >= N */
@@ -344,7 +344,7 @@ int commandCheckArity(struct serverCommand *cmd, int argc, sds *err) {
     if (update_command_stats && !c->flag.blocked) commandlogPushCurrentCommand(c, real_cmd);
 
     /* Send the command to clients in MONITOR mode if applicable,
-     * since some administrative commands are considered too dangerous to be shown. ... */
+     * since some administrative commands are considered too dangerous to be shown. */
     if (update_command_stats && !reprocessing_command && !(c->cmd->flags & (CMD_SKIP_MONITOR | CMD_ADMIN))) {
         robj **argv = c->original_argv ? c->original_argv : c->argv;
         int argc = c->original_argv ? c->original_argc : c->argc;
@@ -358,7 +358,7 @@ int commandCheckArity(struct serverCommand *cmd, int argc, sds *err) {
 [`src/server.c` L4010-L4038](https://github.com/valkey-io/valkey/blob/9.1.0/src/server.c#L4010-L4038)
 
 ```c
-    /* Propagate the command into the AOF and replication link. ... */
+    /* Propagate the command into the AOF and replication link. */
     if (flags & CMD_CALL_PROPAGATE && !c->flag.prevent_prop && c->cmd->proc != execCommand &&
         !(c->cmd->flags & CMD_MODULE)) {
         int propagate_flags = PROPAGATE_NONE;
@@ -387,7 +387,32 @@ int commandCheckArity(struct serverCommand *cmd, int argc, sds *err) {
 この機構が効く理由は、伝播の量を意味のある変更に絞れる点にある。
 AOF にもレプリカにも、実際に状態を変えた操作だけを送れば、変更後の状態は再現できる。
 読み取りや空振りまで送ればトラフィックとファイルサイズが膨らむが、`dirty` を基準にすればそれを避けられる。
-書き込みコマンドであっても、結果として何も変わらなければ流さない、という判定が `flags` ではなく実行結果（`dirty`）に基づく点が要である。
+書き込みコマンドであっても、結果として何も変わらなければ既定では流さない。
+この絞り込みが実行結果（`dirty`）に基づく点が、伝播量を抑える基本の仕組みである。
+
+ただし `dirty` だけが伝播の条件ではない。
+先の引用にあるとおり、コマンドの実装が `force_repl` や `force_aof` を立てた場合は、`dirty` が増えていなくても該当する経路へ伝播される。
+データを書き換えなくても、レプリカや AOF で同じ状態や副作用を再現するために伝播が要る操作のための例外である。
+
+たとえば空のデータベースに対する `FLUSHDB` は、実際には1件も消さないので `dirty` が増えない。
+それでもレプリカや AOF に削除操作を残さなければ状態が食い違うため、`forceCommandPropagation` で伝播を強制する。
+
+[`src/db.c` L839-L841](https://github.com/valkey-io/valkey/blob/9.1.0/src/db.c#L839-L841)
+
+```c
+    /* Without the forceCommandPropagation, when DB was already empty,
+     * FLUSHDB will neither be replicated nor put into the AOF. */
+    forceCommandPropagation(c, PROPAGATE_REPL | PROPAGATE_AOF);
+```
+
+`PUBLISH` も、非クラスタ構成ではメッセージをレプリカ側の購読者へ届けるために、レプリカ伝播を強制する。
+
+[`src/pubsub.c` L656-L657](https://github.com/valkey-io/valkey/blob/9.1.0/src/pubsub.c#L656-L657)
+
+```c
+    int receivers = pubsubPublishMessageAndPropagateToCluster(c->argv[1], c->argv[2], 0);
+    if (!server.cluster_enabled) forceCommandPropagation(c, PROPAGATE_REPL);
+```
 
 伝播の入口は `alsoPropagate` で、流すコマンドを保留キュー `server.also_propagate` に積むだけである。
 
@@ -426,7 +451,7 @@ static void propagatePendingCommands(void) {
     int transaction = server.also_propagate.numops > 1;
     // ... (中略) ...
     if (transaction) {
-        /* We use dbid=-1 to indicate we do not want to replicate SELECT. ... */
+        /* We use dbid=-1 to indicate we do not want to replicate SELECT. */
         propagateNow(-1, &shared.multi, 1, PROPAGATE_AOF | PROPAGATE_REPL, -1);
     }
 
