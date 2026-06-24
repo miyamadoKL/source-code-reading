@@ -1,6 +1,7 @@
 # 第23章 Get の全体像
 
 > **本章で読むソース**
+>
 > - [`db/db_impl/db_impl.cc`](https://github.com/facebook/rocksdb/blob/v11.1.1/db/db_impl/db_impl.cc)
 > - [`db/db_impl/db_impl.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/db/db_impl/db_impl.h)
 > - [`table/get_context.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/table/get_context.h)

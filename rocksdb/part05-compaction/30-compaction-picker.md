@@ -1,6 +1,7 @@
 # 第30章 CompactionPicker
 
 > **本章で読むソース**
+>
 > - [`db/compaction/compaction_picker.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_picker.h)
 > - [`db/compaction/compaction_picker.cc`](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_picker.cc)
 > - [`db/compaction/compaction_picker_level.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_picker_level.h)

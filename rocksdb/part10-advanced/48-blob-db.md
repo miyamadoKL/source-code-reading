@@ -1,6 +1,7 @@
 # 第48章 BlobDB（KV 分離）
 
 > **本章で読むソース**
+>
 > - [`db/blob/blob_index.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/db/blob/blob_index.h)
 > - [`db/blob/blob_log_format.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/db/blob/blob_log_format.h)
 > - [`db/blob/blob_file_builder.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/db/blob/blob_file_builder.h)
@@ -585,4 +586,5 @@ class BlobFileGarbage {
 - [第26章 イテレータ](../part04-read-path/26-iterators.md)
 - [第20章 圧縮](../part03-sst/20-compression.md)
 </content>
+
 </invoke>

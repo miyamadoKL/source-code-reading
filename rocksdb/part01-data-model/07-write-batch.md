@@ -1,6 +1,7 @@
 # 第7章 WriteBatch
 
 > **本章で読むソース**
+>
 > - [`include/rocksdb/write_batch.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/write_batch.h)
 > - [`include/rocksdb/write_batch_base.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/write_batch_base.h)
 > - [`db/write_batch_internal.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/db/write_batch_internal.h)

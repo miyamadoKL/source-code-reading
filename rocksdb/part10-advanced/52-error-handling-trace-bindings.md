@@ -1,6 +1,7 @@
 # 第52章 エラーハンドリング・トレース・言語バインディング
 
 > **本章で読むソース**
+>
 > - [`include/rocksdb/status.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/status.h)
 > - [`include/rocksdb/io_status.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/io_status.h)
 > - [`db/error_handler.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/db/error_handler.h)

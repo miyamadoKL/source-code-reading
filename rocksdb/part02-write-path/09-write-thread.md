@@ -1,6 +1,7 @@
 # 第9章 WriteThread とグループコミット
 
 > **本章で読むソース**
+>
 > - [`db/write_thread.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/db/write_thread.h)
 > - [`db/write_thread.cc`](https://github.com/facebook/rocksdb/blob/v11.1.1/db/write_thread.cc)
 > - [`include/rocksdb/options.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/options.h)

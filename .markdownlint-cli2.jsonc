@@ -1,0 +1,21 @@
+{
+  // markdownlint-cli2 設定。CI(GitHub Actions)とローカル(npx markdownlint-cli2)で共有する。
+  // 詳細: https://github.com/DavidAnson/markdownlint-cli2
+  "globs": [
+    "README.md",
+    "rocksdb/**/*.md"
+  ],
+  "config": {
+    "default": true,
+    // MD013(line-length): 日本語の「一文一行」スタイルのため行長制限は設けない。
+    "MD013": false,
+    // MD029(ol-prefix): 目次は章番号(1〜52)を部見出しをまたいで連番にするため無効化。
+    "MD029": false,
+    // MD060(table-column-style): 全角文字を含む表は桁揃えが定まらないため無効化。
+    "MD060": false,
+    // MD024(no-duplicate-heading): 親見出しが異なれば同名の小見出しを許容する。
+    "MD024": {
+      "siblings_only": true
+    }
+  }
+}

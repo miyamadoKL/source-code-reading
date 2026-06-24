@@ -1,6 +1,7 @@
 # 第42章 メモリ割り当てとアリーナ
 
 > **本章で読むソース**
+>
 > - [`memory/allocator.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/memory/allocator.h)
 > - [`memory/arena.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/memory/arena.h)
 > - [`memory/arena.cc`](https://github.com/facebook/rocksdb/blob/v11.1.1/memory/arena.cc)

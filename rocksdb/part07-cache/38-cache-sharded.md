@@ -1,6 +1,7 @@
 # 第38章 Cache 抽象と Sharded Cache
 
 > **本章で読むソース**
+>
 > - [`include/rocksdb/cache.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/cache.h)
 > - [`include/rocksdb/advanced_cache.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/advanced_cache.h)
 > - [`cache/sharded_cache.h`](https://github.com/facebook/rocksdb/blob/v11.1.1/cache/sharded_cache.h)
