@@ -18,7 +18,8 @@ RocksDB のデータベースディレクトリには、SST、MANIFEST、WAL な
 
 ## 前提
 
-- [第24章 Version と SuperVersion](../part04-read-path/24-version-superversion.md)：どの SST が「生きている」かは Version が決める。本章の不要ファイル検出はこの参照関係を前提とする。
+- [第24章 Version と SuperVersion](../part04-read-path/24-version-superversion.md)：どの SST が「生きている」かは Version が決める。
+  本章の不要ファイル検出はこの参照関係を前提とする。
 - [第34章 MANIFEST と VersionEdit](34-manifest-versionedit.md)：コンパクションやフラッシュによる Version の差し替えがどう記録されるか。
 
 ## ファイル名はそのまま種別と世代を表す
@@ -49,7 +50,7 @@ static std::string MakeFileName(const std::string& name, uint64_t number,
 SST は拡張子 `sst`、WAL は `log` を使う。
 これらは同じヘルパーに拡張子の文字列を渡すだけで作られる。
 
-[`file/filename.cc` L78-L86, L113-L119](https://github.com/facebook/rocksdb/blob/v11.1.1/file/filename.cc#L78-L119)
+[`file/filename.cc` L78-L81, L113-L115](https://github.com/facebook/rocksdb/blob/v11.1.1/file/filename.cc#L78-L115)
 
 ```cpp
 std::string LogFileName(const std::string& name, uint64_t number) {
@@ -68,7 +69,7 @@ std::string MakeTableFileName(const std::string& path, uint64_t number) {
 MANIFEST は番号付きだが拡張子を持たず、`MANIFEST-` という接頭辞を付ける形をとる。
 RocksDB のコード内では MANIFEST を「ディスクリプタファイル」とも呼ぶ。
 
-[`file/filename.cc` L166-L176](https://github.com/facebook/rocksdb/blob/v11.1.1/file/filename.cc#L166-L176)
+[`file/filename.cc` L166-L172](https://github.com/facebook/rocksdb/blob/v11.1.1/file/filename.cc#L166-L172)
 
 ```cpp
 std::string DescriptorFileName(uint64_t number) {
@@ -190,7 +191,7 @@ bool ParseFileName(const std::string& fname, uint64_t* number,
 まだ書き込み中のファイルを誤って消さないよう、関数の冒頭で `min_pending_output` を記録する。
 これはコンパクションやフラッシュがこれから書き出す予定の最小ファイル番号であり、この番号以上の SST は出力途中とみなして保護する。
 
-[`db/db_impl/db_impl_files.cc` L156-L166](https://github.com/facebook/rocksdb/blob/v11.1.1/db/db_impl/db_impl_files.cc#L156-L166)
+[`db/db_impl/db_impl_files.cc` L156-L165](https://github.com/facebook/rocksdb/blob/v11.1.1/db/db_impl/db_impl_files.cc#L156-L165)
 
 ```cpp
   job_context->min_pending_output = MinObsoleteSstNumberToKeep();
@@ -292,7 +293,7 @@ CURRENT、LOCK、IDENTITY のような単一ファイルは常に残す。
 
 `DeleteObsoleteFileImpl` は、SST、Blob、WAL についてはレート制限を効かせる削除経路 `DeleteDBFile` を呼び、それ以外は即時削除する。
 
-[`db/db_impl/db_impl_files.cc` L377-L385](https://github.com/facebook/rocksdb/blob/v11.1.1/db/db_impl/db_impl_files.cc#L377-L385)
+[`db/db_impl/db_impl_files.cc` L376-L385](https://github.com/facebook/rocksdb/blob/v11.1.1/db/db_impl/db_impl_files.cc#L376-L385)
 
 ```cpp
   Status file_deletion_status;
@@ -381,7 +382,7 @@ trash 化したファイルはキューに積まれ、`BackgroundEmptyTrash` を
 レート制限の核はこのループにある。
 削除したバイト数を積算し、設定レートで割って「ここまで消すのにかかるべき時間」を求め、その時刻まで待つ。
 
-[`file/delete_scheduler.cc` L325-L343](https://github.com/facebook/rocksdb/blob/v11.1.1/file/delete_scheduler.cc#L325-L343)
+[`file/delete_scheduler.cc` L325-L339](https://github.com/facebook/rocksdb/blob/v11.1.1/file/delete_scheduler.cc#L325-L339)
 
 ```cpp
       // Apply penalty if necessary
@@ -408,7 +409,7 @@ trash 化したファイルはキューに積まれ、`BackgroundEmptyTrash` を
 大きなファイルは、一度の `unlink` で全ブロックを解放させず、`ftruncate` で少しずつ縮める。
 ファイルサイズが `bytes_max_delete_chunk_`（既定64MB）を超えるとき、末尾からチャンク分だけ切り詰めて未完了として残し、次の周回で続きを処理する。
 
-[`file/delete_scheduler.cc` L378-L408](https://github.com/facebook/rocksdb/blob/v11.1.1/file/delete_scheduler.cc#L378-L408)
+[`file/delete_scheduler.cc` L378-L403](https://github.com/facebook/rocksdb/blob/v11.1.1/file/delete_scheduler.cc#L378-L403)
 
 ```cpp
     bool need_full_delete = true;
@@ -514,7 +515,7 @@ bool SstFileManagerImpl::IsMaxAllowedSpaceReachedIncludingCompactions() {
 コンパクションは入力 SST を読みつつ出力 SST を書くので、一時的に両方が並存する。
 そのぶんの容量を `cur_compactions_reserved_size_` として予約し、上限を超えるならコンパクションを始めさせない。
 
-[`file/sst_file_manager_impl.cc` L173-L179](https://github.com/facebook/rocksdb/blob/v11.1.1/file/sst_file_manager_impl.cc#L173-L179)
+[`file/sst_file_manager_impl.cc` L172-L179](https://github.com/facebook/rocksdb/blob/v11.1.1/file/sst_file_manager_impl.cc#L172-L179)
 
 ```cpp
   // Update cur_compactions_reserved_size_ so concurrent compaction
@@ -532,11 +533,14 @@ bool SstFileManagerImpl::IsMaxAllowedSpaceReachedIncludingCompactions() {
 
 ## まとめ
 
-- ファイル番号は単一カウンタから払い出され、SST（`番号.sst`）、WAL（`番号.log`）、MANIFEST（`MANIFEST-番号`）が同じ番号空間を共有する。CURRENT、LOCK、IDENTITY、LOG は固定名を持つ。
+- ファイル番号は単一カウンタから払い出され、SST（`番号.sst`）、WAL（`番号.log`）、MANIFEST（`MANIFEST-番号`）が同じ番号空間を共有する。
+  CURRENT、LOCK、IDENTITY、LOG は固定名を持つ。
 - `ParseFileName` はディレクトリ内の名前を種別と番号へ戻す唯一の解釈点であり、不要ファイル検出と削除はこの解釈に乗って種別ごとに振り分けられる。
-- `FindObsoleteFiles` は「どの Version からも参照されていない」ことを不要の条件とする。Version の参照カウントが切れて初めて、その Version だけが参照していた SST が不要候補に落ちる。
+- `FindObsoleteFiles` は「どの Version からも参照されていない」ことを不要の条件とする。
+  Version の参照カウントが切れて初めて、その Version だけが参照していた SST が不要候補に落ちる。
 - 読んでいるイテレータがある SST は、その Version が `sst_live_set` に載るため `PurgeObsoleteFiles` で保護され、消えない。
-- `DeleteScheduler` は削除をいったん trash へのリネームに置き換え、`BackgroundEmptyTrash` が累積バイト数を `rate_bytes_per_sec` に合わせてならしながら消す。大量削除や巨大ファイル削除による I/O スパイクを避けるのが最適化の核である。
+- `DeleteScheduler` は削除をいったん trash へのリネームに置き換え、`BackgroundEmptyTrash` が累積バイト数を `rate_bytes_per_sec` に合わせてならしながら消す。
+  大量削除や巨大ファイル削除による I/O スパイクを避けるのが最適化の核である。
 - `SstFileManager` は SST と Blob の総サイズを追い、trash 比率の判定とディスク上限の超過検出に使う。
 
 ## 関連する章

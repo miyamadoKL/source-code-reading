@@ -13,7 +13,7 @@
 ## この章の狙い
 
 第46章で見た `FileSystem` の抽象の上に、RocksDB は生のファイルを直接は触らない層を一段重ねている。
-本章では、その上位ラッパである `WritableFileWriter` と `RandomAccessFileReader`、そして読みを先回りする `FilePrefetchBuffer` を読む。
+本章では、その上位ラッパーである `WritableFileWriter` と `RandomAccessFileReader`、そして読みを先回りする `FilePrefetchBuffer` を読む。
 小さな書き込みをまとめてからディスクへ送る仕組みと、スキャンやコンパクションの読みを先読みで効率化する仕組みを、実コードの行を追って理解する。
 
 ## 前提
@@ -22,7 +22,7 @@
 - [第21章 チェックサム](../part03-sst/21-checksum.md)（書きながら計算するチェックサムの中身）
 - [第44章 レートリミッタ](../part08-concurrency/44-rate-limiter.md)（I/O をならすトークン制御）
 
-## なぜ上位ラッパを通すのか
+## なぜ上位ラッパーを通すのか
 
 `FileSystem` が返す `FSWritableFile` や `FSRandomAccessFile` は、OS のファイルに一対一で対応する素朴なインターフェースである。
 ここに `Append` を一回呼ぶたびにシステムコールが一回飛ぶと考えてよい。
@@ -145,7 +145,7 @@ flowchart TD
 積んだデータが実際にファイルへ向かうのは `Flush` の中である。
 `Flush` はバッファに中身があればダイレクト I/O かバッファ I/O かで書き出し方を分岐し、その後に下位ファイルの `Flush`（OS キャッシュへの送り出し）を呼ぶ。
 
-[`file/writable_file_writer.cc` L368-L389](https://github.com/facebook/rocksdb/blob/v11.1.1/file/writable_file_writer.cc#L368-L389)
+[`file/writable_file_writer.cc` L368-L384](https://github.com/facebook/rocksdb/blob/v11.1.1/file/writable_file_writer.cc#L368-L384)
 
 ```cpp
   if (buf_.CurrentSize() > 0) {
@@ -222,7 +222,7 @@ flowchart TD
 端数を含むバッファ全体をゼロでページ境界までパディングし（L807）、アライン済みの位置 `next_write_offset_` から `PositionedAppend` で書く。
 書き込みが成功すると、尾部をバッファ先頭へ詰め直し、次回の書き込み開始位置を本体分だけ進める。
 
-[`file/writable_file_writer.cc` L868-L881](https://github.com/facebook/rocksdb/blob/v11.1.1/file/writable_file_writer.cc#L868-L881)
+[`file/writable_file_writer.cc` L868-L880](https://github.com/facebook/rocksdb/blob/v11.1.1/file/writable_file_writer.cc#L868-L880)
 
 ```cpp
   if (s.ok()) {
@@ -264,7 +264,7 @@ void WritableFileWriter::UpdateFileChecksum(const Slice& data) {
 そこを通る間にチェックサムを更新しておけば、後でファイル全体を読み直して計算する必要がない。
 最終値は `Close` の中で確定する。
 
-[`file/writable_file_writer.cc` L344-L348](https://github.com/facebook/rocksdb/blob/v11.1.1/file/writable_file_writer.cc#L344-L348)
+[`file/writable_file_writer.cc` L344-L349](https://github.com/facebook/rocksdb/blob/v11.1.1/file/writable_file_writer.cc#L344-L349)
 
 ```cpp
   if (s.ok()) {
@@ -315,7 +315,7 @@ IOStatus WritableFileWriter::Sync(const IOOptions& opts, bool use_fsync) {
 一定量を書くたびに古い範囲だけを少しずつ同期し、書き込みのバースト時に大量のダーティページが一度に書き戻されるのを避ける。
 直近 1MB は同期対象から外している。
 
-[`file/writable_file_writer.cc` L416-L432](https://github.com/facebook/rocksdb/blob/v11.1.1/file/writable_file_writer.cc#L416-L432)
+[`file/writable_file_writer.cc` L416-L430](https://github.com/facebook/rocksdb/blob/v11.1.1/file/writable_file_writer.cc#L416-L430)
 
 ```cpp
   // We try to avoid sync to the last 1MB of data. For two reasons:
@@ -468,7 +468,7 @@ bool TryMerge(FSReadRequest* dest, const FSReadRequest& src) {
 要求範囲がバッファに全部あればヒットで、その場限りでデータを `Slice` として返す。
 足りなければ内部で `PrefetchInternal` を呼び、要求分に加えて先読み量を読んでからバッファ越しに返す。
 
-[`file/file_prefetch_buffer.cc` L850-L885](https://github.com/facebook/rocksdb/blob/v11.1.1/file/file_prefetch_buffer.cc#L850-L885)
+[`file/file_prefetch_buffer.cc` L850-L879](https://github.com/facebook/rocksdb/blob/v11.1.1/file/file_prefetch_buffer.cc#L850-L879)
 
 ```cpp
   if (explicit_prefetch_submitted_ ||
@@ -637,10 +637,10 @@ flowchart TD
 要求されたデータが手前のバッファに溜まっている間に、後続バッファの読みがバックグラウンドで進む。
 読み手がそこへ到達するころにはデータが揃っているので、I/O の待ち時間が読みの処理に隠れる。
 
-### コンパクション読み向けの常時先読みラッパ
+### コンパクション読み向けの常時先読みラッパー
 
 先読みのもう一つの入口が `NewReadaheadRandomAccessFile` である。
-これは読みのたびに必ず追加データを先読みするラッパで、主にコンパクションのテーブル読みで使う。
+これは読みのたびに必ず追加データを先読みするラッパーで、主にコンパクションのテーブル読みで使う。
 
 [`file/readahead_raf.h` L24-L28](https://github.com/facebook/rocksdb/blob/v11.1.1/file/readahead_raf.h#L24-L28)
 
@@ -670,11 +670,15 @@ std::unique_ptr<FSRandomAccessFile> NewReadaheadRandomAccessFile(
 
 ## まとめ
 
-- RocksDB は生のファイルを直接は触らず、`WritableFileWriter` と `RandomAccessFileReader` という上位ラッパを通す。これらはバッファリング、ダイレクト I/O のアライン処理、レート制御、チェックサム、統計を一箇所に集約する。
-- `WritableFileWriter` は小さな `Append` を内部バッファに溜め、満杯まで埋めてからまとめて書く。書き込みがバッファ境界に揃うほどファイルシステムが速いことを利用した最適化である。
-- ダイレクト I/O では本体をページ境界まで書き、端数の尾部はゼロ埋めして書いてから次回バッファ先頭へ詰め直す（`RefitTail`）。これで書き込みオフセットを常にブロック境界に保つ。
+- RocksDB は生のファイルを直接は触らず、`WritableFileWriter` と `RandomAccessFileReader` という上位ラッパーを通す。
+  これらはバッファリング、ダイレクト I/O のアライン処理、レート制御、チェックサム、統計を一箇所に集約する。
+- `WritableFileWriter` は小さな `Append` を内部バッファに溜め、満杯まで埋めてからまとめて書く。
+  書き込みがバッファ境界に揃うほどファイルシステムが速いことを利用した最適化である。
+- ダイレクト I/O では本体をページ境界まで書き、端数の尾部はゼロ埋めして書いてから次回バッファ先頭へ詰め直す（`RefitTail`）。
+  これで書き込みオフセットを常にブロック境界に保つ。
 - `RandomAccessFileReader` はチェックサム検証が機能する前提（`scratch[0]` を汚す）を守り、`MultiRead` ではアライン拡張した要求を `TryMerge` で統合して一括読みする。
-- `FilePrefetchBuffer` は連続アクセスを検知して先読み量を倍々に広げ、非連続なら縮める。`PrefetchAsync` は後続バッファをバックグラウンドで埋め、I/O 待ちを読みの処理に隠す。
+- `FilePrefetchBuffer` は連続アクセスを検知して先読み量を倍々に広げ、非連続なら縮める。
+  `PrefetchAsync` は後続バッファをバックグラウンドで埋め、I/O 待ちを読みの処理に隠す。
 - コンパクション読みは `NewReadaheadRandomAccessFile` で常時先読みし、レイテンシ感度が低いため非同期先読みは使わない。
 
 ## 関連する章

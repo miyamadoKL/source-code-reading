@@ -48,7 +48,7 @@
 
 `Prepare` の入口は、`mutex_` を保持していることを表明したうえで、サブコンパクションを形成すべきなら境界を計算する。
 
-[`db/compaction/compaction_job.cc` L262-L302](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_job.cc#L262-L302)
+[`db/compaction/compaction_job.cc` L262-L294](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_job.cc#L262-L294)
 
 ```cpp
 void CompactionJob::Prepare(
@@ -112,7 +112,7 @@ Status CompactionJob::Run() {
 実体は `RunSubcompactions` にある。
 2 番目以降のサブコンパクションをスレッドプールへ投げ、先頭の一つだけは呼び出し元スレッド自身で処理する。
 
-[`db/compaction/compaction_job.cc` L722-L737](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_job.cc#L722-L737)
+[`db/compaction/compaction_job.cc` L722-L732](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_job.cc#L722-L732)
 
 ```cpp
   // Launch a thread for each of subcompactions 1...num_threads-1
@@ -137,7 +137,7 @@ Status CompactionJob::Run() {
 `Run` が終わると、出力 SST はディスク上に存在するが、まだ LSM ツリーの一部ではない。
 `Install` が `mutex_` を保持して呼ばれ、入力ファイルの削除と出力ファイルの追加を一つの `VersionEdit` にまとめる。
 
-[`db/compaction/compaction_job.cc` L2299-L2312](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_job.cc#L2299-L2312)
+[`db/compaction/compaction_job.cc` L2299-L2308](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_job.cc#L2299-L2308)
 
 ```cpp
   VersionEdit* const edit = compaction->edit();
@@ -260,6 +260,7 @@ flowchart LR
     // Add current compaction_iterator key to target compaction output, if the
     // output file needs to be close or open, it will call the `open_file_func`
     // and `close_file_func`.
+    // ...
     status = sub_compact->AddToOutput(*c_iter, use_proximal_output,
                                       open_file_func, close_file_func,
                                       prev_iter_output_internal_key);
@@ -569,7 +570,7 @@ Merge の規則そのものは第33章で扱う。
 範囲削除を一件ずつの削除へ展開せず、覆っているかどうかを問い合わせる形にしてあるので、広い範囲の削除でも判定が安価である。
 集約器の実体は、各 SST の範囲削除を共通の開始終了境界に整列した断片へ分割した `FragmentedRangeTombstoneList` の上に立つ。
 
-[`db/range_tombstone_fragmenter.h` L22-L24](https://github.com/facebook/rocksdb/blob/v11.1.1/db/range_tombstone_fragmenter.h#L22-L24)
+[`db/range_tombstone_fragmenter.h` L22-L23](https://github.com/facebook/rocksdb/blob/v11.1.1/db/range_tombstone_fragmenter.h#L22-L23)
 
 ```cpp
   // A compact representation of a "stack" of range tombstone fragments, which
@@ -628,10 +629,13 @@ Merge の規則そのものは第33章で扱う。
 
 - `CompactionJob` は `Prepare`（区間分割と保持境界の計算）、`Run`（サブコンパクションを並行に走らせ出力 SST を書く）、`Install`（入出力を一つの `VersionEdit` で原子的に差し替え）の三段階で動く。
 - `ProcessKeyValueCompaction` は、入力 SST 群をマージした内部キー順のイテレータを `CompactionIterator` で包み、残すと判定されたキーだけを `TableBuilder` へ渡す一方向走査である。
-- 規則 A は、同一ユーザーキーで新しい版と同じスナップショット区間に入る古い版を捨てる。これが空間回収の中心である。
-- 規則 B は、覆う相手を失い、最古のスナップショットより前に確定し、出力レベルより下に同一キーが存在しない削除マーカーを捨てる。最下層では「後続の版がなければ捨てる」へ簡約される。
+- 規則 A は、同一ユーザーキーで新しい版と同じスナップショット区間に入る古い版を捨てる。
+  これが空間回収の中心である。
+- 規則 B は、覆う相手を失い、最古のスナップショットより前に確定し、出力レベルより下に同一キーが存在しない削除マーカーを捨てる。
+  最下層では「後続の版がなければ捨てる」へ簡約される。
 - `SingleDelete` は対応する PUT との対消滅を狙うが、古いスナップショットがあるときは衝突検査の痕跡として残し、PUT は値を空にして将来の回収に備える。
-- スナップショットの区間という単位が、空間回収と MVCC の正しさを同時に満たす。判定は局所的な比較だけで下せ、入力の一方向走査で完結する。
+- スナップショットの区間という単位が、空間回収と MVCC の正しさを同時に満たす。
+  判定は局所的な比較だけで下せ、入力の一方向走査で完結する。
 
 ## 関連する章
 
