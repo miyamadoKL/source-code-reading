@@ -4,7 +4,8 @@
   "globs": [
     "README.md",
     "rocksdb/**/*.md",
-    "valkey/**/*.md"
+    "valkey/**/*.md",
+    "postgresql/**/*.md"
   ],
   "config": {
     "default": true,
@@ -17,6 +18,11 @@
     // MD024(no-duplicate-heading): 親見出しが異なれば同名の小見出しを許容する。
     "MD024": {
       "siblings_only": true
+    },
+    // MD010(no-hard-tabs): PostgreSQL のソースはタブインデントで、逐語引用する
+    // コードブロックにタブが入るため、コードブロックは対象外とする(地の文は検査)。
+    "MD010": {
+      "code_blocks": false
     }
   }
 }
