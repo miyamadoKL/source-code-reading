@@ -68,9 +68,12 @@ class Compaction {
 コンパクションをどれだけ、どのように行うかは、三つの増幅のバランスを決める問題に帰着する。
 増幅とは、ユーザーが論理的に要求する量に対して、システムが実際に費やす量の比である。
 
-- **書き込み増幅**（write amplification）：ユーザーが一度書いたデータが、コンパクションによって何度も読み直され書き直される度合い。下のレベルへ併合するたびに同じデータが再び書かれるため増える。
-- **読み出し増幅**（read amplification）：一回の読み出しで実際に調べるファイルやレベルの数。古い版が複数の場所に散らばっているほど増える。
-- **空間増幅**（space amplification）：論理的に有効なデータ量に対して、無効なデータを含めてディスク上に実在する総量の比。回収していない古い版やトゥームストーンが多いほど増える。
+- **書き込み増幅**（write amplification）：ユーザーが一度書いたデータが、コンパクションによって何度も読み直され書き直される度合い。
+  下のレベルへ併合するたびに同じデータが再び書かれるため増える。
+- **読み出し増幅**（read amplification）：一回の読み出しで実際に調べるファイルやレベルの数。
+  古い版が複数の場所に散らばっているほど増える。
+- **空間増幅**（space amplification）：論理的に有効なデータ量に対して、無効なデータを含めてディスク上に実在する総量の比。
+  回収していない古い版やトゥームストーンが多いほど増える。
 
 この三つは同時に最小化できない。
 たとえば書き込み増幅を下げようとすれば併合の頻度を減らすことになり、古い版が残って空間増幅が上がるか、ファイルが散らばって読み出し増幅が上がる。
@@ -365,7 +368,7 @@ FIFO は併合という意味でのコンパクションをほとんど行わず
 保持する総サイズに上限を設け、超えたら最も古いファイルから削除する。
 時系列データのように、新しいデータだけが要り、古いデータは期限が来たら捨ててよい用途に向く。
 
-[`include/rocksdb/advanced_options.h` L70-L83](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/advanced_options.h#L70-L83)
+[`include/rocksdb/advanced_options.h` L70-L82](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/advanced_options.h#L70-L82)
 
 ```cpp
 struct CompactionOptionsFIFO {
@@ -404,11 +407,16 @@ struct CompactionOptionsFIFO {
 
 ## まとめ
 
-- LSM は追記中心のため同一キーの古い版、トゥームストーン（tombstone）、重複が溜まる。コンパクションはこれらを併合し、読みで見るファイル数を減らし、無効になった領域を回収する。
-- 書き込み増幅、読み出し増幅、空間増幅の三つは同時に最小化できない。各戦略はどれを譲るかで性格が分かれる。
-- Leveled（既定）は読み出し増幅と空間増幅を抑え、書き込み増幅は中程度に置く。レベルの上限は `max_bytes_for_level_base`（既定 256MB）と公比 `max_bytes_for_level_multiplier`（既定 10）で等比に並ぶ。
-- Universal は書き込み増幅を抑える代わりに空間増幅を許す。`max_size_amplification_percent` の既定 200 がその許容度を表す。
-- FIFO は併合せず古い SST を捨てるだけで、時系列データに向く。`max_table_files_size`（既定 1GB）を超えると最古のファイルを削除する。
+- LSM は追記中心のため同一キーの古い版、トゥームストーン（tombstone）、重複が溜まる。
+  コンパクションはこれらを併合し、読みで見るファイル数を減らし、無効になった領域を回収する。
+- 書き込み増幅、読み出し増幅、空間増幅の三つは同時に最小化できない。
+  各戦略はどれを譲るかで性格が分かれる。
+- Leveled（既定）は読み出し増幅と空間増幅を抑え、書き込み増幅は中程度に置く。
+  レベルの上限は `max_bytes_for_level_base`（既定 256MB）と公比 `max_bytes_for_level_multiplier`（既定 10）で等比に並ぶ。
+- Universal は書き込み増幅を抑える代わりに空間増幅を許す。
+  `max_size_amplification_percent` の既定 200 がその許容度を表す。
+- FIFO は併合せず古い SST を捨てるだけで、時系列データに向く。
+  `max_table_files_size`（既定 1GB）を超えると最古のファイルを削除する。
 - `level_compaction_dynamic_level_bytes`（既定で有効）は各レベルの目標サイズを最下層の実データから下向きに決め、空間増幅の最悪値と読み出し増幅を抑える。
 
 ## 関連する章
@@ -418,4 +426,5 @@ struct CompactionOptionsFIFO {
 - [第32章 サブコンパクション](32-subcompaction.md)
 - [第33章 マージオペレータ](33-merge-operator.md)
 
-[^rum]: RUM 予想（RUM conjecture）。Read、Update、Memory のオーバーヘッドのうち二つを抑えると残る一つが悪化する、というストレージアクセス手法の経験則を指す。
+[^rum]: RUM 予想（RUM conjecture）。
+    Read、Update、Memory のオーバーヘッドのうち二つを抑えると残る一つが悪化する、というストレージアクセス手法の経験則を指す。

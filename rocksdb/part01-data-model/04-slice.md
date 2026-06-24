@@ -269,7 +269,7 @@ class PinnableSlice : public Slice, public Cleanable {
 登録されたクリーンアップは、`Cleanable` のデストラクタか `Reset` のいずれか先に呼ばれたほうで実行される。
 `Cleanable` 側の `Reset` がその起点になる。
 
-[`include/rocksdb/cleanable.h` L43-L50](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/cleanable.h#L43-L50)
+[`include/rocksdb/cleanable.h` L43-L48](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/cleanable.h#L43-L48)
 
 ```cpp
   // DoCleanup and also resets the pointers for reuse
@@ -394,19 +394,24 @@ flowchart TB
 第一に、`Slice` がポインタと長さだけの参照型であることで、キーと値を API へ渡すたびのバイト列複製がなくなる。
 コンストラクタが既存バッファの先頭と長さを写すだけだからである（[L39-L51](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/slice.h#L39-L51)）。
 第二に、`PinnableSlice` が読み出し結果をブロックキャッシュ上で直接指すことで、値を呼び出し側へ複製する `memcpy` を一回省ける。
-ピン留め中はブロックが追い出されないため参照が安全に保たれ、消費後に登録済みのクリーンアップがキャッシュハンドルを返す（[`cleanable.h` L43-L50](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/cleanable.h#L43-L50)）。
+ピン留め中はブロックが追い出されないため参照が安全に保たれ、消費後に登録済みのクリーンアップがキャッシュハンドルを返す（[`cleanable.h` L43-L48](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/cleanable.h#L43-L48)）。
 
 `PinnableSlice` がどこでブロックをピン留めし、どのタイミングでクリーンアップを登録するかは、読み出し経路そのものに踏み込まないと見えない。
 読み出し経路の全体は第23章で扱う。
 
 ## まとめ
 
-- `Slice` は `(data_, size_)` の二つだけを持つ参照型であり、バイト列を所有しない。コンストラクタは既存バッファの先頭と長さを写すだけで複製しない。
-- 比較は `compare` と `operator==` が `memcmp` で行い、辞書順を与える。内部キーの比較もこの `Slice::compare` を土台にする。
+- `Slice` は `(data_, size_)` の二つだけを持つ参照型であり、バイト列を所有しない。
+  コンストラクタは既存バッファの先頭と長さを写すだけで複製しない。
+- 比較は `compare` と `operator==` が `memcmp` で行い、辞書順を与える。
+  内部キーの比較もこの `Slice::compare` を土台にする。
 - `remove_prefix` と `remove_suffix` は参照する窓をずらすだけで、コピーなしに部分列を取り出せる。
-- 所有権を持たないため、参照先バッファを `Slice` より長く生かす責任は呼び出し側にある。一時 `std::string` から作った `Slice` はダングリングになる。
-- `PinnableSlice` は `Slice` と `Cleanable` を継承し、値をブロックキャッシュ上で直接指して `memcpy` を省く。ピンできないときだけ内部バッファへ退避する。
-- `Get` の `PinnableSlice*` 版は、`std::string*` 版が行う `assign` の複製を省く。引き換えに、消費後の `Reset` でピンを解く規律がいる。
+- 所有権を持たないため、参照先バッファを `Slice` より長く生かす責任は呼び出し側にある。
+  一時 `std::string` から作った `Slice` はダングリングになる。
+- `PinnableSlice` は `Slice` と `Cleanable` を継承し、値をブロックキャッシュ上で直接指して `memcpy` を省く。
+  ピンできないときだけ内部バッファへ退避する。
+- `Get` の `PinnableSlice*` 版は、`std::string*` 版が行う `assign` の複製を省く。
+  引き換えに、消費後の `Reset` でピンを解く規律がいる。
 
 ## 関連する章
 

@@ -36,7 +36,7 @@ RocksDB はかわりに、変化の **差分** だけを追記ログへ書く。
 この追記ログが MANIFEST であり、差分の単位が VersionEdit である。
 `VersionEdit` クラスの先頭コメントは、この関係を簡潔に述べている。
 
-[`db/version_edit.h` L689-L693](https://github.com/facebook/rocksdb/blob/v11.1.1/db/version_edit.h#L689-L693)
+[`db/version_edit.h` L689-L692](https://github.com/facebook/rocksdb/blob/v11.1.1/db/version_edit.h#L689-L692)
 
 ```cpp
 // The state of a DB at any given time is referred to as a Version.
@@ -76,7 +76,7 @@ Version への変更はすべて VersionEdit として表され、それが MANI
 差分の対象はファイルの増減にとどまらない。
 `VersionEdit` は、リカバリで再現すべき DB 全体のカウンタも差分として持つ。
 
-[`db/version_edit.h` L735-L775](https://github.com/facebook/rocksdb/blob/v11.1.1/db/version_edit.h#L735-L775)
+[`db/version_edit.h` L735-L773](https://github.com/facebook/rocksdb/blob/v11.1.1/db/version_edit.h#L735-L773)
 
 ```cpp
   void SetLogNumber(uint64_t num) {
@@ -234,7 +234,7 @@ Status VersionSet::LogAndApply(
   }
   if (num_edits == 0) {
     return Status::OK();
-  }
+  } else if (num_edits > 1) {
 ```
 
 `LogAndApply` は DB の `mutex_` を保持した状態で入る（`mu->AssertHeld()`）。
@@ -414,7 +414,7 @@ flowchart TD
 DB ディレクトリには複数の MANIFEST ファイルが残りうるが、現役の一つを指すのが `CURRENT` である。
 `VersionSet::Recover` はまず `CURRENT` を読み、そこに書かれたパスの MANIFEST を開く。
 
-[`db/version_set.cc` L6619-L6644](https://github.com/facebook/rocksdb/blob/v11.1.1/db/version_set.cc#L6619-L6644)
+[`db/version_set.cc` L6619-L6636](https://github.com/facebook/rocksdb/blob/v11.1.1/db/version_set.cc#L6619-L6636)
 
 ```cpp
   // Read "CURRENT" file, which contains a pointer to the current manifest
@@ -455,7 +455,7 @@ MANIFEST を開いたら、`VersionEditHandler` がその差分列を読んで V
 
 差分を一つずつ読んで適用するループが `Iterate` である。
 
-[`db/version_edit_handler.cc` L33-L63](https://github.com/facebook/rocksdb/blob/v11.1.1/db/version_edit_handler.cc#L33-L63)
+[`db/version_edit_handler.cc` L33-L65](https://github.com/facebook/rocksdb/blob/v11.1.1/db/version_edit_handler.cc#L33-L65)
 
 ```cpp
   while (reader.LastRecordEnd() < max_manifest_read_size_ && s.ok() &&
@@ -504,7 +504,7 @@ Status VersionEditHandler::ApplyVersionEdit(VersionEdit& edit,
 
 `OnNonCfOperation` は、最終的に `MaybeCreateVersionBeforeApplyEdit` を通じて、書き込み時と同じ `VersionBuilder` に差分を適用する。
 
-[`db/version_edit_handler.cc` L520-L544](https://github.com/facebook/rocksdb/blob/v11.1.1/db/version_edit_handler.cc#L520-L544)
+[`db/version_edit_handler.cc` L520-L545](https://github.com/facebook/rocksdb/blob/v11.1.1/db/version_edit_handler.cc#L520-L545)
 
 ```cpp
 Status VersionEditHandler::MaybeCreateVersionBeforeApplyEdit(
@@ -633,10 +633,14 @@ flowchart TD
 ## まとめ
 
 - MANIFEST は LSM-tree の構造変化を記録する追記ログで、`CURRENT` ファイルが現役の MANIFEST を一意に指す。
-- `VersionEdit` は一回の構造変化を全状態でなく差分として表す。`AddFile` / `DeleteFile` とログ番号やシーケンス番号などのカウンタを、Tag つき可変長エンコードで直列化し、値を持つフィールドだけを書く。
-- `LogAndApply`（実体は `ProcessManifestWrites`）は、差分を MANIFEST へ追記して `fsync` し、それが成功してから `VersionBuilder` で組んだ新 Version を current に差し込む。複数の書き手の差分は一回の同期にグループ化され、永続化の固定費を償却する。
-- リカバリは `CURRENT` が指す MANIFEST を開き、`VersionEditHandler` が差分列を `DecodeFrom` して書き込み時と同じ `VersionBuilder::Apply` で再生する。差分の生成と再生が同じコードを通るので、復元された状態が食い違わない。
-- MANIFEST が `max_manifest_file_size`（既定 1 GiB）由来の閾値を超えると新ファイルへローテーションし、`WriteCurrentStateToManifest` が冒頭に現在の全状態を一度だけ書く。`CURRENT` の差し替えは一時ファイルのリネームでアトミックに行われ、クラッシュしても一貫した Version が復元できる。
+- `VersionEdit` は一回の構造変化を全状態でなく差分として表す。
+  `AddFile` / `DeleteFile` とログ番号やシーケンス番号などのカウンタを、Tag つき可変長エンコードで直列化し、値を持つフィールドだけを書く。
+- `LogAndApply`（実体は `ProcessManifestWrites`）は、差分を MANIFEST へ追記して `fsync` し、それが成功してから `VersionBuilder` で組んだ新 Version を current に差し込む。
+  複数の書き手の差分は一回の同期にグループ化され、永続化の固定費を償却する。
+- リカバリは `CURRENT` が指す MANIFEST を開き、`VersionEditHandler` が差分列を `DecodeFrom` して書き込み時と同じ `VersionBuilder::Apply` で再生する。
+  差分の生成と再生が同じコードを通るので、復元された状態が食い違わない。
+- MANIFEST が `max_manifest_file_size`（既定 1 GiB）由来の閾値を超えると新ファイルへローテーションし、`WriteCurrentStateToManifest` が冒頭に現在の全状態を一度だけ書く。
+  `CURRENT` の差し替えは一時ファイルのリネームでアトミックに行われ、クラッシュしても一貫した Version が復元できる。
 
 ## 関連する章
 

@@ -46,32 +46,45 @@ class DB {
 代表的な操作メソッドを、つながる先のパスとともに並べる。
 いずれも宣言は `db.h` にあり、列ごとの操作には `ColumnFamilyHandle*` を取る形と、既定列に向ける省略形の二つがある。
 
-- **Put**：キーに値を書き込む。書き込みパイプラインを通って WAL とメモリテーブルに入る。宣言は [`include/rocksdb/db.h` L429-L434](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/db.h#L429-L434)。
-- **Delete**：キーの削除を記録する。削除マーカー（トゥームストーン）を書き込む点を除けば `Put` と同じパスを通る。宣言は [`include/rocksdb/db.h` L461-L466](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/db.h#L461-L466)。
-- **SingleDelete**：一度しか `Put` されていないキーの削除に限定した最適化版。宣言は [`include/rocksdb/db.h` L491-L496](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/db.h#L491-L496)。
-- **Merge**：値を上書きせず、ユーザー定義の `merge_operator` で既存値と統合する。宣言は [`include/rocksdb/db.h` L542-L544](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/db.h#L542-L544)。
-- **Write**：複数の更新を `WriteBatch` にまとめ、原子的に適用する。`Put` や `Delete` も内部では一件の `WriteBatch` に包まれてこの経路に合流する。宣言は [`include/rocksdb/db.h` L559](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/db.h#L559)。
-- **Get**：キーに対応する値を読み出す。メモリテーブルから順に SST ファイルへと探索する読み出しパスに繋がる。宣言は [`include/rocksdb/db.h` L599-L601](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/db.h#L599-L601)。
-- **NewIterator**：データベースを走査する反復子を返す。宣言は [`include/rocksdb/db.h` L990-L991](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/db.h#L990-L991)。
-- **Flush**：メモリテーブルの内容を SST ファイルへ書き出す。宣言は [`include/rocksdb/db.h` L1748-L1749](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/db.h#L1748-L1749)。
-- **CompactRange**：指定したキー範囲の SST を手動で再編成し、削除済みや上書き済みの版を捨てる。宣言は [`include/rocksdb/db.h` L1531-L1533](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/db.h#L1531-L1533)。
+- **Put**：キーに値を書き込む。
+  書き込みパイプラインを通って WAL とメモリテーブルに入る。
+  宣言は [`include/rocksdb/db.h` L429-L434](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/db.h#L429-L434)。
+- **Delete**：キーの削除を記録する。
+  削除マーカー（トゥームストーン）を書き込む点を除けば `Put` と同じパスを通る。
+  宣言は [`include/rocksdb/db.h` L461-L466](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/db.h#L461-L466)。
+- **SingleDelete**：一度しか `Put` されていないキーの削除に限定した最適化版。
+  宣言は [`include/rocksdb/db.h` L491-L496](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/db.h#L491-L496)。
+- **Merge**：値を上書きせず、ユーザー定義の `merge_operator` で既存値と統合する。
+  宣言は [`include/rocksdb/db.h` L542-L544](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/db.h#L542-L544)。
+- **Write**：複数の更新を `WriteBatch` にまとめ、原子的に適用する。
+  `Put` や `Delete` も内部では一件の `WriteBatch` に包まれてこの経路に合流する。
+  宣言は [`include/rocksdb/db.h` L559](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/db.h#L559)。
+- **Get**：キーに対応する値を読み出す。
+  メモリテーブルから順に SST ファイルへと探索する読み出しパスに繋がる。
+  宣言は [`include/rocksdb/db.h` L599-L601](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/db.h#L599-L601)。
+- **NewIterator**：データベースを走査する反復子を返す。
+  宣言は [`include/rocksdb/db.h` L990-L991](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/db.h#L990-L991)。
+- **Flush**：メモリテーブルの内容を SST ファイルへ書き出す。
+  宣言は [`include/rocksdb/db.h` L1748-L1749](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/db.h#L1748-L1749)。
+- **CompactRange**：指定したキー範囲の SST を手動で再編成し、削除済みや上書き済みの版を捨てる。
+  宣言は [`include/rocksdb/db.h` L1531-L1533](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/db.h#L1531-L1533)。
 
 `Put` や `Delete` が単独の操作に見えても、内部では一件の `WriteBatch` に変換されて `Write` の経路に合流する。
 この合流のおかげで、単発書き込みとバッチ書き込みが同じパイプラインを共有できる（書き込みパイプラインの詳細は[書き込みパイプライン](../part02-write-path/08-write-pipeline.md)で扱う）。
 
 ここで `Put` の宣言を見ると、操作メソッドの引数の作りが見える。
 
-[`include/rocksdb/db.h` L429-L442](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/db.h#L429-L442)
+[`include/rocksdb/db.h` L429-L438](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/db.h#L429-L438)
 
 ```cpp
-virtual Status Put(const WriteOptions& options,
-                   ColumnFamilyHandle* column_family, const Slice& key,
-                   const Slice& value) = 0;
-// ... (中略) ...
-virtual Status Put(const WriteOptions& options, const Slice& key,
-                   const Slice& value) {
-  return Put(options, DefaultColumnFamily(), key, value);
-}
+  virtual Status Put(const WriteOptions& options,
+                     ColumnFamilyHandle* column_family, const Slice& key,
+                     const Slice& value) = 0;
+  // ... (中略) ...
+  virtual Status Put(const WriteOptions& options, const Slice& key,
+                     const Slice& value) {
+    return Put(options, DefaultColumnFamily(), key, value);
+  }
 ```
 
 先頭が `WriteOptions`、次が操作対象の列を指す `ColumnFamilyHandle*` である。
@@ -87,14 +100,14 @@ virtual Status Put(const WriteOptions& options, const Slice& key,
 [`include/rocksdb/db.h` L133-L140](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/db.h#L133-L140)
 
 ```cpp
-// Open the database with the specified "name" for reads and writes.
-// On success, stores the database in *dbptr and returns OK.
-// On error, resets *dbptr and returns a non-OK status, including
-// if the DB is already open (read-write) by another DB object. (This
-// guarantee depends on options.env->LockFile(), which might not provide
-// this guarantee in a custom Env implementation.)
-static Status Open(const Options& options, const std::string& name,
-                   std::unique_ptr<DB>* dbptr);
+  // Open the database with the specified "name" for reads and writes.
+  // On success, stores the database in *dbptr and returns OK.
+  // On error, resets *dbptr and returns a non-OK status, including
+  // if the DB is already open (read-write) by another DB object. (This
+  // guarantee depends on options.env->LockFile(), which might not provide
+  // this guarantee in a custom Env implementation.)
+  static Status Open(const Options& options, const std::string& name,
+                     std::unique_ptr<DB>* dbptr);
 ```
 
 複数の列を扱うときは、列ごとの設定を含む `ColumnFamilyDescriptor` の配列を渡す版を使う。
@@ -104,24 +117,24 @@ static Status Open(const Options& options, const std::string& name,
 [`include/rocksdb/db.h` L142-L159](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/db.h#L142-L159)
 
 ```cpp
-// Open DB with column families.
-// db_options specify database specific options
-// column_families is the vector of all column families in the database,
-// containing column family name and options. You need to open ALL column
-// families in the database. To get the list of column families, you can use
-// ListColumnFamilies().
-//
-// The default column family name is 'default' and it's stored
-// in ROCKSDB_NAMESPACE::kDefaultColumnFamilyName.
-// If everything is OK, handles will on return be the same size
-// as column_families --- handles[i] will be a handle that you
-// will use to operate on column family column_family[i].
-// Before destroying the DB, you have to close all column families by calling
-// DestroyColumnFamilyHandle() with all the handles.
-static Status Open(const DBOptions& db_options, const std::string& name,
-                   const std::vector<ColumnFamilyDescriptor>& column_families,
-                   std::vector<ColumnFamilyHandle*>* handles,
-                   std::unique_ptr<DB>* dbptr);
+  // Open DB with column families.
+  // db_options specify database specific options
+  // column_families is the vector of all column families in the database,
+  // containing column family name and options. You need to open ALL column
+  // families in the database. To get the list of column families, you can use
+  // ListColumnFamilies().
+  //
+  // The default column family name is 'default' and it's stored
+  // in ROCKSDB_NAMESPACE::kDefaultColumnFamilyName.
+  // If everything is OK, handles will on return be the same size
+  // as column_families --- handles[i] will be a handle that you
+  // will use to operate on column family column_family[i].
+  // Before destroying the DB, you have to close all column families by calling
+  // DestroyColumnFamilyHandle() with all the handles.
+  static Status Open(const DBOptions& db_options, const std::string& name,
+                     const std::vector<ColumnFamilyDescriptor>& column_families,
+                     std::vector<ColumnFamilyHandle*>* handles,
+                     std::unique_ptr<DB>* dbptr);
 ```
 
 ここで重要なのは、開いた列の数だけ `ColumnFamilyHandle*` が `handles` に返る点である。
@@ -136,36 +149,36 @@ static Status Open(const DBOptions& db_options, const std::string& name,
 [`include/rocksdb/db.h` L161-L171](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/db.h#L161-L171)
 
 ```cpp
-// OpenForReadOnly() creates a Read-only instance that supports reads alone.
-//
-// All DB interfaces that modify data, like put/delete, will return error.
-// Automatic Flush and Compactions are disabled and any manual calls
-// to Flush/Compaction will return error.
-//
-// While a given DB can be simultaneously opened via OpenForReadOnly
-// by any number of readers, if a DB is simultaneously opened by Open
-// and OpenForReadOnly, the read-only instance has undefined behavior
-// (though can often succeed if quickly closed) and the read-write
-// instance is unaffected. See also OpenAsSecondary.
+  // OpenForReadOnly() creates a Read-only instance that supports reads alone.
+  //
+  // All DB interfaces that modify data, like put/delete, will return error.
+  // Automatic Flush and Compactions are disabled and any manual calls
+  // to Flush/Compaction will return error.
+  //
+  // While a given DB can be simultaneously opened via OpenForReadOnly
+  // by any number of readers, if a DB is simultaneously opened by Open
+  // and OpenForReadOnly, the read-only instance has undefined behavior
+  // (though can often succeed if quickly closed) and the read-write
+  // instance is unaffected. See also OpenAsSecondary.
 ```
 
-セカンダリの `OpenAsSecondary` も読み取り専用だが、書き込み中の主インスタンスへ追従できる点が異なる。
-`TryCatchUpWithPrimary()` を呼ぶと、主インスタンスがその後に進めた状態を取り込む。
+セカンダリの `OpenAsSecondary` も読み取り専用だが、書き込み中のプライマリインスタンスへ追従できる点が異なる。
+`TryCatchUpWithPrimary()` を呼ぶと、プライマリインスタンスがその後に進めた状態を取り込む。
 同じデータベースに対して複数のセカンダリを同時に立てられる。
 
 [`include/rocksdb/db.h` L192-L201](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/db.h#L192-L201)
 
 ```cpp
-// OpenAsSecondary() creates a secondary instance that supports read-only
-// operations and supports dynamic catch up with the primary (through a
-// call to TryCatchUpWithPrimary()).
-//
-// All DB interfaces that modify data, like put/delete, will return error.
-// Automatic Flush and Compactions are disabled and any manual calls
-// to Flush/Compaction will return error.
-//
-// Multiple secondary instances can co-exist at the same time.
-//
+  // OpenAsSecondary() creates a secondary instance that supports read-only
+  // operations and supports dynamic catch up with the primary (through a
+  // call to TryCatchUpWithPrimary()).
+  //
+  // All DB interfaces that modify data, like put/delete, will return error.
+  // Automatic Flush and Compactions are disabled and any manual calls
+  // to Flush/Compaction will return error.
+  //
+  // Multiple secondary instances can co-exist at the same time.
+  //
 ```
 
 `OpenForReadOnly` と `OpenAsSecondary` のどちらにも、複数列を指定する版がある。
@@ -235,18 +248,18 @@ classDiagram
 [`include/rocksdb/options.h` L593-L604](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/options.h#L593-L604)
 
 ```cpp
-// If true, the database will be created if it is missing.
-// Default: false
-bool create_if_missing = false;
+  // If true, the database will be created if it is missing.
+  // Default: false
+  bool create_if_missing = false;
 
-// If true, missing column families will be automatically created on
-// DB::Open().
-// Default: false
-bool create_missing_column_families = false;
+  // If true, missing column families will be automatically created on
+  // DB::Open().
+  // Default: false
+  bool create_missing_column_families = false;
 
-// If true, an error is raised if the database already exists.
-// Default: false
-bool error_if_exists = false;
+  // If true, an error is raised if the database already exists.
+  // Default: false
+  bool error_if_exists = false;
 ```
 
 既定では `create_if_missing` が `false` なので、存在しないデータベースを開こうとするとエラーになる。
@@ -256,12 +269,12 @@ bool error_if_exists = false;
 [`include/rocksdb/options.h` L893-L898](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/options.h#L893-L898)
 
 ```cpp
-// Maximum number of concurrent background jobs (compactions and flushes).
-//
-// Default: 2
-//
-// Dynamically changeable through SetDBOptions() API.
-int max_background_jobs = 2;
+  // Maximum number of concurrent background jobs (compactions and flushes).
+  //
+  // Default: 2
+  //
+  // Dynamically changeable through SetDBOptions() API.
+  int max_background_jobs = 2;
 ```
 
 `ColumnFamilyOptions` 側で代表的なのは、メモリテーブルの大きさを決める `write_buffer_size` である。
@@ -271,13 +284,13 @@ int max_background_jobs = 2;
 [`include/rocksdb/options.h` L184-L190](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/options.h#L184-L190)
 
 ```cpp
-// Note that write_buffer_size is enforced per column family.
-// See db_write_buffer_size for sharing memory across column families.
-//
-// Default: 64MB
-//
-// Dynamically changeable through SetOptions() API
-size_t write_buffer_size = 64 << 20;
+  // Note that write_buffer_size is enforced per column family.
+  // See db_write_buffer_size for sharing memory across column families.
+  //
+  // Default: 64MB
+  //
+  // Dynamically changeable through SetOptions() API
+  size_t write_buffer_size = 64 << 20;
 ```
 
 圧縮方式は `compression` フィールドで指定する。
@@ -286,12 +299,12 @@ size_t write_buffer_size = 64 << 20;
 [`include/rocksdb/options.h` L192-L218](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/options.h#L192-L218)
 
 ```cpp
-// Compress blocks using the specified compression algorithm.
-//
-// Default: kSnappyCompression, if it's supported. If snappy is not linked
-// with the library, the default is kNoCompression.
-// ... (中略) ...
-CompressionType compression;
+  // Compress blocks using the specified compression algorithm.
+  //
+  // Default: kSnappyCompression, if it's supported. If snappy is not linked
+  // with the library, the default is kNoCompression.
+  // ... (中略) ...
+  CompressionType compression;
 ```
 
 コンパクション方式は `compaction_style` で選ぶ。
@@ -300,8 +313,8 @@ CompressionType compression;
 [`include/rocksdb/advanced_options.h` L718-L719](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/advanced_options.h#L718-L719)
 
 ```cpp
-// The compaction style. Default: kCompactionStyleLevel
-CompactionStyle compaction_style = kCompactionStyleLevel;
+  // The compaction style. Default: kCompactionStyleLevel
+  CompactionStyle compaction_style = kCompactionStyleLevel;
 ```
 
 選べる方式は `CompactionStyle` 列挙で定義される。
@@ -410,12 +423,12 @@ Status DBImpl::Open(const DBOptions& db_options, const std::string& dbname,
 [`db/db_impl/db_impl_open.cc` L2481-L2486](https://github.com/facebook/rocksdb/blob/v11.1.1/db/db_impl/db_impl_open.cc#L2481-L2486)
 
 ```cpp
-// Handles create_if_missing, error_if_exists
-uint64_t recovered_seq(kMaxSequenceNumber);
-s = impl->Recover(column_families, false /* read_only */,
-                  false /* error_if_wal_file_exists */,
-                  false /* error_if_data_exists_in_wals */, is_retry,
-                  &recovered_seq, &recovery_ctx, can_retry);
+  // Handles create_if_missing, error_if_exists
+  uint64_t recovered_seq(kMaxSequenceNumber);
+  s = impl->Recover(column_families, false /* read_only */,
+                    false /* error_if_wal_file_exists */,
+                    false /* error_if_data_exists_in_wals */, is_retry,
+                    &recovered_seq, &recovery_ctx, can_retry);
 ```
 
 `Recover` の中では、`CURRENT` ファイルの有無で既存データベースか新規かを見分ける。
@@ -426,23 +439,22 @@ s = impl->Recover(column_families, false /* read_only */,
 [`db/db_impl/db_impl_open.cc` L471-L486](https://github.com/facebook/rocksdb/blob/v11.1.1/db/db_impl/db_impl_open.cc#L471-L486)
 
 ```cpp
-if (s.IsNotFound()) {
-  if (immutable_db_options_.create_if_missing) {
-    s = NewDB(&files_in_dbname);
-    is_new_db = true;
-    if (!s.ok()) {
-      return s;
-    }
-  } else {
-    return Status::InvalidArgument(
-        current_fname, "does not exist (create_if_missing is false)");
-  }
-} else if (s.ok()) {
-  if (immutable_db_options_.error_if_exists) {
-    return Status::InvalidArgument(dbname_,
-                                   "exists (error_if_exists is true)");
-  }
-}
+    if (s.IsNotFound()) {
+      if (immutable_db_options_.create_if_missing) {
+        s = NewDB(&files_in_dbname);
+        is_new_db = true;
+        if (!s.ok()) {
+          return s;
+        }
+      } else {
+        return Status::InvalidArgument(
+            current_fname, "does not exist (create_if_missing is false)");
+      }
+    } else if (s.ok()) {
+      if (immutable_db_options_.error_if_exists) {
+        return Status::InvalidArgument(dbname_,
+                                       "exists (error_if_exists is true)");
+      }
 ```
 
 既存データベースなら、`versions_->Recover` が MANIFEST を読み、そこに記録された列の集合とそれぞれの SST 構成を復元する。
@@ -451,12 +463,12 @@ if (s.IsNotFound()) {
 [`db/db_impl/db_impl_open.cc` L532-L537](https://github.com/facebook/rocksdb/blob/v11.1.1/db/db_impl/db_impl_open.cc#L532-L537)
 
 ```cpp
-if (!immutable_db_options_.best_efforts_recovery) {
-  // Status of reading the descriptor file
-  Status desc_status;
-  s = versions_->Recover(column_families, read_only, &db_id_,
-                         /*no_error_if_files_missing=*/false, is_retry,
-                         &desc_status);
+  if (!immutable_db_options_.best_efforts_recovery) {
+    // Status of reading the descriptor file
+    Status desc_status;
+    s = versions_->Recover(column_families, read_only, &db_id_,
+                           /*no_error_if_files_missing=*/false, is_retry,
+                           &desc_status);
 ```
 
 MANIFEST を読んで列を復元したあとは、まだ SST になっていない WAL を再生する。
@@ -466,18 +478,18 @@ MANIFEST を読んで列を復元したあとは、まだ SST になっていな
 [`db/db_impl/db_impl_open.cc` L805-L816](https://github.com/facebook/rocksdb/blob/v11.1.1/db/db_impl/db_impl_open.cc#L805-L816)
 
 ```cpp
-if (!wal_files.empty()) {
-  // Recover in the order in which the wals were generated
-  std::vector<uint64_t> wals;
-  wals.reserve(wal_files.size());
-  for (const auto& wal_file : wal_files) {
-    wals.push_back(wal_file.first);
-  }
-  std::sort(wals.begin(), wals.end());
+    if (!wal_files.empty()) {
+      // Recover in the order in which the wals were generated
+      std::vector<uint64_t> wals;
+      wals.reserve(wal_files.size());
+      for (const auto& wal_file : wal_files) {
+        wals.push_back(wal_file.first);
+      }
+      std::sort(wals.begin(), wals.end());
 
-  bool corrupted_wal_found = false;
-  s = RecoverLogFiles(wals, &next_sequence, read_only, is_retry,
-                      &corrupted_wal_found, recovery_ctx);
+      bool corrupted_wal_found = false;
+      s = RecoverLogFiles(wals, &next_sequence, read_only, is_retry,
+                          &corrupted_wal_found, recovery_ctx);
 ```
 
 `Recover` から戻ると、`Open` の末尾でバックグラウンド処理を立ち上げる。
@@ -486,17 +498,17 @@ if (!wal_files.empty()) {
 [`db/db_impl/db_impl_open.cc` L2687-L2689](https://github.com/facebook/rocksdb/blob/v11.1.1/db/db_impl/db_impl_open.cc#L2687-L2689)
 
 ```cpp
-impl->DeleteObsoleteFiles();
-TEST_SYNC_POINT("DBImpl::Open:AfterDeleteFiles");
-impl->MaybeScheduleFlushOrCompaction();
+    impl->DeleteObsoleteFiles();
+    TEST_SYNC_POINT("DBImpl::Open:AfterDeleteFiles");
+    impl->MaybeScheduleFlushOrCompaction();
 ```
 
 [`db/db_impl/db_impl_open.cc` L2725-L2727](https://github.com/facebook/rocksdb/blob/v11.1.1/db/db_impl/db_impl_open.cc#L2725-L2727)
 
 ```cpp
-if (s.ok()) {
-  s = impl->StartPeriodicTaskScheduler();
-}
+  if (s.ok()) {
+    s = impl->StartPeriodicTaskScheduler();
+  }
 ```
 
 ここまでの流れをまとめると、`Open` はオプション検証、既存データベースのリカバリまたは新規作成、WAL の再生、列の復元、バックグラウンドスレッドの起動という段で進む。
@@ -525,11 +537,16 @@ flowchart TD
 
 ## まとめ
 
-- `DB` は抽象基底クラスで、`Put`、`Delete`、`Merge`、`Write`、`Get`、`NewIterator`、`Flush`、`CompactRange` などの操作を仮想メソッドとして並べる。実体は `DBImpl` が担う。
-- 操作メソッドは `ColumnFamilyHandle*` で対象列を取る版と、`DefaultColumnFamily()` を補う省略形を持つ。`Put` などの単発書き込みは内部で `WriteBatch` に変換され `Write` の経路に合流する。
-- `Open` には、通常、複数列、読み取り専用、セカンダリの四系統がある。複数列の `Open` は列の数だけ `ColumnFamilyHandle*` を返す。
-- 設定は範囲で分かれる。データベース全体の `DBOptions` と列ごとの `ColumnFamilyOptions`、両者を多重継承した `Options` の三段で、`ReadOptions` や `WriteOptions`、`FlushOptions` は呼び出しごとに渡す。
-- `DBImpl::Open` はオプション検証、リカバリまたは新規作成、WAL 再生、列の復元、バックグラウンドスレッド起動の段で進む。`create_if_missing` と `error_if_exists` は `Recover` の中で処理される。
+- `DB` は抽象基底クラスで、`Put`、`Delete`、`Merge`、`Write`、`Get`、`NewIterator`、`Flush`、`CompactRange` などの操作を仮想メソッドとして並べる。
+  実体は `DBImpl` が担う。
+- 操作メソッドは `ColumnFamilyHandle*` で対象列を取る版と、`DefaultColumnFamily()` を補う省略形を持つ。
+  `Put` などの単発書き込みは内部で `WriteBatch` に変換され `Write` の経路に合流する。
+- `Open` には、通常、複数列、読み取り専用、セカンダリの四系統がある。
+  複数列の `Open` は列の数だけ `ColumnFamilyHandle*` を返す。
+- 設定は範囲で分かれる。
+  データベース全体の `DBOptions` と列ごとの `ColumnFamilyOptions`、両者を多重継承した `Options` の三段で、`ReadOptions` や `WriteOptions`、`FlushOptions` は呼び出しごとに渡す。
+- `DBImpl::Open` はオプション検証、リカバリまたは新規作成、WAL 再生、列の復元、バックグラウンドスレッド起動の段で進む。
+  `create_if_missing` と `error_if_exists` は `Recover` の中で処理される。
 
 ## 関連する章
 

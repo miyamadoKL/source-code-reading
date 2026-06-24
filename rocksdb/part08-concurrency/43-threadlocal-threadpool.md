@@ -216,7 +216,7 @@ flowchart TB
 実装は pimpl で隠した `Impl` にある。
 `Impl` はジョブキュー、ワーカースレッドの配列、それらを保護する mutex と条件変数を一組だけ持つ。
 
-[`util/threadpool_imp.cc` L146-L159](https://github.com/facebook/rocksdb/blob/v11.1.1/util/threadpool_imp.cc#L146-L159)
+[`util/threadpool_imp.cc` L146-L158](https://github.com/facebook/rocksdb/blob/v11.1.1/util/threadpool_imp.cc#L146-L158)
 
 ```cpp
   // Entry per Schedule()/Submit() call
@@ -438,6 +438,7 @@ flowchart LR
 
 ```cpp
     ca->compaction_pri_ = Env::Priority::LOW;
+    ca->prepicked_compaction = nullptr;
     bg_compaction_scheduled_++;
     unscheduled_compactions_--;
     env_->Schedule(&DBImpl::BGWorkCompaction, ca, Env::Priority::LOW, this,
@@ -454,7 +455,7 @@ HIGH プールにスレッドが一つも割り当てられていないときは
 一定間隔で同じ処理を繰り返すだけの軽い用途には、`RepeatableThread` を使う。
 これは `port::Thread` を一本だけ抱え、指定した秒数ごとにコールバックを呼ぶラッパーである。
 
-[`util/repeatable_thread.h` L17-L21](https://github.com/facebook/rocksdb/blob/v11.1.1/util/repeatable_thread.h#L17-L21)
+[`util/repeatable_thread.h` L18-L21](https://github.com/facebook/rocksdb/blob/v11.1.1/util/repeatable_thread.h#L18-L21)
 
 ```cpp
 // Simple wrapper around port::Thread that supports calling a callback every
@@ -465,7 +466,7 @@ class RepeatableThread {
 
 本体ループ `thread()` は、待機と関数呼び出しを交互に繰り返す。
 
-[`util/repeatable_thread.h` L113-L127](https://github.com/facebook/rocksdb/blob/v11.1.1/util/repeatable_thread.h#L113-L127)
+[`util/repeatable_thread.h` L113-L126](https://github.com/facebook/rocksdb/blob/v11.1.1/util/repeatable_thread.h#L113-L126)
 
 ```cpp
     assert(delay_us_ > 0);
@@ -484,9 +485,10 @@ class RepeatableThread {
 ## まとめ
 
 - `ThreadLocalPtr` は「スレッド×インスタンス」の表でポインタを管理し、`StaticMeta` が発番する id を列の添字に使う。
-- 読み書きは自スレッドのセルへのアトミック操作で完結し、mutex はベクタ拡張時しか取らない。これが SuperVersion キャッシュ（第24章）のロック回避を支える。
+- 読み書きは自スレッドのセルへのアトミック操作で完結し、mutex はベクタ拡張時しか取らない。
+  これが SuperVersion キャッシュ（第24章）のロック回避を支える。
 - スレッド終了時は `OnThreadExit` が、インスタンス破棄時は `ReclaimId` が、それぞれ表の行と列を回収する。
-- `ThreadPoolImpl` はジョブキューとワーカーのループからなり、ワーカーを使い回すことでスレッド生成・破棄の費用を薄める。
+- `ThreadPoolImpl` はジョブキューとワーカーのループからなり、ワーカーを使い回すことでスレッド生成、破棄の費用を薄める。
 - 既定 Env は優先度ごとに別プールを持ち、フラッシュは HIGH、コンパクションは LOW、最下層コンパクションは BOTTOM に分かれて待ち合わせを避ける。
 - 周期実行だけが必要な軽い用途には、プールではなく `RepeatableThread` を使う。
 

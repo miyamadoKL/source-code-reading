@@ -35,7 +35,7 @@
 `MultiScan` は、複数の範囲を一つの要求としてまとめて受け取る。
 ヘッダ冒頭のコメントは、この API が返す入れ子のイテレータ構造を次のように図示している。
 
-[`include/rocksdb/multi_scan.h` L14-L54](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/multi_scan.h#L14-L54)
+[`include/rocksdb/multi_scan.h` L14-L34](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/multi_scan.h#L14-L34)
 
 ```cpp
 // EXPERIMENTAL
@@ -229,7 +229,7 @@ MultiScanIterator& MultiScanIterator::operator++() {
 `Prepare()` が呼ばれると、`BlockBasedTableIterator` は通常のインデックスイテレータを `MultiScanIndexIterator` に差し替える。
 このイテレータの役割は、全範囲ぶんのブロックハンドルを事前に集めた配列を、通常のインデックスイテレータと同じ `InternalIteratorBase<IndexValue>` の見た目で提示することにある。
 
-[`table/block_based/multi_scan_index_iterator.h` L23-L33](https://github.com/facebook/rocksdb/blob/v11.1.1/table/block_based/multi_scan_index_iterator.h#L23-L33)
+[`table/block_based/multi_scan_index_iterator.h` L23-L32](https://github.com/facebook/rocksdb/blob/v11.1.1/table/block_based/multi_scan_index_iterator.h#L23-L32)
 
 ```cpp
 // MultiScanIndexIterator wraps the block handle list produced by
@@ -536,7 +536,7 @@ class MultiCfIteratorImpl {
 
 公開 API の `DB::NewCoalescingIterator` のコメントが、統合の意味論を具体例で説明している。
 
-[`include/rocksdb/db.h` L1003-L1018](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/db.h#L1003-L1018)
+[`include/rocksdb/db.h` L1003-L1015](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/db.h#L1003-L1015)
 
 ```cpp
   // Return a cross-column-family iterator from a consistent database state.
@@ -639,7 +639,7 @@ flowchart TB
 
 属性グループは、ワイドカラムの集まりをカラムファミリーで論理的にまとめたものである。
 
-[`include/rocksdb/attribute_groups.h` L16-L31](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/attribute_groups.h#L16-L31)
+[`include/rocksdb/attribute_groups.h` L15-L31](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/attribute_groups.h#L15-L31)
 
 ```cpp
 // Class representing attribute group. Attribute group is a logical grouping of
@@ -698,11 +698,15 @@ void AttributeGroupIteratorImpl::AddToAttributeGroups(
 ## まとめ
 
 - `MultiScan` は複数のキー範囲を1回の要求にまとめる実験的 API で、`MultiScanArgs` に範囲を詰め、`MultiScan` のコンストラクタが1本の `DB` イテレータに対して `Prepare()` を一度だけ呼ぶ。
-- `Prepare()` は `CollectBlockHandles()` で全範囲ぶんのブロックハンドルを集め、`MultiScanIndexIterator` に差し替える。これにより上位のスキャン経路を変えずにインデックス参照をまとめ、範囲をまたぐ重複ブロックを取り除く。
-- 先読みは `IODispatcher` の1ジョブにまとめ、`io_coalesce_threshold`（既定16KB）で隣り合わないブロックも1回の I/O に束ねる。`IODispatcher` をスキャン全体で共有することで、複数 SST ファイルにまたがる先読みも一つに集約する。
-- 先読みのまとめは、`Seek` がブロックを飛ばすと無駄も生む。`MULTISCAN_PREFETCH_BLOCKS_WASTED` がその量を記録する。
+- `Prepare()` は `CollectBlockHandles()` で全範囲ぶんのブロックハンドルを集め、`MultiScanIndexIterator` に差し替える。
+  これにより上位のスキャン経路を変えずにインデックス参照をまとめ、範囲をまたぐ重複ブロックを取り除く。
+- 先読みは `IODispatcher` の1ジョブにまとめ、`io_coalesce_threshold`（既定16KB）で隣り合わないブロックも1回の I/O に束ねる。
+  `IODispatcher` をスキャン全体で共有することで、複数 SST ファイルにまたがる先読みも一つに集約する。
+- 先読みのまとめは、`Seek` がブロックを飛ばすと無駄も生む。
+  `MULTISCAN_PREFETCH_BLOCKS_WASTED` がその量を記録する。
 - `MultiCfIteratorImpl` は複数カラムファミリーの子イテレータをヒープで併合する基盤で、同一キーの値の組み立て方を `PopulateFunc` に委ねる。
-- `CoalescingIterator` は同一キーの列を1組のワイドカラムに合成し（同名列は `order` で上書き）、`AttributeGroupIterator` はカラムファミリーごとの区切りを保って属性グループとして並べる。両者は `PopulateFunc` の違いだけで分かれる。
+- `CoalescingIterator` は同一キーの列を1組のワイドカラムに合成し（同名列は `order` で上書き）、`AttributeGroupIterator` はカラムファミリーごとの区切りを保って属性グループとして並べる。
+  両者は `PopulateFunc` の違いだけで分かれる。
 
 ## 関連する章
 

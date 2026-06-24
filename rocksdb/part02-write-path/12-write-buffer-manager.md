@@ -284,7 +284,7 @@ charge によって両者を一つの Cache 予算へ統合すると、書き込
 クラスのコメントが役割を端的に述べている。
 write stall はコンパクションが書き込み速度に追いつけないときに起きる。
 
-[`db/write_controller.h` L20-L37](https://github.com/facebook/rocksdb/blob/v11.1.1/db/write_controller.h#L20-L37)
+[`db/write_controller.h` L20-L36](https://github.com/facebook/rocksdb/blob/v11.1.1/db/write_controller.h#L20-L36)
 
 ```cpp
 // WriteController is controlling write stalls in our write code-path. Write
@@ -516,7 +516,10 @@ ColumnFamilyData::GetWriteStallConditionAndCause(
 
 停止と減速のしきい値を、原因ごとに対応する `Options` とともに並べる。
 
-- **MemTable 数**：フラッシュ待ちの Immutable MemTable が `max_write_buffer_number` に達したら停止。既定値は 2（[`advanced_options.h` L260-L270](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/advanced_options.h#L260-L270)）。`max_write_buffer_number > 3` のときは、最後の 1 枠の手前に来たら減速する。減速条件には `min_write_buffer_number_to_merge`（既定値 1、[`advanced_options.h` L272-L282](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/advanced_options.h#L272-L282)）が絡む。
+- **MemTable 数**：フラッシュ待ちの Immutable MemTable が `max_write_buffer_number` に達したら停止。
+  既定値は 2（[`advanced_options.h` L260-L270](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/advanced_options.h#L260-L270)）。
+  `max_write_buffer_number > 3` のときは、最後の 1 枠の手前に来たら減速する。
+  減速条件には `min_write_buffer_number_to_merge`（既定値 1、[`advanced_options.h` L272-L282](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/advanced_options.h#L272-L282)）が絡む。
 - **L0 ファイル数**：L0 のファイル数が `level0_stop_writes_trigger`（既定値 36）に達したら停止、`level0_slowdown_writes_trigger`（既定値 20）に達したら減速（[`advanced_options.h` L546-L553](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/advanced_options.h#L546-L553)）。
 - **保留コンパクションバイト**：見積もられたコンパクション必要バイト数が `hard_pending_compaction_bytes_limit`（既定値 256GB）に達したら停止、`soft_pending_compaction_bytes_limit`（既定値 64GB）に達したら減速（[`advanced_options.h` L702-L716](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/advanced_options.h#L702-L716)）。
 
@@ -635,9 +638,12 @@ const double kDelayRecoverSlowdownRatio = 1.4;
 ## まとめ
 
 - `WriteBufferManager` は `ReserveMem` / `FreeMem` で MemTable のメモリ総量を会計し、複数のカラムファミリーや DB をまたいだ上限を一つのカウンタで管理する。
-- `ShouldFlush` は活動中メモリが上限の 8 分の 7 を超えたとき、または総量が上限に達してなお活動中メモリが半分以上あるときにフラッシュを促す。すでに半分以上がフラッシュ中なら起動を抑える。
-- `Cache` を渡すと MemTable メモリが Block Cache にダミーエントリとして charge され、キャッシュとライトバッファが一つのメモリ予算を共有する。これがプロセス全体のメモリ上限を単一の値で表現させる。
-- `WriteController` は停止と減速をトークンの所有として表現し、`std::unique_ptr` のデストラクタで状態の取り消しを保証する。`GetDelay` はトークンバケットで個々の書き込みに比例した遅延を返し、合計スループットを `delayed_write_rate_` に張り付かせる。
+- `ShouldFlush` は活動中メモリが上限の 8 分の 7 を超えたとき、または総量が上限に達してなお活動中メモリが半分以上あるときにフラッシュを促す。
+  すでに半分以上がフラッシュ中なら起動を抑える。
+- `Cache` を渡すと MemTable メモリが Block Cache にダミーエントリとして charge され、キャッシュとライトバッファが一つのメモリ予算を共有する。
+  これがプロセス全体のメモリ上限を単一の値で表現させる。
+- `WriteController` は停止と減速をトークンの所有として表現し、`std::unique_ptr` のデストラクタで状態の取り消しを保証する。
+  `GetDelay` はトークンバケットで個々の書き込みに比例した遅延を返し、合計スループットを `delayed_write_rate_` に張り付かせる。
 - write stall の発火条件は MemTable 数（`max_write_buffer_number`）、L0 ファイル数（`level0_*_writes_trigger`）、保留コンパクションバイト（`*_pending_compaction_bytes_limit`）、WBM のメモリ上限であり、それぞれ停止と減速のしきい値を持つ。
 - 減速レートはコンパクション負債の増減に応じて 0.8 倍、その逆数、0.6 倍で動的に調整され、コンパクションの処理能力へ収束するフィードバックループを作る。
 

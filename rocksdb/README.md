@@ -1,10 +1,11 @@
 # RocksDB ソースコードリーディング
 
-RocksDB（[facebook/rocksdb](https://github.com/facebook/rocksdb)）のソースコードを読み解き、各コンポーネントが「何のために、どういう処理を行うか」と「高速化・最適化の工夫」を、ソースコードを引用しながら日本語で解説するドキュメントである。
+RocksDB（[facebook/rocksdb](https://github.com/facebook/rocksdb)）のソースコードを読み解き、各コンポーネントが「何のために、どういう処理を行うか」と「高速化、最適化の工夫」を、ソースコードを引用しながら日本語で解説するドキュメントである。
 
 - **対象バージョン**：v11.1.1（コード引用はすべて [`v11.1.1` タグ](https://github.com/facebook/rocksdb/tree/v11.1.1)に固定）
 - **想定読者**：C++ と DB の基礎がある中級エンジニア
-- **読み方**：基礎から順に積み上がる構成。第0部から順に読むことを想定する。
+- **読み方**：基礎から順に積み上がる構成。
+  第0部から順に読むことを想定する。
 
 コード引用は、本文中の `[path L開始-L終了](https://github.com/facebook/rocksdb/blob/v11.1.1/...)` 形式のリンクから GitHub 上の該当箇所を直接参照できる。
 
@@ -76,7 +77,7 @@ RocksDB（[facebook/rocksdb](https://github.com/facebook/rocksdb)）のソース
 41. [Secondary / Tiered Cache](part07-cache/41-secondary-tiered-cache.md)
 42. [メモリ割り当てとアリーナ](part07-cache/42-memory-arena.md)
 
-### 第8部　並行制御・計測
+### 第8部　並行制御と計測
 
 43. [ThreadLocal とスレッドプール](part08-concurrency/43-threadlocal-threadpool.md)
 44. [RateLimiter](part08-concurrency/44-rate-limiter.md)
@@ -92,9 +93,10 @@ RocksDB（[facebook/rocksdb](https://github.com/facebook/rocksdb)）のソース
 48. [BlobDB（KV 分離）](part10-advanced/48-blob-db.md)
 49. [ワイドカラム](part10-advanced/49-wide-columns.md)
 50. [トランザクション（楽観/悲観/2PC）](part10-advanced/50-transactions.md)
-51. [バックアップ・チェックポイント・セカンダリ](part10-advanced/51-backup-checkpoint-secondary.md)
-52. [エラーハンドリング・トレース・言語バインディング](part10-advanced/52-error-handling-trace-bindings.md)
+51. [バックアップ、チェックポイント、セカンダリ](part10-advanced/51-backup-checkpoint-secondary.md)
+52. [エラーハンドリング、トレース、言語バインディング](part10-advanced/52-error-handling-trace-bindings.md)
 
 ---
 
-> 全52章すべて執筆済み。各章のコード引用は v11.1.1 タグに固定した GitHub リンクから該当行を直接参照できる。
+> 全52章すべて執筆済み。
+> 各章のコード引用は v11.1.1 タグに固定した GitHub リンクから該当行を直接参照できる。

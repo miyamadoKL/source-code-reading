@@ -275,7 +275,7 @@ bool AssociativeMergeOperator::PartialMerge(const Slice& key,
 固定されているとは、基になるバッファが `MergeContext` より長く生き、内容が動かないことを指す。
 固定済みなら追加のコピーを避けられる。
 
-[`db/merge_context.h` L36-L48](https://github.com/facebook/rocksdb/blob/v11.1.1/db/merge_context.h#L36-L48)
+[`db/merge_context.h` L35-L48](https://github.com/facebook/rocksdb/blob/v11.1.1/db/merge_context.h#L35-L48)
 
 ```cpp
   // Push a merge operand
@@ -402,7 +402,7 @@ bool AssociativeMergeOperator::PartialMerge(const Slice& key,
 代わりに `PartialMergeMulti` でオペランド同士を結合し、列を短くする。
 結合できたぶんだけ、以後の読み取りとコンパクションが処理するオペランドが減る。
 
-[`db/merge_helper.cc` L617-L643](https://github.com/facebook/rocksdb/blob/v11.1.1/db/merge_helper.cc#L617-L643)
+[`db/merge_helper.cc` L617-L645](https://github.com/facebook/rocksdb/blob/v11.1.1/db/merge_helper.cc#L617-L645)
 
 ```cpp
   } else {
@@ -596,11 +596,16 @@ bool StringAppendOperator::Merge(const Slice& /*key*/,
 
 ## まとめ
 
-- マージ演算子は read-modify-write の読み取りを更新表現から取り除く。クライアントは増分（オペランド）を `Merge(key, operand)` で記録し、書き込みは MemTable への追記で完結する。
-- オペランドは書き込み時には適用されず、`MergeContext` に時系列順で積まれる。畳み込みは読み取りとコンパクションのときに起きる。
-- `FullMerge` は基底値とオペランド列から最終値を作る。`PartialMerge` は基底値を持たず、オペランド同士を結合して列を短くする。`AssociativeMergeOperator` は結合的な操作向けの簡易形で、`Merge` 一つから両方を導く。
+- マージ演算子は read-modify-write の読み取りを更新表現から取り除く。
+  クライアントは増分（オペランド）を `Merge(key, operand)` で記録し、書き込みは MemTable への追記で完結する。
+- オペランドは書き込み時には適用されず、`MergeContext` に時系列順で積まれる。
+  畳み込みは読み取りとコンパクションのときに起きる。
+- `FullMerge` は基底値とオペランド列から最終値を作る。
+  `PartialMerge` は基底値を持たず、オペランド同士を結合して列を短くする。
+  `AssociativeMergeOperator` は結合的な操作向けの簡易形で、`Merge` 一つから両方を導く。
 - `MergeHelper::MergeUntil` がオペランド列を走査し、基底値に届けば `FullMerge` で Put に畳み、届かなければ `PartialMerge` で列を短くする。
-- コンパクションはどのみち全データを通過するので、その通過に畳み込みを相乗りさせることで、読み取り専用の I/O を増やさずにオペランド列を短く保つ。これがマージの償却の核である。
+- コンパクションはどのみち全データを通過するので、その通過に畳み込みを相乗りさせることで、読み取り専用の I/O を増やさずにオペランド列を短く保つ。
+  これがマージの償却の核である。
 - `MergeContext` の遅延反転（要求時のみ `std::reverse`）と固定済みオペランドの非コピー保持、`FullMergeV2` の一括 `reserve` が、畳み込み経路の細かな最適化である。
 
 ## 関連する章
