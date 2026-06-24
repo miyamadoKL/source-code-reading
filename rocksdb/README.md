@@ -77,7 +77,7 @@ RocksDB（[facebook/rocksdb](https://github.com/facebook/rocksdb)）のソース
 41. [Secondary / Tiered Cache](part07-cache/41-secondary-tiered-cache.md)
 42. [メモリ割り当てとアリーナ](part07-cache/42-memory-arena.md)
 
-### 第8部　並行制御・計測
+### 第8部　並行制御と計測
 
 43. [ThreadLocal とスレッドプール](part08-concurrency/43-threadlocal-threadpool.md)
 44. [RateLimiter](part08-concurrency/44-rate-limiter.md)
@@ -98,4 +98,5 @@ RocksDB（[facebook/rocksdb](https://github.com/facebook/rocksdb)）のソース
 
 ---
 
-> 全52章すべて執筆済み。各章のコード引用は v11.1.1 タグに固定した GitHub リンクから該当行を直接参照できる。
+> 全52章すべて執筆済み。
+> 各章のコード引用は v11.1.1 タグに固定した GitHub リンクから該当行を直接参照できる。
