@@ -327,9 +327,11 @@ sequenceDiagram
 
 - `DB` は公開インターフェース、`DBImpl` はその唯一の主たる実装であり、各コンポーネントを保持してフラッシュとコンパクションを制御する入口である。
 - カラムファミリーごとの LSM-tree は、可変 MemTable、Immutable MemTable 列、SST 群を指す `Version` の三層からなり、`SuperVersion` がそれらを点像として束ねる。
-- 書き込みは WAL への追記を先に行い、その後 MemTable へ挿入する。MemTable は満杯で締め切られ、フラッシュで L0 の SST になる。
+- 書き込みは WAL への追記を先に行い、その後 MemTable へ挿入する。
+  MemTable は満杯で締め切られ、フラッシュで L0 の SST になる。
 - 読み出しは `SuperVersion` を取得し、可変 MemTable から Immutable MemTable、L0、L1 から Ln の順に探索して最初の一致で打ち切る。
-- 背後ではコンパクションが SST を併合し、`VersionSet` が新しい `Version` を作って MANIFEST に差分を追記する。Block Cache はデータブロックを保持してディスク I/O を省く。
+- 背後ではコンパクションが SST を併合し、`VersionSet` が新しい `Version` を作って MANIFEST に差分を追記する。
+  Block Cache はデータブロックを保持してディスク I/O を省く。
 
 ## 関連する章
 

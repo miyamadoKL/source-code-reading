@@ -356,7 +356,7 @@ SequenceNumber SeqnoToTimeMapping::GetProximalSeqnoBeforeTime(
 階層化のしきい値は、この問い合わせの上に組み立てられる。
 `GetCurrentTieringCutoffSeqnos` は、現在時刻から `preserve_internal_time_seconds` と `preclude_last_level_data_seconds` の大きいほうだけ遡った時刻を求め、その時刻に対応するシーケンス番号に 1 を足してしきい値とする。
 
-[`db/seqno_to_time_mapping.cc` L72-L99](https://github.com/facebook/rocksdb/blob/v11.1.1/db/seqno_to_time_mapping.cc#L72-L99)
+[`db/seqno_to_time_mapping.cc` L72-L91](https://github.com/facebook/rocksdb/blob/v11.1.1/db/seqno_to_time_mapping.cc#L72-L91)
 
 ```cpp
 void SeqnoToTimeMapping::GetCurrentTieringCutoffSeqnos(
@@ -388,10 +388,14 @@ void SeqnoToTimeMapping::GetCurrentTieringCutoffSeqnos(
 ## まとめ
 
 - シーケンス番号は DB 全体で単調増加する整数で、書き込みごとに割り当てられて内部キーのトレーラに入り、MVCC の版を表す。
-- スナップショットは取得時のシーケンス番号一つを `SnapshotImpl::number_` に控えるだけの不変オブジェクトで、取得はその番号をリストへつなぐ軽い操作である。読み出しはその番号以下で最大の版を見る。
-- `SnapshotList` は番兵付きの双方向環状リストで、昇順を保つので最古と最新を定数時間で返す。挿入と削除はポインタの付け替えだけで済む。
-- 生きているスナップショットの最古のシーケンス番号が、コンパクションのガベージコレクションの安全境界になる。境界より下で隠された古い版とトゥームストーンが捨てられる。
-- スナップショットを解放せずに握り続けると最古境界が前進せず、古い版が SST に溜まる。`ReleaseSnapshot` は解放のたびに境界を更新し、必要ならコンパクションを起動する。
+- スナップショットは取得時のシーケンス番号一つを `SnapshotImpl::number_` に控えるだけの不変オブジェクトで、取得はその番号をリストへつなぐ軽い操作である。
+  読み出しはその番号以下で最大の版を見る。
+- `SnapshotList` は番兵付きの双方向環状リストで、昇順を保つので最古と最新を定数時間で返す。
+  挿入と削除はポインタの付け替えだけで済む。
+- 生きているスナップショットの最古のシーケンス番号が、コンパクションのガベージコレクションの安全境界になる。
+  境界より下で隠された古い版とトゥームストーンが捨てられる。
+- スナップショットを解放せずに握り続けると最古境界が前進せず、古い版が SST に溜まる。
+  `ReleaseSnapshot` は解放のたびに境界を更新し、必要ならコンパクションを起動する。
 - `SeqnoToTimeMapping` はサンプリングしたシーケンス番号と実時刻の対応を持ち、`GetProximalSeqnoBeforeTime` で時刻をシーケンス番号のしきい値へ変換して、時間ベースの TTL や階層化を支える。
 
 ## 関連する章

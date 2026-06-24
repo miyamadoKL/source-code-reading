@@ -202,7 +202,6 @@ class Cache : public Customizable {
     // primary cache without removal from the secondary cache can be prevented
     // from attempting re-insertion into secondary cache (for efficiency).
     const CacheItemHelper* without_secondary_compat;
-  };
 ```
 
 中心は `del_cb` で、エントリがキャッシュから外れるときに呼ばれる解放関数である。
@@ -315,6 +314,7 @@ flowchart TD
   bool strict_capacity_limit_;
   size_t capacity_;
   mutable port::Mutex config_mutex_;
+};
 ```
 
 `shard_mask_` は `num_shard_bits` ビットがすべて1のマスクで、コンストラクタで作られる。
@@ -527,7 +527,7 @@ int GetDefaultCacheShardBits(size_t capacity, size_t min_shard_size) {
 全エントリへのコールバック適用では、レイテンシへの配慮が見える。
 全シャードを順に一気に処理せず、各シャードを少しずつ処理しながらシャード間を巡回する。
 
-[`cache/sharded_cache.h` L242-L259](https://github.com/facebook/rocksdb/blob/v11.1.1/cache/sharded_cache.h#L242-L259)
+[`cache/sharded_cache.h` L242-L260](https://github.com/facebook/rocksdb/blob/v11.1.1/cache/sharded_cache.h#L242-L260)
 
 ```cpp
     uint32_t num_shards = GetNumShards();
@@ -595,6 +595,7 @@ class CacheKey {
 // If the db_id, db_session_id, and file_number come from the file's table
 // properties, then the keys will be stable across DB::Open/Close, backup/
 // restore, import/export, etc.
+//
 ```
 
 基底キーを `db_id`、`db_session_id`、`file_number` から作る点が要である。
@@ -623,12 +624,19 @@ class CacheKey {
 
 ## まとめ
 
-- `Cache` はキーからメモリ上のオブジェクトへの対応を、参照カウント付きで保持する抽象である。`Insert` で値と `charge` と解放処理を預け、`Lookup` で `Handle` を得て、使い終えたら `Release` する。
-- `Lookup` が返した `Handle` を `Release` するまで、そのエントリは退避されない。`Erase` してもなお、未解放の `Handle` がある限り実体は保持される。実際の破棄は参照ゼロまで遅延する。
-- 値は `void*` として扱われ、型ごとの解放処理は `CacheItemHelper` に切り出される。コールバックを C スタイル関数ポインタにし、`role` ごとに静的共有することで、エントリあたりのメタデータを小さく保つ。
-- `ShardedCache` はキャッシュを `2^num_shard_bits` 個のシャードに分け、容量を均等分割し、各シャードに独立したロックを持たせる。キーのハッシュ下位ビットでシャードを選ぶため、分散したキーへの操作は別ロックで同時に進み、ロック競合がおよそシャード数分の1に下がる。
-- 単一ホットブロックや小容量では分散が効きにくいため、既定シャード数は容量に応じて決め、上限を64に抑える。シャード配列はキャッシュライン整列で確保し、偽共有を避ける。
-- `CacheKey` は SST のテーブルプロパティ由来の情報から16バイトの安定キーを作り、オフセット付きキーは XOR 一回で導く。Open/Close やバックアップをまたいでも安定し、衝突しにくい。
+- `Cache` はキーからメモリ上のオブジェクトへの対応を、参照カウント付きで保持する抽象である。
+  `Insert` で値と `charge` と解放処理を預け、`Lookup` で `Handle` を得て、使い終えたら `Release` する。
+- `Lookup` が返した `Handle` を `Release` するまで、そのエントリは退避されない。
+  `Erase` してもなお、未解放の `Handle` がある限り実体は保持される。
+  実際の破棄は参照ゼロまで遅延する。
+- 値は `void*` として扱われ、型ごとの解放処理は `CacheItemHelper` に切り出される。
+  コールバックを C スタイル関数ポインタにし、`role` ごとに静的共有することで、エントリあたりのメタデータを小さく保つ。
+- `ShardedCache` はキャッシュを `2^num_shard_bits` 個のシャードに分け、容量を均等分割し、各シャードに独立したロックを持たせる。
+  キーのハッシュ下位ビットでシャードを選ぶため、分散したキーへの操作は別ロックで同時に進み、ロック競合がおよそシャード数分の1に下がる。
+- 単一ホットブロックや小容量では分散が効きにくいため、既定シャード数は容量に応じて決め、上限を64に抑える。
+  シャード配列はキャッシュライン整列で確保し、偽共有を避ける。
+- `CacheKey` は SST のテーブルプロパティ由来の情報から16バイトの安定キーを作り、オフセット付きキーは XOR 一回で導く。
+  Open/Close やバックアップをまたいでも安定し、衝突しにくい。
 
 ## 関連する章
 

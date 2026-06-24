@@ -22,7 +22,8 @@
 - [第39章 LRUCache](39-lru-cache.md)（一次キャッシュの実装の一つ）
 - [第40章 HyperClockCache](40-hyperclock-cache.md)（もう一つの一次キャッシュ実装）
 
-一次キャッシュそのものの構造は上記2章で扱う。本章は、その下に二次層を足したときの挙動に絞る。
+一次キャッシュそのものの構造は上記2章で扱う。
+本章は、その下に二次層を足したときの挙動に絞る。
 
 ## 二次キャッシュの位置づけ
 
@@ -52,14 +53,14 @@ flowchart TD
 [`include/rocksdb/secondary_cache.h` L82-L117](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/secondary_cache.h#L82-L117) を読む。
 
 ```cpp
-virtual Status Insert(const Slice& key, Cache::ObjectPtr obj,
-                      const Cache::CacheItemHelper* helper,
-                      bool force_insert) = 0;
-// ... (中略) ...
-virtual std::unique_ptr<SecondaryCacheResultHandle> Lookup(
-    const Slice& key, const Cache::CacheItemHelper* helper,
-    Cache::CreateContext* create_context, bool wait, bool advise_erase,
-    Statistics* stats, bool& kept_in_sec_cache) = 0;
+  virtual Status Insert(const Slice& key, Cache::ObjectPtr obj,
+                        const Cache::CacheItemHelper* helper,
+                        bool force_insert) = 0;
+  // ... (中略) ...
+  virtual std::unique_ptr<SecondaryCacheResultHandle> Lookup(
+      const Slice& key, const Cache::CacheItemHelper* helper,
+      Cache::CreateContext* create_context, bool wait, bool advise_erase,
+      Statistics* stats, bool& kept_in_sec_cache) = 0;
 ```
 
 `Insert` は一次から落ちた値を二次へ移す入口である。
@@ -79,15 +80,17 @@ virtual std::unique_ptr<SecondaryCacheResultHandle> Lookup(
 [`include/rocksdb/advanced_cache.h` L132-L142](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/advanced_cache.h#L132-L142) を読む。
 
 ```cpp
-struct CacheItemHelper {
-  // Function for deleting an object on its removal from the Cache.
-  DeleterFn del_cb;  // (<- Most performance critical)
-  // Next three are used for persisting values as described above.
-  // If any is nullptr, then all three should be nullptr and persisting the
-  // entry to/from secondary cache is not supported.
-  SizeCallback size_cb;
-  SaveToCallback saveto_cb;
-  CreateCallback create_cb;
+  struct CacheItemHelper {
+    // Function for deleting an object on its removal from the Cache.
+    // nullptr is only for entries that require no destruction, such as
+    // "placeholder" cache entries with nullptr object.
+    DeleterFn del_cb;  // (<- Most performance critical)
+    // Next three are used for persisting values as described above.
+    // If any is nullptr, then all three should be nullptr and persisting the
+    // entry to/from secondary cache is not supported.
+    SizeCallback size_cb;
+    SaveToCallback saveto_cb;
+    CreateCallback create_cb;
 ```
 
 三つの直列化用コールバックは、いずれかが `nullptr` ならすべて `nullptr` でなければならない。
@@ -96,36 +99,36 @@ struct CacheItemHelper {
 [`include/rocksdb/advanced_cache.h` L178-L180](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/advanced_cache.h#L178-L180) を引く。
 
 ```cpp
-inline bool IsSecondaryCacheCompatible() const {
-  return size_cb != nullptr;
-}
+    inline bool IsSecondaryCacheCompatible() const {
+      return size_cb != nullptr;
+    }
 ```
 
 各コールバックの役割は定義部のコメントに書かれている。
 `SizeCallback` は直列化したときのバイト数を返し、二次キャッシュが領域を確保するのに使う。
-[`include/rocksdb/advanced_cache.h` L90-L104](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/advanced_cache.h#L90-L104) を読む。
+[`include/rocksdb/advanced_cache.h` L97-L104](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/advanced_cache.h#L97-L104) を読む。
 
 ```cpp
-using SizeCallback = size_t (*)(ObjectPtr obj);
+  using SizeCallback = size_t (*)(ObjectPtr obj);
 
-// The SaveToCallback takes an object pointer and saves the persistable
-// data into a buffer. The secondary cache may decide to not store it in a
-// contiguous buffer, in which case this callback will be called multiple
-// times with increasing offset
-using SaveToCallback = Status (*)(ObjectPtr from_obj, size_t from_offset,
-                                  size_t length, char* out_buf);
+  // The SaveToCallback takes an object pointer and saves the persistable
+  // data into a buffer. The secondary cache may decide to not store it in a
+  // contiguous buffer, in which case this callback will be called multiple
+  // times with increasing offset
+  using SaveToCallback = Status (*)(ObjectPtr from_obj, size_t from_offset,
+                                    size_t length, char* out_buf);
 ```
 
 `SaveToCallback` はオブジェクトの中身を渡されたバッファへ書き出す。
 オフセットを増やしながら複数回呼ばれることがあり、二次キャッシュ側が連続領域を用意できなくても対応できる。
 復元側は `CreateCallback` が担う。
-[`include/rocksdb/advanced_cache.h` L114-L127](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/advanced_cache.h#L114-L127) を読む。
+[`include/rocksdb/advanced_cache.h` L124-L127](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/advanced_cache.h#L124-L127) を読む。
 
 ```cpp
-using CreateCallback = Status (*)(const Slice& data, CompressionType type,
-                                  CacheTier source, CreateContext* context,
-                                  MemoryAllocator* allocator,
-                                  ObjectPtr* out_obj, size_t* out_charge);
+  using CreateCallback = Status (*)(const Slice& data, CompressionType type,
+                                    CacheTier source, CreateContext* context,
+                                    MemoryAllocator* allocator,
+                                    ObjectPtr* out_obj, size_t* out_charge);
 ```
 
 `CreateCallback` は二次キャッシュから受け取ったバッファ `data` からオブジェクトを組み立てる。
@@ -143,7 +146,7 @@ using CreateCallback = Status (*)(const Slice& data, CompressionType type,
 
 一次と二次を束ねるのが `CacheWithSecondaryAdapter` である。
 これは `CacheWrapper` を継承し、一次キャッシュ（`target_`）の上に二次キャッシュ（`secondary_cache_`）を重ねる。
-[`cache/secondary_cache_adapter.h` L13-L21](https://github.com/facebook/rocksdb/blob/v11.1.1/cache/secondary_cache_adapter.h#L13-L21) を読む。
+[`cache/secondary_cache_adapter.h` L13-L19](https://github.com/facebook/rocksdb/blob/v11.1.1/cache/secondary_cache_adapter.h#L13-L19) を読む。
 
 ```cpp
 class CacheWithSecondaryAdapter : public CacheWrapper {
@@ -160,10 +163,10 @@ class CacheWithSecondaryAdapter : public CacheWrapper {
 [`cache/secondary_cache_adapter.cc` L90-L93](https://github.com/facebook/rocksdb/blob/v11.1.1/cache/secondary_cache_adapter.cc#L90-L93) を引く。
 
 ```cpp
-target_->SetEvictionCallback(
-    [this](const Slice& key, Handle* handle, bool was_hit) {
-      return EvictionHandler(key, handle, was_hit);
-    });
+  target_->SetEvictionCallback(
+      [this](const Slice& key, Handle* handle, bool was_hit) {
+        return EvictionHandler(key, handle, was_hit);
+      });
 ```
 
 一次キャッシュがエントリを退避させると、このハンドラが呼ばれる。
@@ -206,6 +209,8 @@ Cache::Handle* CacheWithSecondaryAdapter::Lookup(const Slice& key,
                                                  CreateContext* create_context,
                                                  Priority priority,
                                                  Statistics* stats) {
+  // NOTE: we could just StartAsyncLookup() and Wait(), but this should be a bit
+  // more efficient
   Handle* result =
       target_->Lookup(key, helper, create_context, priority, stats);
   bool secondary_compatible = helper && helper->IsSecondaryCacheCompatible();
@@ -236,28 +241,31 @@ Cache::Handle* CacheWithSecondaryAdapter::Lookup(const Slice& key,
 [`cache/secondary_cache_adapter.cc` L204-L243](https://github.com/facebook/rocksdb/blob/v11.1.1/cache/secondary_cache_adapter.cc#L204-L243) を読む。
 
 ```cpp
-// Note: SecondaryCache::Size() is really charge (from the CreateCallback)
-size_t charge = secondary_handle->Size();
-Handle* result = nullptr;
-// Insert into primary cache, possibly as a standalone+dummy entries.
-if (secondary_cache_->SupportForceErase() && !found_dummy_entry) {
-  // Create standalone and insert dummy
-  // Allow standalone to be created even if cache is full, to avoid
-  // reading the entry from storage.
-  result =
-      CreateStandalone(key, obj, helper, charge, /*allow_uncharged*/ true);
-  // ... (中略) ...
-  // Insert dummy to record recent use
-  Status s = Insert(key, kDummyObj, &kNoopCacheItemHelper, /*charge=*/0,
-                    /*handle=*/nullptr, priority);
-  // ... (中略) ...
-} else {
-  // Insert regular entry into primary cache.
-  // Don't allow it to spill into secondary cache again if it was kept there.
-  Status s = Insert(
-      key, obj, kept_in_sec_cache ? helper->without_secondary_compat : helper,
-      charge, &result, priority);
-  // ... (中略) ...
+  // Note: SecondaryCache::Size() is really charge (from the CreateCallback)
+  size_t charge = secondary_handle->Size();
+  Handle* result = nullptr;
+  // Insert into primary cache, possibly as a standalone+dummy entries.
+  if (secondary_cache_->SupportForceErase() && !found_dummy_entry) {
+    // Create standalone and insert dummy
+    // Allow standalone to be created even if cache is full, to avoid
+    // reading the entry from storage.
+    result =
+        CreateStandalone(key, obj, helper, charge, /*allow_uncharged*/ true);
+    // ... (中略) ...
+    // Insert dummy to record recent use
+    // ... (中略) ...
+    Status s = Insert(key, kDummyObj, &kNoopCacheItemHelper, /*charge=*/0,
+                      /*handle=*/nullptr, priority);
+    // ... (中略) ...
+  } else {
+    // Insert regular entry into primary cache.
+    // Don't allow it to spill into secondary cache again if it was kept there.
+    Status s = Insert(
+        key, obj, kept_in_sec_cache ? helper->without_secondary_compat : helper,
+        charge, &result, priority);
+    // ... (中略) ...
+  }
+  return result;
 }
 ```
 
@@ -284,6 +292,7 @@ void CacheWithSecondaryAdapter::StartAsyncLookupOnMySecondary(
           /*wait*/ false, async_handle.found_dummy_entry, async_handle.stats,
           /*out*/ async_handle.kept_in_sec_cache);
   if (secondary_handle) {
+    // TODO with stacked secondaries: Check & process if already ready?
     async_handle.pending_handle = secondary_handle.release();
     async_handle.pending_cache = secondary_cache_.get();
   }
@@ -291,28 +300,28 @@ void CacheWithSecondaryAdapter::StartAsyncLookupOnMySecondary(
 ```
 
 保留中のハンドルを溜めておき、後で `WaitAll` がまとめて待つ。
-[`cache/secondary_cache_adapter.cc` L446-L465](https://github.com/facebook/rocksdb/blob/v11.1.1/cache/secondary_cache_adapter.cc#L446-L465) を読む。
+[`cache/secondary_cache_adapter.cc` L446-L464](https://github.com/facebook/rocksdb/blob/v11.1.1/cache/secondary_cache_adapter.cc#L446-L464) を読む。
 
 ```cpp
-// Wait on all lookups on my secondary cache
-{
-  std::vector<SecondaryCacheResultHandle*> my_secondary_handles;
-  for (AsyncLookupHandle* cur : my_pending) {
-    my_secondary_handles.push_back(cur->pending_handle);
+  // Wait on all lookups on my secondary cache
+  {
+    std::vector<SecondaryCacheResultHandle*> my_secondary_handles;
+    for (AsyncLookupHandle* cur : my_pending) {
+      my_secondary_handles.push_back(cur->pending_handle);
+    }
+    secondary_cache_->WaitAll(std::move(my_secondary_handles));
   }
-  secondary_cache_->WaitAll(std::move(my_secondary_handles));
-}
 
-// Process results
-for (AsyncLookupHandle* cur : my_pending) {
-  std::unique_ptr<SecondaryCacheResultHandle> secondary_handle(
-      cur->pending_handle);
-  cur->pending_handle = nullptr;
-  cur->result_handle = Promote(
-      std::move(secondary_handle), cur->key, cur->helper, cur->priority,
-      cur->stats, cur->found_dummy_entry, cur->kept_in_sec_cache);
-  assert(cur->pending_cache == nullptr);
-}
+  // Process results
+  for (AsyncLookupHandle* cur : my_pending) {
+    std::unique_ptr<SecondaryCacheResultHandle> secondary_handle(
+        cur->pending_handle);
+    cur->pending_handle = nullptr;
+    cur->result_handle = Promote(
+        std::move(secondary_handle), cur->key, cur->helper, cur->priority,
+        cur->stats, cur->found_dummy_entry, cur->kept_in_sec_cache);
+    assert(cur->pending_cache == nullptr);
+  }
 ```
 
 複数の鍵の二次 lookup を並行して走らせ、I/O 完了を一度に待つ。
@@ -325,24 +334,24 @@ for (AsyncLookupHandle* cur : my_pending) {
 `CompressedSecondaryCache` は、二次層を DRAM 上に置きつつ値を圧縮して保持する `SecondaryCache` の実装である。
 解凍済みより小さく持てるので、同じ DRAM 量でより多くのブロックをキャッシュできる。
 退避された値を二次へ挿入する経路が `InsertInternal` で、ここで圧縮する。
-[`cache/compressed_secondary_cache.cc` L199-L221](https://github.com/facebook/rocksdb/blob/v11.1.1/cache/compressed_secondary_cache.cc#L199-L221) を読む。
+[`cache/compressed_secondary_cache.cc` L199-L218](https://github.com/facebook/rocksdb/blob/v11.1.1/cache/compressed_secondary_cache.cc#L199-L218) を読む。
 
 ```cpp
-Status s = (*helper->saveto_cb)(value, 0, data_size_original, data_ptr);
-if (!s.ok()) {
-  return s;
-}
+  Status s = (*helper->saveto_cb)(value, 0, data_size_original, data_ptr);
+  if (!s.ok()) {
+    return s;
+  }
 
-std::unique_ptr<char[]> tagged_compressed_data;
-CompressionType to_type = kNoCompression;
-if (compressor_ && from_type == kNoCompression &&
-    !cache_options_.do_not_compress_roles.Contains(helper->role)) {
-  assert(source == CacheTier::kVolatileCompressedTier);
-  // ... (中略) ...
-  s = compressor_->CompressBlock(Slice(data_ptr, data_size_original),
-                                 tagged_compressed_data.get() + kTagSize,
-                                 &data_size_compressed, &to_type,
-                                 nullptr /*working_area*/);
+  std::unique_ptr<char[]> tagged_compressed_data;
+  CompressionType to_type = kNoCompression;
+  if (compressor_ && from_type == kNoCompression &&
+      !cache_options_.do_not_compress_roles.Contains(helper->role)) {
+    assert(source == CacheTier::kVolatileCompressedTier);
+    // ... (中略) ...
+    s = compressor_->CompressBlock(Slice(data_ptr, data_size_original),
+                                   tagged_compressed_data.get() + kTagSize,
+                                   &data_size_compressed, &to_type,
+                                   nullptr /*working_area*/);
 ```
 
 まず `helper->saveto_cb` で一次のオブジェクトをバイト列へ直列化し、続いて `compressor_->CompressBlock` で圧縮する。
@@ -354,28 +363,29 @@ if (compressor_ && from_type == kNoCompression &&
 [`cache/compressed_secondary_cache.cc` L101-L136](https://github.com/facebook/rocksdb/blob/v11.1.1/cache/compressed_secondary_cache.cc#L101-L136) を読む。
 
 ```cpp
-if (source == CacheTier::kVolatileCompressedTier) {
-  if (type != kNoCompression) {
-    Decompressor::Args args;
-    args.compressed_data = saved;
-    args.compression_type = type;
-    Status s = decompressor_->ExtractUncompressedSize(args);
-    // ... (中略) ...
-    s = decompressor_->DecompressBlock(args, uncompressed.get());
-    // ... (中略) ...
-    saved = Slice(uncompressed.get(), args.uncompressed_size);
-    type = kNoCompression;
-    // ... (中略) ...
+  if (source == CacheTier::kVolatileCompressedTier) {
+    if (type != kNoCompression) {
+      // ... (中略) ...
+      Decompressor::Args args;
+      args.compressed_data = saved;
+      args.compression_type = type;
+      Status s = decompressor_->ExtractUncompressedSize(args);
+      // ... (中略) ...
+        s = decompressor_->DecompressBlock(args, uncompressed.get());
+      // ... (中略) ...
+      saved = Slice(uncompressed.get(), args.uncompressed_size);
+      type = kNoCompression;
+      // ... (中略) ...
+    }
+    // Reduced as if it came from primary cache
+    source = CacheTier::kVolatileTier;
   }
-  // Reduced as if it came from primary cache
-  source = CacheTier::kVolatileTier;
-}
 
-Cache::ObjectPtr result_value = nullptr;
-size_t result_charge = 0;
-Status s = helper->create_cb(saved, type, source, create_context,
-                             cache_options_.memory_allocator.get(),
-                             &result_value, &result_charge);
+  Cache::ObjectPtr result_value = nullptr;
+  size_t result_charge = 0;
+  Status s = helper->create_cb(saved, type, source, create_context,
+                               cache_options_.memory_allocator.get(),
+                               &result_value, &result_charge);
 ```
 
 ### ダミーによる二度目の参照での昇格
@@ -396,20 +406,21 @@ bool CompressedSecondaryCache::MaybeInsertDummy(const Slice& key) {
   } else {
     cache_->Release(lru_handle, /*erase_if_last_ref=*/false);
   }
+
   return false;
 }
 ```
 
 `Insert` は `force_insert` でなければまず `MaybeInsertDummy` を試す。
-[`cache/compressed_secondary_cache.cc` L285-L299](https://github.com/facebook/rocksdb/blob/v11.1.1/cache/compressed_secondary_cache.cc#L285-L299) を引く。
+[`cache/compressed_secondary_cache.cc` L293-L298](https://github.com/facebook/rocksdb/blob/v11.1.1/cache/compressed_secondary_cache.cc#L293-L298) を引く。
 
 ```cpp
-if (!force_insert && MaybeInsertDummy(key)) {
-  return Status::OK();
-}
+  if (!force_insert && MaybeInsertDummy(key)) {
+    return Status::OK();
+  }
 
-return InsertInternal(key, value, helper, kNoCompression,
-                      CacheTier::kVolatileCompressedTier);
+  return InsertInternal(key, value, helper, kNoCompression,
+                        CacheTier::kVolatileCompressedTier);
 ```
 
 初めて退避された鍵にはサイズ 0 のダミーを置くだけで、実データの圧縮も保存もしない。
@@ -420,7 +431,7 @@ return InsertInternal(key, value, helper, kNoCompression,
 
 `TieredSecondaryCache` は、圧縮 DRAM 二次層とフラッシュ二次層を縦に積む。
 これ自体が `SecondaryCache` を実装するため、`CacheWithSecondaryAdapter` から見れば単一の二次層に見える。
-[`cache/tiered_secondary_cache.h` L26-L37](https://github.com/facebook/rocksdb/blob/v11.1.1/cache/tiered_secondary_cache.h#L26-L37) を読む。
+[`cache/tiered_secondary_cache.h` L26-L31](https://github.com/facebook/rocksdb/blob/v11.1.1/cache/tiered_secondary_cache.h#L26-L31) を読む。
 
 ```cpp
 class TieredSecondaryCache : public SecondaryCacheWrapper {
@@ -476,6 +487,7 @@ Status TieredSecondaryCache::MaybeInsertAndCreate(
   assert(source == CacheTier::kVolatileTier);
   if (!context->advise_erase && type != kNoCompression) {
     // Attempt to insert into compressed secondary cache
+    // TODO: Don't hardcode the source
     context->comp_sec_cache->InsertSaved(*context->key, data, type, source)
         .PermitUncheckedError();
     RecordTick(context->stats, COMPRESSED_SECONDARY_CACHE_PROMOTIONS);
@@ -505,26 +517,26 @@ Status TieredSecondaryCache::MaybeInsertAndCreate(
 
 容量配分も調整できる。
 `NewTieredCache` は、全体の容量を一次と圧縮二次へ `compressed_secondary_ratio` で配分し、フラッシュ層があれば三段に積む。
-[`cache/secondary_cache_adapter.cc` L709-L726](https://github.com/facebook/rocksdb/blob/v11.1.1/cache/secondary_cache_adapter.cc#L709-L726) を読む。
+[`cache/secondary_cache_adapter.cc` L709-L725](https://github.com/facebook/rocksdb/blob/v11.1.1/cache/secondary_cache_adapter.cc#L709-L725) を読む。
 
 ```cpp
-std::shared_ptr<SecondaryCache> sec_cache;
-opts.comp_cache_opts.capacity = static_cast<size_t>(
-    opts.total_capacity * opts.compressed_secondary_ratio);
-sec_cache = NewCompressedSecondaryCache(opts.comp_cache_opts);
+  std::shared_ptr<SecondaryCache> sec_cache;
+  opts.comp_cache_opts.capacity = static_cast<size_t>(
+      opts.total_capacity * opts.compressed_secondary_ratio);
+  sec_cache = NewCompressedSecondaryCache(opts.comp_cache_opts);
 
-if (opts.nvm_sec_cache) {
-  if (opts.adm_policy == TieredAdmissionPolicy::kAdmPolicyThreeQueue) {
-    sec_cache = std::make_shared<TieredSecondaryCache>(
-        sec_cache, opts.nvm_sec_cache,
-        TieredAdmissionPolicy::kAdmPolicyThreeQueue);
-  } else {
-    return nullptr;
+  if (opts.nvm_sec_cache) {
+    if (opts.adm_policy == TieredAdmissionPolicy::kAdmPolicyThreeQueue) {
+      sec_cache = std::make_shared<TieredSecondaryCache>(
+          sec_cache, opts.nvm_sec_cache,
+          TieredAdmissionPolicy::kAdmPolicyThreeQueue);
+    } else {
+      return nullptr;
+    }
   }
-}
 
-return std::make_shared<CacheWithSecondaryAdapter>(
-    cache, sec_cache, opts.adm_policy, /*distribute_cache_res=*/true);
+  return std::make_shared<CacheWithSecondaryAdapter>(
+      cache, sec_cache, opts.adm_policy, /*distribute_cache_res=*/true);
 ```
 
 圧縮二次層の比率を上げれば、より多くのブロックを DRAM に保持できる代わりに、解凍済みで持てる一次の容量が減る。
@@ -535,8 +547,10 @@ Block Cache を読み出し経路でどう引くかは[第16章 BlockBasedTableR
 ## まとめ
 
 - 二次キャッシュは一次（DRAM の Block Cache）の下に置く第二層で、退避された値を受け取り、次の lookup で復元して一次へ昇格させ、ディスク I/O を減らす。
-- 一次のオブジェクトと二次のバイト列の変換は、`CacheItemHelper` の `size_cb` / `saveto_cb` / `create_cb` の三つで行う。三つが揃っているかどうかが二次保存可否の判定（`IsSecondaryCacheCompatible()`）になる。
-- `CacheWithSecondaryAdapter` が一次の退避コールバックで二次へ移し、一次ミス時に二次を引いて `Promote` で昇格させる。初回の参照ではダミーを置き、二度目で正規昇格する。
+- 一次のオブジェクトと二次のバイト列の変換は、`CacheItemHelper` の `size_cb` / `saveto_cb` / `create_cb` の三つで行う。
+  三つが揃っているかどうかが二次保存可否の判定（`IsSecondaryCacheCompatible()`）になる。
+- `CacheWithSecondaryAdapter` が一次の退避コールバックで二次へ移し、一次ミス時に二次を引いて `Promote` で昇格させる。
+  初回の参照ではダミーを置き、二度目で正規昇格する。
 - 非同期 lookup（`StartAsyncLookup` と `WaitAll`）で複数鍵のフラッシュ読み取りを並行させ、待ちをまとめてレイテンシを隠す。
 - `CompressedSecondaryCache` は二次層で値を圧縮して保持し、同じ DRAM でより多くのブロックを抱える。
 - `TieredSecondaryCache` は圧縮 DRAM 層とフラッシュ層を縦に積み、フラッシュからの復元時に圧縮 DRAM 層へ相乗りで昇格させる。

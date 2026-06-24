@@ -124,7 +124,7 @@ constexpr int kRecyclableHeaderSize = 4 + 2 + 1 + 4;
 ペイロードが 1 ブロックに収まるかどうかで、物理レコードの型（type）が変わる。
 型は 1 バイトの `RecordType` で表される。
 
-[`db/log_format.h` L22-L37](https://github.com/facebook/rocksdb/blob/v11.1.1/db/log_format.h#L22-L37)
+[`db/log_format.h` L22-L36](https://github.com/facebook/rocksdb/blob/v11.1.1/db/log_format.h#L22-L36)
 
 ```cpp
 enum RecordType : uint8_t {
@@ -329,7 +329,7 @@ CRC（バイト 0 から 3）は型バイトとペイロードを対象に計算
 リカバリ時には `Reader::ReadRecord` が WAL を先頭から走査し、物理レコードの断片を連結して 1 件の論理レコードを返す。
 物理レコード 1 個を取り出すのが `ReadPhysicalRecord` で、その型に応じて `ReadRecord` のループが状態を進める。
 
-[`db/log_reader.cc` L98-L174](https://github.com/facebook/rocksdb/blob/v11.1.1/db/log_reader.cc#L98-L174)
+[`db/log_reader.cc` L97-L174](https://github.com/facebook/rocksdb/blob/v11.1.1/db/log_reader.cc#L97-L174)
 
 ```cpp
   Slice fragment;
@@ -392,7 +392,7 @@ CRC（バイト 0 から 3）は型バイトとペイロードを対象に計算
 
 物理レコードを 1 個読むたびに、`ReadPhysicalRecord` がヘッダを解析し、CRC を検査する。
 
-[`db/log_reader.cc` L566-L639](https://github.com/facebook/rocksdb/blob/v11.1.1/db/log_reader.cc#L566-L639)
+[`db/log_reader.cc` L567-L639](https://github.com/facebook/rocksdb/blob/v11.1.1/db/log_reader.cc#L567-L639)
 
 ```cpp
     // Parse the header
@@ -407,6 +407,7 @@ CRC（バイト 0 から 3）は型バイトとペイロードを対象に計算
       // ... (中略) ...
       *drop_size = buffer_.size();
       buffer_.clear();
+      // ... (中略) ...
       return kBadRecordLen;
     }
     // ... (中略) ...
@@ -468,13 +469,17 @@ enum class WALRecoveryMode : char {
 
 四つの違いは次のとおりである。
 
-**kTolerateCorruptedTailRecords**：書き込み途中のクラッシュで末尾のレコードが不完全になるのは正常とみなし、末尾の破損だけを許容する。LevelDB 由来の挙動である。
+**kTolerateCorruptedTailRecords**：書き込み途中のクラッシュで末尾のレコードが不完全になるのは正常とみなし、末尾の破損だけを許容する。
+LevelDB 由来の挙動である。
 
-**kAbsoluteConsistency**：クリーンシャットダウン後の起動を前提とし、WAL に破損があってはならないとみなす。破損を検出すると DB のオープンを拒否する。
+**kAbsoluteConsistency**：クリーンシャットダウン後の起動を前提とし、WAL に破損があってはならないとみなす。
+破損を検出すると DB のオープンを拒否する。
 
-**kPointInTimeRecovery**（既定値）：破損を見つけた地点の直前まで再生し、そこを正当な復旧点として打ち切る。破損より後の更新は復元しない。
+**kPointInTimeRecovery**（既定値）：破損を見つけた地点の直前まで再生し、そこを正当な復旧点として打ち切る。
+破損より後の更新は復元しない。
 
-**kSkipAnyCorruptedRecords**：破損レコードを読み飛ばし、読めるだけ救い出す。災害復旧向けの最後の手段である。
+**kSkipAnyCorruptedRecords**：破損レコードを読み飛ばし、読めるだけ救い出す。
+災害復旧向けの最後の手段である。
 
 既定値は `kPointInTimeRecovery` で、`DBOptions` のフィールドとして設定される。
 
@@ -555,7 +560,7 @@ enum class WALRecoveryMode : char {
 これを見分けるために、再利用ログのヘッダにはログ番号（4 バイト）が入る。
 読み出し側は、レコードのログ番号が現在のログ番号と一致しなければ、それを前回の利用者が書いた古いレコードとみなして `kOldRecord` を返す。
 
-[`db/log_reader.cc` L606-L611](https://github.com/facebook/rocksdb/blob/v11.1.1/db/log_reader.cc#L606-L611)
+[`db/log_reader.cc` L606-L612](https://github.com/facebook/rocksdb/blob/v11.1.1/db/log_reader.cc#L606-L612)
 
 ```cpp
     if (is_recyclable_type) {
@@ -573,12 +578,18 @@ enum class WALRecoveryMode : char {
 
 ## まとめ
 
-- WAL は更新を MemTable に入れる前にディスクへ追記しておく追記専用ログであり、クラッシュ後の再生で未フラッシュの更新を復元する。ペイロードは `WriteBatch` の `rep_` そのものである。
-- ログは 32KB（`kBlockSize`）のブロック列で、各物理レコードは CRC(4B)＋長さ(2B)＋型(1B) のヘッダとペイロードからなる。再利用ログではログ番号(4B)が加わり、ヘッダは 11 バイトになる。
-- `AddRecord` は論理レコードをブロック境界に合わせて断片化し、収まれば `kFullType`、またげば `kFirstType`／`kMiddleType`／`kLastType` を割り当てる。ヘッダの入らない端数はゼロ埋めして次のブロックへ移る。
-- `EmitPhysicalRecord` は型バイトとペイロードを対象に CRC を計算する。型ごとの CRC を事前計算し、ペイロード CRC を下位層へ引き渡すことで、CRC の再計算を避けている。
-- `ReadRecord` は断片を連結して論理レコードを復元し、`ReadPhysicalRecord` の CRC 検査で破損を検出する。検出後の挙動は `WALRecoveryMode`（既定は `kPointInTimeRecovery`）が決める。
-- `recycle_log_file_num` による WAL 再利用は、割り当て済みブロックの上書きで inode 更新とブロック割り当てを省き、追記 I/O を軽くする。古い内容はヘッダのログ番号で区別され、`kOldRecord` として切り捨てられる。
+- WAL は更新を MemTable に入れる前にディスクへ追記しておく追記専用ログであり、クラッシュ後の再生で未フラッシュの更新を復元する。
+  ペイロードは `WriteBatch` の `rep_` そのものである。
+- ログは 32KB（`kBlockSize`）のブロック列で、各物理レコードは CRC(4B)＋長さ(2B)＋型(1B) のヘッダとペイロードからなる。
+  再利用ログではログ番号(4B)が加わり、ヘッダは 11 バイトになる。
+- `AddRecord` は論理レコードをブロック境界に合わせて断片化し、収まれば `kFullType`、またげば `kFirstType`／`kMiddleType`／`kLastType` を割り当てる。
+  ヘッダの入らない端数はゼロ埋めして次のブロックへ移る。
+- `EmitPhysicalRecord` は型バイトとペイロードを対象に CRC を計算する。
+  型ごとの CRC を事前計算し、ペイロード CRC を下位層へ引き渡すことで、CRC の再計算を避けている。
+- `ReadRecord` は断片を連結して論理レコードを復元し、`ReadPhysicalRecord` の CRC 検査で破損を検出する。
+  検出後の挙動は `WALRecoveryMode`（既定は `kPointInTimeRecovery`）が決める。
+- `recycle_log_file_num` による WAL 再利用は、割り当て済みブロックの上書きで inode 更新とブロック割り当てを省き、追記 I/O を軽くする。
+  古い内容はヘッダのログ番号で区別され、`kOldRecord` として切り捨てられる。
 
 ## 関連する章
 

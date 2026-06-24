@@ -18,7 +18,8 @@
 
 ## 前提
 
-- [第31章 コンパクションジョブ](31-compaction-job.md)：本章が分割の対象とする `CompactionJob` の全体像。どの SST を入力に選ぶかの取捨判定はこの章で扱う。
+- [第31章 コンパクションジョブ](31-compaction-job.md)：本章が分割の対象とする `CompactionJob` の全体像。
+  どの SST を入力に選ぶかの取捨判定はこの章で扱う。
 - [第30章 コンパクションピッカー](30-compaction-picker.md)：コンパクション対象の選定と `max_subcompactions` の役割。
 - [第29章 コンパクションの理論](29-compaction-theory.md)：LSM ツリーにおけるコンパクションの位置づけ。
 
@@ -37,10 +38,10 @@
 [`db/compaction/subcompaction_state.h` L54-L57](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/subcompaction_state.h#L54-L57)
 
 ```cpp
-// The boundaries of the key-range this compaction is interested in. No two
-// sub-compactions may have overlapping key-ranges.
-// 'start' is inclusive, 'end' is exclusive, and nullptr means unbounded
-const std::optional<Slice> start, end;
+  // The boundaries of the key-range this compaction is interested in. No two
+  // sub-compactions may have overlapping key-ranges.
+  // 'start' is inclusive, 'end' is exclusive, and nullptr means unbounded
+  const std::optional<Slice> start, end;
 ```
 
 二つのサブコンパクションのキー範囲は決して重ならない。
@@ -50,7 +51,7 @@ const std::optional<Slice> start, end;
 範囲は昇順で並ぶことも前提になっている。
 全サブコンパクションを束ねる `CompactionState` は、状態をキー範囲の昇順で保持することを要求する。
 
-[`db/compaction/compaction_state.h` L23-L40](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_state.h#L23-L40)
+[`db/compaction/compaction_state.h` L22-L40](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_state.h#L22-L40)
 
 ```cpp
 // Maintains state for the entire compaction
@@ -86,7 +87,7 @@ class CompactionState {
 均等分割の出発点は、入力データの総量を分割数で割った目標サイズである。
 関数冒頭のコメントが、その方針を具体例つきで説明している。
 
-[`db/compaction/compaction_job.cc` L533-L558](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_job.cc#L533-L558)
+[`db/compaction/compaction_job.cc` L533-L540](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_job.cc#L533-L540)
 
 ```cpp
 void CompactionJob::GenSubcompactionBoundaries() {
@@ -106,7 +107,7 @@ void CompactionJob::GenSubcompactionBoundaries() {
 
 アンカー点の収集は、入力レベルの各ファイルを順にたどって行う。
 
-[`db/compaction/compaction_job.cc` L595-L612](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_job.cc#L595-L612)
+[`db/compaction/compaction_job.cc` L595-L610](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_job.cc#L595-L610)
 
 ```cpp
       for (size_t i = 0; i < num_files; i++) {
@@ -265,7 +266,7 @@ uint64_t CompactionJob::GetSubcompactionsLimit() {
 境界が決まると、`CompactionJob::Run` の準備段で `sub_compact_states` を組み立てる。
 境界が一つ以上あれば、境界の個数より一つ多い数のサブコンパクションを作る。
 
-[`db/compaction/compaction_job.cc` L287-L302](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_job.cc#L287-L302)
+[`db/compaction/compaction_job.cc` L287-L300](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_job.cc#L287-L300)
 
 ```cpp
   if (boundaries_.size() >= 1) {
@@ -292,7 +293,7 @@ uint64_t CompactionJob::GetSubcompactionsLimit() {
 並列起動は `RunSubcompactions` が担う。
 サブコンパクション数だけスレッドを使うが、先頭の一つは新しいスレッドを立てず現在のスレッドで処理する。
 
-[`db/compaction/compaction_job.cc` L716-L741](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_job.cc#L716-L741)
+[`db/compaction/compaction_job.cc` L716-L742](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_job.cc#L716-L742)
 
 ```cpp
 void CompactionJob::RunSubcompactions() {
@@ -394,7 +395,7 @@ void CompactionState::AggregateCompactionStats(
 
 反映は `InstallCompactionResults` の中で、全サブコンパクションの出力を一つの `VersionEdit` に積み上げて行う。
 
-[`db/compaction/compaction_job.cc` L2299-L2312](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_job.cc#L2299-L2312)
+[`db/compaction/compaction_job.cc` L2299-L2308](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_job.cc#L2299-L2308)
 
 ```cpp
   VersionEdit* const edit = compaction->edit();
@@ -476,7 +477,7 @@ Status OutputValidator::Add(const Slice& key, const Slice& value) {
 
 ハッシュの突き合わせは `CompareValidator` が行う。
 
-[`db/output_validator.h` L31-L37](https://github.com/facebook/rocksdb/blob/v11.1.1/db/output_validator.h#L31-L37)
+[`db/output_validator.h` L28-L33](https://github.com/facebook/rocksdb/blob/v11.1.1/db/output_validator.h#L28-L33)
 
 ```cpp
   // Compare result of two key orders are the same. It can be used
@@ -515,7 +516,7 @@ Status OutputValidator::Add(const Slice& key, const Slice& value) {
 各出力ファイルは、書き込み時に転がしたハッシュを持つ `validator` を抱えている。
 `Run` の後段で各出力 SST を読み戻し、新しい検証器に全キーを通して、書き込み時の `validator` と突き合わせる。
 
-[`db/compaction/compaction_job.cc` L958-L973](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_job.cc#L958-L973)
+[`db/compaction/compaction_job.cc` L958-L972](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_job.cc#L958-L972)
 
 ```cpp
           if (s.ok() && should_verify_iteration) {
@@ -545,11 +546,16 @@ Status OutputValidator::Add(const Slice& key, const Slice& value) {
 
 ## まとめ
 
-- 一回のコンパクションを、互いに素なキー範囲の複数のサブコンパクションに分け、別スレッドで並列に走らせて経過時間を縮める。出力範囲が重ならないため、各スレッドはロックなしで自分の範囲だけを読み書きできる。
-- `GenSubcompactionBoundaries` は、各入力ファイルから 128 個のアンカー点でデータ量を見積もり、総量を分割数で割った目標サイズになるよう境界キーを刻む。アンカー点はインデックスブロックから得るので、データブロックを読まずに分布がわかる。
-- 分割の上限は `max_subcompactions`（既定 1、1 なら分割しない）。計画分割数はこの上限から決まり、入力量が足りなければ実際の分割はそれより少なくなる。
-- `RunSubcompactions` は `1` 番目以降にスレッドを立て、`0` 番目は呼び出し元スレッドで処理してスレッドを一つ節約する。各 `SubcompactionState` が自分の出力 SST を貯め、`CompactionState` が統計を合算し、`Install` が一つの `VersionEdit` でまとめて `Version` に反映する。
-- `OutputValidator` は出力キーが内部キー順で昇順であることを検査し、`enable_hash` 有効時はキーと値の転がしハッシュを書き込み時と読み戻し時で突き合わせる。順序破綻と内容の化けという別々の壊れ方を早期に捕まえる。
+- 一回のコンパクションを、互いに素なキー範囲の複数のサブコンパクションに分け、別スレッドで並列に走らせて経過時間を縮める。
+  出力範囲が重ならないため、各スレッドはロックなしで自分の範囲だけを読み書きできる。
+- `GenSubcompactionBoundaries` は、各入力ファイルから 128 個のアンカー点でデータ量を見積もり、総量を分割数で割った目標サイズになるよう境界キーを刻む。
+  アンカー点はインデックスブロックから得るので、データブロックを読まずに分布がわかる。
+- 分割の上限は `max_subcompactions`（既定 1、1 なら分割しない）。
+  計画分割数はこの上限から決まり、入力量が足りなければ実際の分割はそれより少なくなる。
+- `RunSubcompactions` は `1` 番目以降にスレッドを立て、`0` 番目は呼び出し元スレッドで処理してスレッドを一つ節約する。
+  各 `SubcompactionState` が自分の出力 SST を貯め、`CompactionState` が統計を合算し、`Install` が一つの `VersionEdit` でまとめて `Version` に反映する。
+- `OutputValidator` は出力キーが内部キー順で昇順であることを検査し、`enable_hash` 有効時はキーと値の転がしハッシュを書き込み時と読み戻し時で突き合わせる。
+  順序破綻と内容の化けという別々の壊れ方を早期に捕まえる。
 
 ## 関連する章
 
