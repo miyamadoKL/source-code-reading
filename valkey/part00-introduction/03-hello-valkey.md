@@ -25,7 +25,7 @@
 Valkey の配布物はトップディレクトリの `Makefile` から `src/` 配下のビルドへ委譲する作りになっている。
 README が示すビルド手順は一行で済む。
 
-[`README.md` L62-L64](https://github.com/valkey-io/valkey/blob/9.1.0/README.md#L62-L64)
+[`README.md` L23-L25](https://github.com/valkey-io/valkey/blob/9.1.0/README.md#L23-L25)
 
 ```text
 It is as simple as:

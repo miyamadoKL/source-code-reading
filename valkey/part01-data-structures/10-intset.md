@@ -214,6 +214,27 @@ static uint8_t _intsetValueEncoding(int64_t v) {
 INT16 の範囲に収まる値だけを入れているあいだは、一要素あたり2バイトで済む。
 INT32 や INT64 を要する値が一つも来なければ、集合全体が最小の幅を保つ。
 
+エンコーディングは一方向にのみ昇格し、いちど広げた幅を縮めることはない。
+状態遷移で示すと次のようになる。
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> INT16: intsetNew
+    INT16 --> INT32: INT32 を要する値の追加
+    INT16 --> INT64: INT64 を要する値の追加
+    INT32 --> INT64: INT64 を要する値の追加
+    note right of INT16
+        一要素 2 byte
+    end note
+    note right of INT32
+        一要素 4 byte
+    end note
+    note right of INT64
+        一要素 8 byte
+    end note
+```
+
 挿入の入口である `intsetAdd` は、まず追加する値の必要エンコーディングと現在のエンコーディングを比べる。
 
 [`src/intset.c` L204-L232](https://github.com/valkey-io/valkey/blob/9.1.0/src/intset.c#L204-L232)

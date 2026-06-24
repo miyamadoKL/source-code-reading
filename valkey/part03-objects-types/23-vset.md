@@ -15,7 +15,7 @@
 
 ## 前提
 
-`vset` は内部で `rax`・`hashtable` を使い分け、`robj`（ハッシュ）のメタデータ領域に格納される。
+`vset` は内部で `rax` と `hashtable` を使い分け、`robj`（ハッシュ）の値が指すハッシュテーブルのメタデータ領域に格納される。
 先に次の章を読んでおくと理解しやすい。
 
 - [第14章 オブジェクトとエンコーディング](14-object-encoding.md)
@@ -673,7 +673,7 @@ typedef struct vector {
 
 ## 関連する章
 
-- [第14章 オブジェクトとエンコーディング](14-object-encoding.md)：`vset` が格納される `robj`（ハッシュ）と、そのメタデータ領域。
+- [第14章 オブジェクトとエンコーディング](14-object-encoding.md)：`vset` を保持するハッシュテーブルを値に持つ `robj`（ハッシュ）。
 - [第7章 hashtable](../part01-data-structures/07-hashtable.md)：密集バケットで使う `HASHTABLE` 表現の実体。
 - [第11章 rax](../part01-data-structures/11-rax.md)：時間バケットを束ねる `RAX` 表現の実体。
 - [第31章 有効期限](../part05-database/31-expire.md)：キー単位の有効期限の扱い。

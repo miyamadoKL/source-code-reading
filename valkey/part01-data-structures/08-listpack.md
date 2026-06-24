@@ -65,6 +65,31 @@
 |<-- 種別と長さ -->|<- 値 ->|<- 自分の長さ（後方走査用）->|
 ```
 
+同じ構造を Mermaid で示すと次のようになる。
+
+```mermaid
+flowchart LR
+    subgraph LP["listpack（単一の連続領域）"]
+        direction LR
+        H["ヘッダ 6 byte<br/>total bytes 4 byte<br/>numele 2 byte"]
+        E0["entry 0"]
+        E1["entry 1"]
+        EN["entry N-1"]
+        EOF["LP_EOF 0xFF"]
+        H --> E0 --> E1 -.-> EN --> EOF
+    end
+
+    subgraph ENTRY["entry の内部"]
+        direction LR
+        ENC["encoding<br/>種別と長さ"]
+        VAL["value<br/>整数または文字列本体"]
+        BL["backlen<br/>自分の長さ 1〜5 byte"]
+        ENC --> VAL --> BL
+    end
+
+    E1 -. "各 entry を展開" .-> ENTRY
+```
+
 total bytes は領域全体のバイト数を持つため、要素列を先頭から走査しなくても領域全体の大きさが分かる。
 要素数は2バイトしか持たないため、`UINT16_MAX`（`LP_HDR_NUMELE_UNKNOWN`）を超える数は表現できない。
 この値が入っているときは「要素数は不明」を意味し、長さの取得には全要素の走査が必要になる。

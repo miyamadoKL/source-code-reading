@@ -286,6 +286,36 @@ skiplist は順序づけと範囲探索を担い、dict はメンバからスコ
     "a" -> [A]   "c" -> [C]   "e" -> [E]   ...   ノードを共有して指すだけ
 ```
 
+二重構造とアクセス経路を Mermaid で示すと次のようになる。
+
+```mermaid
+flowchart TD
+    ZSET["zset"]
+    ZSET --> HT["hashtable ht"]
+    ZSET --> ZSL["zskiplist zsl"]
+
+    HT -. "member から O(1) 参照" .-> NODE["zskiplistNode（スコアとメンバの実体）"]
+
+    subgraph SL["skiplist（スコア昇順の多段リンク）"]
+        direction LR
+        HDR["header"]
+        A["A a:1.0"]
+        C["C c:2.0"]
+        E["E e:8.0"]
+        F["F f:9.0"]
+        HDR -- "L2 span 4" --> E
+        HDR -- "L1 span 2" --> C
+        C -- "L1" --> E
+        HDR -- "L0" --> A --> C --> E --> F
+    end
+
+    ZSL --> HDR
+    NODE -. "同一ノードを共有" .-> C
+
+    ZSCORE["ZSCORE は ht のみ使用<br/>O(1)"] --> HT
+    ZRANGE["ZRANGEBYSCORE は zsl を使用<br/>O(log n)"] --> ZSL
+```
+
 `ZSCORE` はメンバ一個のスコアを返すコマンドで、二重構造の片方だけを使う典型である。
 
 [`src/t_zset.c` L1401-L1416](https://github.com/valkey-io/valkey/blob/9.1.0/src/t_zset.c#L1401-L1416)

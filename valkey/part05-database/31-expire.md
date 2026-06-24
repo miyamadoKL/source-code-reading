@@ -178,8 +178,7 @@ void expireGenericCommand(client *c, mstime_t basetime, int unit) {
     }
     // ... (中略) ...
     when += basetime;
-    /* A negative expiration time should cause a key to expire and be deleted immediately.
-     * ... */
+    /* A negative expiration time should cause a key to expire and be deleted immediately. */
     if (when < 0) {
         when = 0;
     }
@@ -290,7 +289,7 @@ robj *lookupKey(serverDb *db, robj *key, int flags) {
     robj *val = dbFindWithDictIndex(db, objectGetVal(key), dict_index);
     if (val) {
         /* Forcing deletion of expired keys on a replica makes the replica
-         * inconsistent with the primary. ... */
+         * inconsistent with the primary. */
         int is_ro_replica = server.primary_host && server.repl_replica_ro;
         int expire_flags = 0;
         if (flags & LOOKUP_WRITE && !is_ro_replica) expire_flags |= EXPIRE_FORCE_DELETE_EXPIRED;
@@ -359,7 +358,7 @@ expirationPolicy getExpirationPolicyWithFlags(int flags) {
     /* If we are running in the context of a replica, instead of
      * evicting the expired key from the database, we return ASAP:
      * the replica key expiration is controlled by the primary that will
-     * send us synthesized DEL operations for expired keys. ... */
+     * send us synthesized DEL operations for expired keys. */
     if (server.primary_host != NULL) {
         if (server.current_client && (server.current_client->flag.primary)) return POLICY_IGNORE_EXPIRE;
         if (!(flags & EXPIRE_FORCE_DELETE_EXPIRED)) return POLICY_KEEP_EXPIRED;
@@ -433,11 +432,11 @@ expirationPolicy getExpirationPolicyWithFlags(int flags) {
 
 ```c
 ustime_t activeExpireCycle(int type) {
-    /* If 'expire' action is paused, ... */
+    /* If 'expire' action is paused, for whatever reason, then don't expire any key. */
     if (isPausedActionsWithUpdate(PAUSE_ACTION_EXPIRE)) return 0;
 
     /* Adjust the running parameters according to the configured expire
-     * effort. ... */
+     * effort. */
     ustime_t timelimit_us;
     if (type == ACTIVE_EXPIRE_CYCLE_FAST) {
         ustime_t config_cycle_fast_duration = ACTIVE_EXPIRE_CYCLE_FAST_DURATION + ACTIVE_EXPIRE_CYCLE_FAST_DURATION / 4 * activeExpireEffort();
@@ -452,7 +451,7 @@ ustime_t activeExpireCycle(int type) {
         timelimit_us = config_cycle_fast_duration;
     } else {
         /* We can use at max 'config_cycle_slow_time_perc' percentage of CPU
-         * time per iteration. ... */
+         * time per iteration. */
         int config_cycle_slow_time_perc = ACTIVE_EXPIRE_CYCLE_SLOW_TIME_PERC + 2 * activeExpireEffort();
         timelimit_us = config_cycle_slow_time_perc * 1000000 / server.hz / 100;
     }
