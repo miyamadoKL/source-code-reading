@@ -18,8 +18,8 @@ RocksDB のワイドカラムは、1つのキーに対し値を「（列名, 列
 
 ## 前提
 
-- [第5章 内部キー形式 InternalKey](../part01-data-model/05-internal-key.md)（`ValueType` とトレーラの構造。ワイドカラムは `kTypeWideColumnEntity` という値型で内部キーに乗る）
-- [第23章 Get](../part04-read-path/23-get.md)（読み出し経路。`GetEntity` は同じ経路を通る）
+- [第5章 内部キー形式 InternalKey](../part01-data-model/05-internal-key.md)（`ValueType` とトレーラの構造を扱う章であり、ワイドカラムは `kTypeWideColumnEntity` という値型で内部キーに乗る）
+- [第23章 Get](../part04-read-path/23-get.md)（読み出し経路を扱う章であり、`GetEntity` は同じ経路を通る）
 
 ## ワイドカラムという値の形
 
@@ -362,7 +362,7 @@ flowchart LR
 既定列の取り出しは、版2のレイアウトでさらに踏み込んだ最適化を受ける。
 版2は可変長データの前にメタデータをまとめて置く設計で、ヘッダの直後に各区画のバイト長を並べた「スキップ情報」を持つ。
 
-[`db/wide/wide_column_serialization.h` L62-L80](https://github.com/facebook/rocksdb/blob/v11.1.1/db/wide/wide_column_serialization.h#L62-L80)
+[`db/wide/wide_column_serialization.h` L62-L75](https://github.com/facebook/rocksdb/blob/v11.1.1/db/wide/wide_column_serialization.h#L62-L75)
 
 ```cpp
 // Section 1: HEADER (2 varints)
@@ -432,7 +432,7 @@ flowchart LR
 
 なお版1には同じ速い経路がなく、`GetValueOfDefaultColumn` は全列をいったん復元してから先頭列を返す。
 
-[`db/wide/wide_column_serialization.cc` L609-L623](https://github.com/facebook/rocksdb/blob/v11.1.1/db/wide/wide_column_serialization.cc#L609-L623)
+[`db/wide/wide_column_serialization.cc` L609-L624](https://github.com/facebook/rocksdb/blob/v11.1.1/db/wide/wide_column_serialization.cc#L609-L624)
 
 ```cpp
   // V1 fallback: full deserialization
@@ -458,11 +458,17 @@ flowchart LR
 
 ## まとめ
 
-- ワイドカラムは1つのキーに「（列名, 列値）の集合」を持たせる仕組みで、`PutEntity` で書き `GetEntity` で読む。列は `WideColumn`、集合は `WideColumns`（`std::vector<WideColumn>`）で表す。
-- 名前が空の既定列（`kDefaultWideColumnName`）が単一値 API との互換を作る。`Put` した値は既定列1つの集合に等しく、`Get` は既定列の値を返す。読み出し側では通常値もワイドカラムも `WideColumns` に収束する。
-- 直列化は列名でソートして1つのバイト列に詰める。版1は版番号と列数に続けて、各列の名前長と値長を並べた索引を置き、最後に値本体を連結する。`ValidateColumnOrder` が厳密な昇順を強制する。
+- ワイドカラムは1つのキーに「（列名, 列値）の集合」を持たせる仕組みで、`PutEntity` で書き `GetEntity` で読む。
+  列は `WideColumn`、集合は `WideColumns`（`std::vector<WideColumn>`）で表す。
+- 名前が空の既定列（`kDefaultWideColumnName`）が単一値 API との互換を作る。
+  `Put` した値は既定列1つの集合に等しく、`Get` は既定列の値を返す。
+  読み出し側では通常値もワイドカラムも `WideColumns` に収束する。
+- 直列化は列名でソートして1つのバイト列に詰める。
+  版1は版番号と列数に続けて、各列の名前長と値長を並べた索引を置き、最後に値本体を連結する。
+  `ValidateColumnOrder` が厳密な昇順を強制する。
 - このバイト列は `kTypeWideColumnEntity`（0x16）という値型を付けて内部キーに乗る（第5章）。
-- ソート済みなので特定列は `Find` の二分探索で O(log N) で見つかる。版2はヘッダ直後のスキップ情報で区画境界を跳び越え、既定列の取り出しを列数によらない一定時間にしている。
+- ソート済みなので特定列は `Find` の二分探索で O(log N) で見つかる。
+  版2はヘッダ直後のスキップ情報で区画境界を跳び越え、既定列の取り出しを列数によらない一定時間にしている。
 
 ## 関連する章
 

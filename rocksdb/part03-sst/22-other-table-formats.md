@@ -30,7 +30,7 @@ RocksDB の SST 形式は一つではない。
 SST の形式は、`TableFactory` を実装したクラスを `Options.table_factory` に差し込むことで切り替わる。
 ファクトリは書き出し器と読み取り器を生成する起点であり、形式ごとの実体はそこから作られるリーダとビルダに閉じている。
 
-[`include/rocksdb/table.h` L995-L1075](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/table.h#L995-L1075)
+[`include/rocksdb/table.h` L994-L1075](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/table.h#L994-L1075)
 
 ```cpp
 // A base class for table factories.
@@ -48,7 +48,7 @@ class TableFactory : public Customizable {
       std::unique_ptr<RandomAccessFileReader>&& file, uint64_t file_size,
       std::unique_ptr<TableReader>* table_reader,
       bool prefetch_index_and_filter_in_cache) const = 0;
-
+  // ... (中略) ...
   virtual TableBuilder* NewTableBuilder(
       const TableBuilderOptions& table_builder_options,
       WritableFileWriter* file) const = 0;
@@ -144,7 +144,7 @@ class PlainTableReader : public TableReader {
 索き方は、プレフィックスのハッシュ値でバケットを引く一段階だけではない。
 インデックスのバケットは32ビット整数で、最上位ビットがその先の探索方法を示す。
 
-[`table/plain/plain_table_index.h` L24-L40](https://github.com/facebook/rocksdb/blob/v11.1.1/table/plain/plain_table_index.h#L24-L40)
+[`table/plain/plain_table_index.h` L24-L38](https://github.com/facebook/rocksdb/blob/v11.1.1/table/plain/plain_table_index.h#L24-L38)
 
 ```cpp
 // PlainTableIndex contains buckets size of index_size_, each is a
@@ -320,7 +320,7 @@ struct CuckooTableOptions {
 読み取り側の点探索は、候補位置を順に当たるだけである。
 リーダの `Get` は、ハッシュ関数を `hash_cnt` で切り替えながらバケットを引き、ユーザーキーが一致したらそのバリューを返す。
 
-[`table/cuckoo/cuckoo_table_reader.cc` L157-L172](https://github.com/facebook/rocksdb/blob/v11.1.1/table/cuckoo/cuckoo_table_reader.cc#L157-L172)
+[`table/cuckoo/cuckoo_table_reader.cc` L157-L171](https://github.com/facebook/rocksdb/blob/v11.1.1/table/cuckoo/cuckoo_table_reader.cc#L157-L171)
 
 ```cpp
   for (uint32_t hash_cnt = 0; hash_cnt < num_hash_func_; ++hash_cnt) {
@@ -397,7 +397,7 @@ struct CuckooTableOptions {
 `AdaptiveTableFactory` は、書きは一形式に固定したまま、読みは複数形式を受け付けるためのファクトリである。
 構築時に、書き出しに使うファクトリと、読み取りに使う三つのファクトリ（BlockBasedTable、PlainTable、CuckooTable）を受け取る。
 
-[`table/adaptive/adaptive_table_factory.h` L23-L46](https://github.com/facebook/rocksdb/blob/v11.1.1/table/adaptive/adaptive_table_factory.h#L23-L46)
+[`table/adaptive/adaptive_table_factory.h` L23-L33](https://github.com/facebook/rocksdb/blob/v11.1.1/table/adaptive/adaptive_table_factory.h#L23-L33)
 
 ```cpp
 class AdaptiveTableFactory : public TableFactory {
@@ -417,7 +417,7 @@ class AdaptiveTableFactory : public TableFactory {
 読み分けの判断材料は、ファイル末尾の `Footer` に書かれたマジックナンバーである。
 `NewTableReader` は、まずファイルから `Footer` を読み、そのマジックナンバーで分岐して適切なファクトリへ委譲する。
 
-[`table/adaptive/adaptive_table_factory.cc` L42-L63](https://github.com/facebook/rocksdb/blob/v11.1.1/table/adaptive/adaptive_table_factory.cc#L42-L63)
+[`table/adaptive/adaptive_table_factory.cc` L42-L64](https://github.com/facebook/rocksdb/blob/v11.1.1/table/adaptive/adaptive_table_factory.cc#L42-L64)
 
 ```cpp
   Footer footer;
@@ -490,10 +490,15 @@ TableFactory* NewAdaptiveTableFactory(
 
 ## まとめ
 
-- SST の形式は `TableFactory` を実装したクラスを `Options.table_factory` に差し込むことで切り替わる。上位の経路は `TableReader` と `TableBuilder` のインタフェースだけを見ており、形式に依存しない。
-- PlainTable は mmap 常駐を前提に、ブロックを使わず点探索の経路を短くする。プレフィックスのハッシュを引き、衝突時だけ二分探索へ落ちる。圧縮とチェックサムを持たず、レンジスキャンは弱い。
-- PlainTable の点探索コストは、衝突がなければハッシュ一回、衝突があればハッシュに二分探索と線形探索を足したぶんに収まる。線形探索の長さは `index_sparseness`（既定16）で決まる。
-- CuckooTable はクックーハッシュ法で各キーを少数の候補位置に収め、点探索を `num_hash_func` と `cuckoo_block_size` の積を上限とする有界回数のメモリアクセスで済ませる。固定長キー前提で、スナップショットとマージを持たず、レンジ系は弱い。
+- SST の形式は `TableFactory` を実装したクラスを `Options.table_factory` に差し込むことで切り替わる。
+  上位の経路は `TableReader` と `TableBuilder` のインタフェースだけを見ており、形式に依存しない。
+- PlainTable は mmap 常駐を前提に、ブロックを使わず点探索の経路を短くする。
+  プレフィックスのハッシュを引き、衝突時だけ二分探索へ落ちる。
+  圧縮とチェックサムを持たず、レンジスキャンは弱い。
+- PlainTable の点探索コストは、衝突がなければハッシュ一回、衝突があればハッシュに二分探索と線形探索を足したぶんに収まる。
+  線形探索の長さは `index_sparseness`（既定16）で決まる。
+- CuckooTable はクックーハッシュ法で各キーを少数の候補位置に収め、点探索を `num_hash_func` と `cuckoo_block_size` の積を上限とする有界回数のメモリアクセスで済ませる。
+  固定長キー前提で、スナップショットとマージを持たず、レンジ系は弱い。
 - `AdaptiveTableFactory` は `Footer` のマジックナンバーで形式を判別し、読みは複数形式、書きは一形式という役割分担で形式移行を支える。
 
 ## 関連する章

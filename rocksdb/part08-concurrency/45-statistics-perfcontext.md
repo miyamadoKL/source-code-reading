@@ -49,19 +49,19 @@ RocksDB の計測は、集計の単位が異なる二つの系統に分かれて
 [`include/rocksdb/statistics.h` L806-L818](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/statistics.h#L806-L818)
 
 ```cpp
-virtual uint64_t getTickerCount(uint32_t tickerType) const = 0;
-virtual void histogramData(uint32_t type,
-                           HistogramData* const data) const = 0;
-virtual std::string getHistogramString(uint32_t /*type*/) const { return ""; }
-virtual void recordTick(uint32_t tickerType, uint64_t count = 1) = 0;
-virtual void setTickerCount(uint32_t tickerType, uint64_t count) = 0;
-virtual uint64_t getAndResetTickerCount(uint32_t tickerType) = 0;
-virtual void reportTimeToHistogram(uint32_t histogramType, uint64_t time) {
-  if (get_stats_level() <= StatsLevel::kExceptTimers) {
-    return;
+  virtual uint64_t getTickerCount(uint32_t tickerType) const = 0;
+  virtual void histogramData(uint32_t type,
+                             HistogramData* const data) const = 0;
+  virtual std::string getHistogramString(uint32_t /*type*/) const { return ""; }
+  virtual void recordTick(uint32_t tickerType, uint64_t count = 1) = 0;
+  virtual void setTickerCount(uint32_t tickerType, uint64_t count) = 0;
+  virtual uint64_t getAndResetTickerCount(uint32_t tickerType) = 0;
+  virtual void reportTimeToHistogram(uint32_t histogramType, uint64_t time) {
+    if (get_stats_level() <= StatsLevel::kExceptTimers) {
+      return;
+    }
+    recordInHistogram(histogramType, time);
   }
-  recordInHistogram(histogramType, time);
-}
 ```
 
 書き込みは `recordTick()`（カウンタを加算）と `recordInHistogram()`（分布に1標本を追加）、読み出しは `getTickerCount()` と `histogramData()` である。
@@ -94,21 +94,21 @@ virtual void reportTimeToHistogram(uint32_t histogramType, uint64_t time) {
 
 具象実装 `StatisticsImpl` は、カウンタとヒストグラムをまとめた構造体をコアごとに1個ずつ持つ。
 
-[`monitoring/statistics_impl.h` L85-L106](https://github.com/facebook/rocksdb/blob/v11.1.1/monitoring/statistics_impl.h#L85-L106)
+[`monitoring/statistics_impl.h` L80-L106](https://github.com/facebook/rocksdb/blob/v11.1.1/monitoring/statistics_impl.h#L80-L106)
 
 ```cpp
-// The ticker/histogram data are stored in this structure, which we will store
-// per-core. It is cache-aligned, so tickers/histograms belonging to different
-// cores can never share the same cache line.
-//
-// Alignment attributes expand to nothing depending on the platform
-struct ALIGN_AS(CACHE_LINE_SIZE) StatisticsData {
-  std::atomic_uint_fast64_t tickers_[INTERNAL_TICKER_ENUM_MAX] = {{0}};
-  HistogramImpl histograms_[INTERNAL_HISTOGRAM_ENUM_MAX];
+  // The ticker/histogram data are stored in this structure, which we will store
+  // per-core. It is cache-aligned, so tickers/histograms belonging to different
+  // cores can never share the same cache line.
+  //
+  // Alignment attributes expand to nothing depending on the platform
+  struct ALIGN_AS(CACHE_LINE_SIZE) StatisticsData {
+    std::atomic_uint_fast64_t tickers_[INTERNAL_TICKER_ENUM_MAX] = {{0}};
+    HistogramImpl histograms_[INTERNAL_HISTOGRAM_ENUM_MAX];
   // ... (中略) ...
-};
-// ... (中略) ...
-CoreLocalArray<StatisticsData> per_core_stats_;
+  };
+  // ... (中略) ...
+  CoreLocalArray<StatisticsData> per_core_stats_;
 ```
 
 `StatisticsData` は `CACHE_LINE_SIZE` でアラインされている。
@@ -227,12 +227,12 @@ struct PerfContextBase {
 [`include/rocksdb/perf_context.h` L166-L171](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/perf_context.h#L166-L171)
 
 ```cpp
-uint64_t get_snapshot_time;        // total nanos spent on getting snapshot
-uint64_t get_from_memtable_time;   // total nanos spent on querying memtables
-uint64_t get_from_memtable_count;  // number of mem tables queried
-// total nanos spent after Get() finds a key
-uint64_t get_post_process_time;
-uint64_t get_from_output_files_time;  // total nanos reading from output files
+  uint64_t get_snapshot_time;        // total nanos spent on getting snapshot
+  uint64_t get_from_memtable_time;   // total nanos spent on querying memtables
+  uint64_t get_from_memtable_count;  // number of mem tables queried
+  // total nanos spent after Get() finds a key
+  uint64_t get_post_process_time;
+  uint64_t get_from_output_files_time;  // total nanos reading from output files
 ```
 
 これらを足し合わせると、1回の `Get()` が「スナップショット取得 → MemTable 探索 → SST 読み出し → 後処理」のどこに時間を使ったかが復元できる。
@@ -290,9 +290,12 @@ enum PerfLevel : unsigned char {
   kEnableCount = 2,
   // ... (中略) ...
   // Starts enabling metrics that measure the end to end time of an operation.
+  // These metrics' names have keywords "time" or "nanos". Check other time
+  // measuring metrics with similar but more specific naming conventions.
   kEnableTimeExceptForMutex = 4,
   // ... (中略) ...
-  // Starts enabling metrics that measure time for mutex.
+  // Starts enabling metrics that measure time for mutex. These metrics' name
+  // usually have this pattern: "_[mutex|condition]_*_[time|nanos]".
   kEnableTime = 6,
   kOutOfBounds = 7  // N.B. Must always be the last value!
 };
@@ -305,7 +308,7 @@ enum PerfLevel : unsigned char {
 このゲーティングは `perf_context_imp.h` のマクロで実装される。
 読み書きパスのコードは生のフィールド更新を書かず、これらのマクロを通す。
 
-[`monitoring/perf_context_imp.h` L80-L99](https://github.com/facebook/rocksdb/blob/v11.1.1/monitoring/perf_context_imp.h#L80-L99)
+[`monitoring/perf_context_imp.h` L79-L84](https://github.com/facebook/rocksdb/blob/v11.1.1/monitoring/perf_context_imp.h#L79-L84)
 
 ```cpp
 // Increase metric value
@@ -321,7 +324,7 @@ enum PerfLevel : unsigned char {
 
 時間計測の側は `PERF_TIMER_GUARD` で、スコープ内の経過時間を1個のフィールドに積む。
 
-[`monitoring/perf_context_imp.h` L45-L47](https://github.com/facebook/rocksdb/blob/v11.1.1/monitoring/perf_context_imp.h#L45-L47)
+[`monitoring/perf_context_imp.h` L44-L47](https://github.com/facebook/rocksdb/blob/v11.1.1/monitoring/perf_context_imp.h#L44-L47)
 
 ```cpp
 // Declare and set start time of the timer
@@ -335,30 +338,28 @@ enum PerfLevel : unsigned char {
 [`monitoring/perf_step_timer.h` L15-L57](https://github.com/facebook/rocksdb/blob/v11.1.1/monitoring/perf_step_timer.h#L15-L57)
 
 ```cpp
-explicit PerfStepTimer(
-    uint64_t* metric, SystemClock* clock = nullptr, bool use_cpu_time = false,
-    PerfLevel enable_level = PerfLevel::kEnableTimeExceptForMutex,
-    Statistics* statistics = nullptr, uint32_t ticker_type = 0)
-    : perf_counter_enabled_(perf_level >= enable_level),
-      // ... (中略) ...
-{}
-
-void Start() {
-  if (perf_counter_enabled_ || statistics_ != nullptr) {
-    start_ = time_now();
-  }
-}
-// ... (中略) ...
-void Stop() {
-  if (start_) {
-    uint64_t duration = time_now() - start_;
-    if (perf_counter_enabled_) {
-      *metric_ += duration;
+  explicit PerfStepTimer(
+      uint64_t* metric, SystemClock* clock = nullptr, bool use_cpu_time = false,
+      PerfLevel enable_level = PerfLevel::kEnableTimeExceptForMutex,
+      Statistics* statistics = nullptr, uint32_t ticker_type = 0)
+      : perf_counter_enabled_(perf_level >= enable_level),
+  // ... (中略) ...
+  void Start() {
+    if (perf_counter_enabled_ || statistics_ != nullptr) {
+      start_ = time_now();
     }
-    // ... (中略) ...
-    start_ = 0;
   }
-}
+  // ... (中略) ...
+  void Stop() {
+    if (start_) {
+      uint64_t duration = time_now() - start_;
+      if (perf_counter_enabled_) {
+        *metric_ += duration;
+      }
+  // ... (中略) ...
+      start_ = 0;
+    }
+  }
 ```
 
 肝は `perf_counter_enabled_(perf_level >= enable_level)` である。
@@ -405,11 +406,11 @@ enum StatsLevel : uint8_t {
 [`db/db_impl/db_impl_write.cc` L766-L770](https://github.com/facebook/rocksdb/blob/v11.1.1/db/db_impl/db_impl_write.cc#L766-L770)
 
 ```cpp
-PERF_TIMER_GUARD(write_wal_time);
-io_s = WriteGroupToWAL(write_group, wal_context.writer, wal_used,
-                       wal_context.need_wal_sync,
-                       wal_context.need_wal_dir_sync, last_sequence + 1,
-                       *wal_context.wal_file_number_size);
+        PERF_TIMER_GUARD(write_wal_time);
+        io_s = WriteGroupToWAL(write_group, wal_context.writer, wal_used,
+                               wal_context.need_wal_sync,
+                               wal_context.need_wal_dir_sync, last_sequence + 1,
+                               *wal_context.wal_file_number_size);
 ```
 
 このガードのスコープを抜けるとき、`PerfStepTimer` のデストラクタが `Stop()` を呼んで `perf_context.write_wal_time` に経過時間を積む。
@@ -419,10 +420,15 @@ io_s = WriteGroupToWAL(write_group, wal_context.writer, wal_used,
 
 ## まとめ
 
-- 計測は二系統に分かれる。`Statistics` は DB 全体の累積値（Ticker と Histogram）、`PerfContext` と `IOStatsContext` はスレッドごとに今の1操作の内訳を持つ。
-- `Statistics` のカウンタはコアごとの `StatisticsData` に分散して `relaxed` な `fetch_add` で更新し、読み出し時に全コアを合算する。共有カウンタへの atomic 競合とフォルスシェアリングを避けるための分散である。
-- `PerfContext` はスレッドローカルな `uint64_t` の集まりで、同期が要らない。1操作の各段の時間と回数を積み、後から分解できる。
-- 計測のコストは `PerfLevel` と `StatsLevel` の段階でゲーティングする。段階に達しないとき、`PerfStepTimer` はクロック読み出しを行わず、`PERF_COUNTER_ADD` は加算自体を飛ばす。これで不要な計測のオーバーヘッドを実質ゼロにする。
+- 計測は二系統に分かれる。
+  `Statistics` は DB 全体の累積値（Ticker と Histogram）、`PerfContext` と `IOStatsContext` はスレッドごとに今の1操作の内訳を持つ。
+- `Statistics` のカウンタはコアごとの `StatisticsData` に分散して `relaxed` な `fetch_add` で更新し、読み出し時に全コアを合算する。
+  共有カウンタへの atomic 競合とフォルスシェアリングを避けるための分散である。
+- `PerfContext` はスレッドローカルな `uint64_t` の集まりで、同期が要らない。
+  1操作の各段の時間と回数を積み、後から分解できる。
+- 計測のコストは `PerfLevel` と `StatsLevel` の段階でゲーティングする。
+  段階に達しないとき、`PerfStepTimer` はクロック読み出しを行わず、`PERF_COUNTER_ADD` は加算自体を飛ばす。
+  これで不要な計測のオーバーヘッドを実質ゼロにする。
 - これらの計測は `PERF_TIMER_GUARD` などのマクロを通じて読み書きパスやコンパクションに埋め込まれる。
 
 ## 関連する章
@@ -430,6 +436,3 @@ io_s = WriteGroupToWAL(write_group, wal_context.writer, wal_used,
 - [第38章 シャーディングされたキャッシュ](../part07-cache/38-cache-sharded.md)（共有状態を分割して競合を避ける同じ発想）
 - [第8章 書き込みパイプライン](../part02-write-path/08-write-pipeline.md)、[第23章 Get](../part04-read-path/23-get.md)（計測が埋め込まれるパス）
 - [第43章 ThreadLocal とスレッドプール](../part08-concurrency/43-threadlocal-threadpool.md)（スレッドローカル記憶域）
-</content>
-
-</invoke>

@@ -12,7 +12,7 @@
 ## この章の狙い
 
 1つの DB の中に独立した名前空間を複数持たせる仕組みがカラムファミリーである。
-本章では、各カラムファミリーが固有の MemTable・SST 群・`ColumnFamilyOptions` を持つ一方で、WAL と MANIFEST は DB 全体で1つに共有される、という独立と共有の境界を実コードで確認する。
+本章では、各カラムファミリーが固有の MemTable、SST 群、`ColumnFamilyOptions` を持つ一方で、WAL と MANIFEST は DB 全体で1つに共有される、という独立と共有の境界を実コードで確認する。
 その境界から、複数カラムファミリーへの書き込みを1回の同期で原子的に永続化できる理由と、カラムファミリーごとにコンパクションを独立してチューニングできる理由を、機構として読み取る。
 
 ## 前提
@@ -70,7 +70,7 @@ struct Options : public DBOptions, public ColumnFamilyOptions {
 コンパクションの設定や書き込みバッファのサイズはカラムファミリーごとの `ColumnFamilyOptions` から来るので、`ColumnFamilyData` が `initial_cf_options_` として自前で保持する。
 一方、背景スレッド数や DB レベルのキャッシュは `DBOptions` に属し、DB 全体で1つの値を共有する。
 
-つまり、MemTable・Version・オプションはカラムファミリーで独立し、それらを使ってどう読み書きするかも独立する。
+つまり、MemTable、Version、オプションはカラムファミリーで独立し、それらを使ってどう読み書きするかも独立する。
 独立しないのは、変更を永続化する経路、すなわち WAL と MANIFEST である。
 
 ## ColumnFamilySet が全カラムファミリーを束ねる
@@ -119,7 +119,7 @@ DB の中に存在する全カラムファミリーを管理するのが `Column
 ```
 
 このリストの番兵が `dummy_cfd_` である。
-`ColumnFamilySet` の構築時に、ダミー用の予約 ID を持つ `ColumnFamilyData` を作り、自分自身を `prev_`・`next_` に指させて空の円環を初期化する。
+`ColumnFamilySet` の構築時に、ダミー用の予約 ID を持つ `ColumnFamilyData` を作り、自分自身を `prev_`、`next_` に指させて空の円環を初期化する。
 
 [`db/column_family.cc` L1789-L1791](https://github.com/facebook/rocksdb/blob/v11.1.1/db/column_family.cc#L1789-L1791)
 
@@ -293,7 +293,7 @@ bool ColumnFamilyData::UnrefAndTryDelete() {
 減らす前の値が 2 で、しかも残りの参照が `super_version_` だけのときは、特別な経路で `SuperVersion` ごと畳む。
 ここで `SuperVersion` が `MemTable` や `Version` を握っているため、まずそれを解放しないと `ColumnFamilyData` を消せない。
 
-[`db/column_family.cc` L795-L811](https://github.com/facebook/rocksdb/blob/v11.1.1/db/column_family.cc#L795-L811)
+[`db/column_family.cc` L795-L810](https://github.com/facebook/rocksdb/blob/v11.1.1/db/column_family.cc#L795-L810)
 
 ```cpp
   if (old_refs == 2 && super_version_ != nullptr) {
@@ -402,7 +402,7 @@ void ColumnFamilyData::SetDropped() {
 ここでドロップを表す `VersionEdit` を作り、単一の書き込みスレッドから `versions_->LogAndApply` に渡す。
 削除という構造変更も、他のカラムファミリーの変更と同じ MANIFEST へ、同じ `LogAndApply` 経由で記録される（MANIFEST は第34章）。
 
-[`db/db_impl/db_impl.cc` L3897-L3916](https://github.com/facebook/rocksdb/blob/v11.1.1/db/db_impl/db_impl.cc#L3897-L3916)
+[`db/db_impl/db_impl.cc` L3897-L3917](https://github.com/facebook/rocksdb/blob/v11.1.1/db/db_impl/db_impl.cc#L3897-L3917)
 
 ```cpp
   VersionEdit edit;
@@ -421,7 +421,7 @@ void ColumnFamilyData::SetDropped() {
 
 ## WAL と MANIFEST の共有がもたらす跨ぎ原子性
 
-ここまでで、MemTable・Version・オプションがカラムファミリーごとに独立し、`ColumnFamilySet` がそれらを束ねることを見た。
+ここまでで、MemTable、Version、オプションがカラムファミリーごとに独立し、`ColumnFamilySet` がそれらを束ねることを見た。
 独立しないのは永続化の経路である。
 `VersionSet` は DB ごとに1つで、すべてのカラムファミリーの構造変更を1つの MANIFEST に記録する。
 データの変更を記録する WAL も DB 全体で1つである。
@@ -487,14 +487,19 @@ WAL が1つであることは書き込み経路に現れる。
 
 ## まとめ
 
-- カラムファミリーは1つの DB 内の独立した名前空間で、各 `ColumnFamilyData` が固有の MemTable（`mem_` / `imm_`）・`SuperVersion`・`ColumnFamilyOptions` を持つ。
-- `ColumnFamilySet` が全カラムファミリーを束ねる。点引きは ID と名前の2つのハッシュ表が、全走査は番兵 `dummy_cfd_` を端点とする円環二重リンクリストが担う。
+- カラムファミリーは1つの DB 内の独立した名前空間で、各 `ColumnFamilyData` が固有の MemTable（`mem_` / `imm_`）、`SuperVersion`、`ColumnFamilyOptions` を持つ。
+- `ColumnFamilySet` が全カラムファミリーを束ねる。
+  点引きは ID と名前の2つのハッシュ表が、全走査は番兵 `dummy_cfd_` を端点とする円環二重リンクリストが担う。
 - デフォルトカラムファミリー（名前 `"default"`、ID 0）は削除できず、`default_cfd_cache_` により ID 0 の書き込みがハッシュ引きを避けて即座に宛先へ届く。
-- `ColumnFamilyData` の寿命は `refs_` の参照カウントで管理し、`UnrefAndTryDelete` が最後の参照のときだけ回収する。利用者へは `ColumnFamilyHandleImpl` が渡り、生成時に `Ref()`、破棄時に解放する。
-- 削除（`SetDropped`）はフラグ立てとリンクリストからの除去にとどまり、ファイルとメモリの回収は参照が尽きてから起こる。論理削除自体は `VersionEdit` として共有 MANIFEST に記録される。
-- WAL と MANIFEST は DB 全体で1つに共有される。複数カラムファミリーへの更新が同じ WAL に乗るため、1回の同期で跨ぎ原子的に永続化できる。一方でコンパクションはカラムファミリーごとに独立してチューニングできる。
+- `ColumnFamilyData` の寿命は `refs_` の参照カウントで管理し、`UnrefAndTryDelete` が最後の参照のときだけ回収する。
+  利用者へは `ColumnFamilyHandleImpl` が渡り、生成時に `Ref()`、破棄時に解放する。
+- 削除（`SetDropped`）はフラグ立てとリンクリストからの除去にとどまり、ファイルとメモリの回収は参照が尽きてから起こる。
+  論理削除自体は `VersionEdit` として共有 MANIFEST に記録される。
+- WAL と MANIFEST は DB 全体で1つに共有される。
+  複数カラムファミリーへの更新が同じ WAL に乗るため、1回の同期で跨ぎ原子的に永続化できる。
+  一方でコンパクションはカラムファミリーごとに独立してチューニングできる。
 
 ## 関連する章
 
-- [第34章 MANIFEST と VersionEdit](34-manifest-versionedit.md)：カラムファミリーの作成・削除や構造変更が記録される先。
+- [第34章 MANIFEST と VersionEdit](34-manifest-versionedit.md)：カラムファミリーの作成、削除や構造変更が記録される先。
 - [第36章 スナップショットと MVCC](36-snapshot-mvcc.md)：カラムファミリーごとの `SuperVersion` の上で読み取りの一貫性を保つ仕組み。

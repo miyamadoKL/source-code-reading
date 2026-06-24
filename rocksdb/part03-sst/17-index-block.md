@@ -79,14 +79,14 @@ flowchart LR
 [`include/rocksdb/table.h` L691-L700](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/table.h#L691-L700)
 
 ```cpp
-// The index contains a key separating each pair of consecutive blocks.
-// Let A be the highest key in one block, B the lowest key in the next block,
-// and I the index entry separating these two blocks:
-// [ ... A] I [B ...]
-// I is allowed to be anywhere in [A, B).
-// ... (中略) ...
-// In kNoShortening mode, we use I=A. In other modes, we use the shortest
-// key in [A, B), which usually significantly reduces index size.
+  // The index contains a key separating each pair of consecutive blocks.
+  // Let A be the highest key in one block, B the lowest key in the next block,
+  // and I the index entry separating these two blocks:
+  // [ ... A] I [B ...]
+  // I is allowed to be anywhere in [A, B).
+  // ... (中略) ...
+  // In kNoShortening mode, we use I=A. In other modes, we use the shortest
+  // key in [A, B), which usually significantly reduces index size.
 ```
 
 短縮した区切りキー `I` は範囲 `[A, B)` のどこにあってもよい。
@@ -132,22 +132,21 @@ Slice ShortenedIndexBuilder::FindShortestInternalKeySeparator(
 [`util/comparator.cc` L42-L91](https://github.com/facebook/rocksdb/blob/v11.1.1/util/comparator.cc#L42-L91)
 
 ```cpp
-void FindShortestSeparator(std::string* start,
-                           const Slice& limit) const override {
-  // Find length of common prefix
-  size_t min_length = std::min(start->size(), limit.size());
-  size_t diff_index = 0;
-  while ((diff_index < min_length) &&
-         ((*start)[diff_index] == limit[diff_index])) {
-    diff_index++;
-  }
-  // ... (中略) ...
-    if (diff_index < limit.size() - 1 || start_byte + 1 < limit_byte) {
-      (*start)[diff_index]++;
-      start->resize(diff_index + 1);
+  void FindShortestSeparator(std::string* start,
+                             const Slice& limit) const override {
+    // Find length of common prefix
+    size_t min_length = std::min(start->size(), limit.size());
+    size_t diff_index = 0;
+    while ((diff_index < min_length) &&
+           ((*start)[diff_index] == limit[diff_index])) {
+      diff_index++;
     }
-  // ... (中略) ...
-}
+    // ... (中略) ...
+      if (diff_index < limit.size() - 1 || start_byte + 1 < limit_byte) {
+        (*start)[diff_index]++;
+        start->resize(diff_index + 1);
+    // ... (中略) ...
+  }
 ```
 
 たとえば `start` が `"the quick brown fox"`、`limit` が `"the who"` なら、最初に異なるバイトは `q` と `w` である。
@@ -175,32 +174,32 @@ Slice ShortenedIndexBuilder::FindShortInternalKeySuccessor(
 [`table/block_based/index_builder.h` L264-L293](https://github.com/facebook/rocksdb/blob/v11.1.1/table/block_based/index_builder.h#L264-L293)
 
 ```cpp
-Slice GetSeparatorWithSeq(const Slice& last_key_in_current_block,
-                          const Slice* first_key_in_next_block,
-                          std::string* separator_scratch) {
-  Slice separator_with_seq;
-  if (first_key_in_next_block != nullptr) {
-    if (shortening_mode_ !=
-        BlockBasedTableOptions::IndexShorteningMode::kNoShortening) {
-      separator_with_seq = FindShortestInternalKeySeparator(
-          *comparator_->user_comparator(), last_key_in_current_block,
-          *first_key_in_next_block, separator_scratch);
+  Slice GetSeparatorWithSeq(const Slice& last_key_in_current_block,
+                            const Slice* first_key_in_next_block,
+                            std::string* separator_scratch) {
+    Slice separator_with_seq;
+    if (first_key_in_next_block != nullptr) {
+      if (shortening_mode_ !=
+          BlockBasedTableOptions::IndexShorteningMode::kNoShortening) {
+        separator_with_seq = FindShortestInternalKeySeparator(
+            *comparator_->user_comparator(), last_key_in_current_block,
+            *first_key_in_next_block, separator_scratch);
+      } else {
+        separator_with_seq = last_key_in_current_block;
+      }
+      // ... (中略) ...
     } else {
-      separator_with_seq = last_key_in_current_block;
+      if (shortening_mode_ == BlockBasedTableOptions::IndexShorteningMode::
+                                  kShortenSeparatorsAndSuccessor) {
+        separator_with_seq = FindShortInternalKeySuccessor(
+            *comparator_->user_comparator(), last_key_in_current_block,
+            separator_scratch);
+      } else {
+        separator_with_seq = last_key_in_current_block;
+      }
     }
-    // ... (中略) ...
-  } else {
-    if (shortening_mode_ == BlockBasedTableOptions::IndexShorteningMode::
-                                kShortenSeparatorsAndSuccessor) {
-      separator_with_seq = FindShortInternalKeySuccessor(
-          *comparator_->user_comparator(), last_key_in_current_block,
-          separator_scratch);
-    } else {
-      separator_with_seq = last_key_in_current_block;
-    }
+    return separator_with_seq;
   }
-  return separator_with_seq;
-}
 ```
 
 ### なぜ短縮が効くのか
@@ -213,18 +212,18 @@ Slice GetSeparatorWithSeq(const Slice& last_key_in_current_block,
 [`include/rocksdb/table.h` L706-L717](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/table.h#L706-L717)
 
 ```cpp
-enum class IndexShorteningMode : char {
-  // Use full keys.
-  kNoShortening,
-  // Shorten index keys between blocks, but use full key for the last index
-  // key, which is the upper bound of the whole file.
-  kShortenSeparators,
-  // Shorten both keys between blocks and key after last block.
-  kShortenSeparatorsAndSuccessor,
-};
+  enum class IndexShorteningMode : char {
+    // Use full keys.
+    kNoShortening,
+    // Shorten index keys between blocks, but use full key for the last index
+    // key, which is the upper bound of the whole file.
+    kShortenSeparators,
+    // Shorten both keys between blocks and key after last block.
+    kShortenSeparatorsAndSuccessor,
+  };
 
-IndexShorteningMode index_shortening =
-    IndexShorteningMode::kShortenSeparators;
+  IndexShorteningMode index_shortening =
+      IndexShorteningMode::kShortenSeparators;
 ```
 
 最後のキーを縮めると、その上限が過大評価され、シークのたびにファイル末尾のデータブロックを無駄に読みやすくなる。
@@ -262,26 +261,41 @@ class ShortenedIndexBuilder : public IndexBuilder {
 IndexBuilder* IndexBuilder::CreateIndexBuilder(
     BlockBasedTableOptions::IndexType index_type,
     // ... (中略) ...
-    ) {
   IndexBuilder* result = nullptr;
   switch (index_type) {
     case BlockBasedTableOptions::kBinarySearch: {
-      result = new ShortenedIndexBuilder(/* ... */);
+      result = new ShortenedIndexBuilder(
+          comparator, table_opt.index_block_restart_interval,
+          table_opt.format_version, use_value_delta_encoding,
+          table_opt.index_shortening, /* include_first_key */ false, ts_sz,
+          persist_user_defined_timestamps, statistics,
+          table_opt.uniform_cv_threshold);
       break;
     }
     case BlockBasedTableOptions::kHashSearch: {
       // Currently kHashSearch is incompatible with index_block_restart_interval
       // > 1
       assert(table_opt.index_block_restart_interval == 1);
-      result = new HashIndexBuilder(/* ... */);
+      result = new HashIndexBuilder(
+          comparator, int_key_slice_transform,
+          table_opt.index_block_restart_interval, table_opt.format_version,
+          use_value_delta_encoding, table_opt.index_shortening, ts_sz,
+          persist_user_defined_timestamps, table_opt.uniform_cv_threshold);
       break;
     }
     case BlockBasedTableOptions::kTwoLevelIndexSearch: {
-      result = PartitionedIndexBuilder::CreateIndexBuilder(/* ... */);
+      result = PartitionedIndexBuilder::CreateIndexBuilder(
+          comparator, use_value_delta_encoding, table_opt, ts_sz,
+          persist_user_defined_timestamps);
       break;
     }
     case BlockBasedTableOptions::kBinarySearchWithFirstKey: {
-      result = new ShortenedIndexBuilder(/* ... include_first_key=true ... */);
+      result = new ShortenedIndexBuilder(
+          comparator, table_opt.index_block_restart_interval,
+          table_opt.format_version, use_value_delta_encoding,
+          table_opt.index_shortening, /* include_first_key */ true, ts_sz,
+          persist_user_defined_timestamps, statistics,
+          table_opt.uniform_cv_threshold);
       break;
     }
     // ... (中略) ...
@@ -314,26 +328,26 @@ class BlockBasedTable::IndexReaderCommon : public BlockBasedTable::IndexReader {
 [`include/rocksdb/table.h` L236-L264](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/table.h#L236-L264)
 
 ```cpp
-enum IndexType : char {
-  // A space efficient index block that is optimized for
-  // binary-search-based index.
-  kBinarySearch = 0x00,
+  enum IndexType : char {
+    // A space efficient index block that is optimized for
+    // binary-search-based index.
+    kBinarySearch = 0x00,
 
-  // The hash index, if enabled, will do the hash lookup when
-  // `Options.prefix_extractor` is provided.
-  kHashSearch = 0x01,
+    // The hash index, if enabled, will do the hash lookup when
+    // `Options.prefix_extractor` is provided.
+    kHashSearch = 0x01,
 
-  // A two-level index implementation. Both levels are binary search indexes.
-  // Second level index blocks ("partitions") use block cache even when
-  // cache_index_and_filter_blocks=false.
-  kTwoLevelIndexSearch = 0x02,
+    // A two-level index implementation. Both levels are binary search indexes.
+    // Second level index blocks ("partitions") use block cache even when
+    // cache_index_and_filter_blocks=false.
+    kTwoLevelIndexSearch = 0x02,
 
-  // Like kBinarySearch, but index also contains first key of each block.
-  // ... (中略) ...
-  kBinarySearchWithFirstKey = 0x03,
-};
+    // Like kBinarySearch, but index also contains first key of each block.
+    // ... (中略) ...
+    kBinarySearchWithFirstKey = 0x03,
+  };
 
-IndexType index_type = kBinarySearch;
+  IndexType index_type = kBinarySearch;
 ```
 
 ### kBinarySearch（既定）
@@ -392,7 +406,7 @@ InternalIteratorBase<IndexValue>* BinarySearchIndexReader::NewIterator(
 //    are stored consectively without any metadata (like, prefix sizes) being
 //    stored, which is kept in the other metablock.
 //  - a metablock contains the metadata of the prefixes, including prefix size,
-//    restart index and number of block it spans.
+//    restart index and number of block it spans. The format looks like:
 // ... (中略：メタブロックのレイアウト図) ...
 class HashIndexBuilder : public IndexBuilder {
 ```
@@ -414,7 +428,7 @@ class HashIndexBuilder : public IndexBuilder {
 `GetBlocks` がキーを受け取り、そのプレフィックスから候補となるデータブロックの集合を返す。
 返り値 0 はキーが存在しないことを表す。
 
-[`table/block_based/block_prefix_index.h` L22-L33](https://github.com/facebook/rocksdb/blob/v11.1.1/table/block_based/block_prefix_index.h#L22-L33)
+[`table/block_based/block_prefix_index.h` L22-L28](https://github.com/facebook/rocksdb/blob/v11.1.1/table/block_based/block_prefix_index.h#L22-L28)
 
 ```cpp
 class BlockPrefixIndex {
@@ -454,18 +468,18 @@ class BlockPrefixIndex {
 [`include/rocksdb/table.h` L250-L261](https://github.com/facebook/rocksdb/blob/v11.1.1/include/rocksdb/table.h#L250-L261)
 
 ```cpp
-// Like kBinarySearch, but index also contains first key of each block.
-// This allows iterators to defer reading the block until it's actually
-// needed. May significantly reduce read amplification of short range scans.
-// Without it, iterator seek usually reads one block from each level-0 file
-// and from each level, which may be expensive.
-// Works best in combination with:
-//  - IndexShorteningMode::kNoShortening,
-//  - custom FlushBlockPolicy to cut blocks at some meaningful boundaries,
-//    e.g. when prefix changes.
-// Makes the index significantly bigger (2x or more), especially when keys
-// are long.
-kBinarySearchWithFirstKey = 0x03,
+    // Like kBinarySearch, but index also contains first key of each block.
+    // This allows iterators to defer reading the block until it's actually
+    // needed. May significantly reduce read amplification of short range scans.
+    // Without it, iterator seek usually reads one block from each level-0 file
+    // and from each level, which may be expensive.
+    // Works best in combination with:
+    //  - IndexShorteningMode::kNoShortening,
+    //  - custom FlushBlockPolicy to cut blocks at some meaningful boundaries,
+    //    e.g. when prefix changes.
+    // Makes the index significantly bigger (2x or more), especially when keys
+    // are long.
+    kBinarySearchWithFirstKey = 0x03,
 ```
 
 先頭キーを持てば、シーク先のキーがそのブロックの先頭キーより小さいと分かった時点で、ブロックを読まずに次へ進める。
@@ -477,12 +491,12 @@ kBinarySearchWithFirstKey = 0x03,
 [`table/block_based/index_builder.h` L257-L262](https://github.com/facebook/rocksdb/blob/v11.1.1/table/block_based/index_builder.h#L257-L262)
 
 ```cpp
-void OnKeyAdded(const Slice& key,
-                const std::optional<Slice>& /*value*/) override {
-  if (include_first_key_ && current_block_first_internal_key_.empty()) {
-    current_block_first_internal_key_.assign(key.data(), key.size());
+  void OnKeyAdded(const Slice& key,
+                  const std::optional<Slice>& /*value*/) override {
+    if (include_first_key_ && current_block_first_internal_key_.empty()) {
+      current_block_first_internal_key_.assign(key.data(), key.size());
+    }
   }
-}
 ```
 
 ## パーティションドインデックス（kTwoLevelIndexSearch）
@@ -544,7 +558,7 @@ void PartitionedIndexBuilder::MaybeFlush(const Slice& index_key,
 直前に書いた下位インデックスの `BlockHandle` を `last_partition_block_handle` で受け取り、その区切りキーとともに上位インデックスへ一エントリ追加する。
 残りの下位インデックスがなくなったとき、上位インデックスを `Finish` して `Status::OK()` を返す。
 
-[`table/block_based/index_builder.cc` L327-L368](https://github.com/facebook/rocksdb/blob/v11.1.1/table/block_based/index_builder.cc#L327-L368)
+[`table/block_based/index_builder.cc` L327-L367](https://github.com/facebook/rocksdb/blob/v11.1.1/table/block_based/index_builder.cc#L327-L367)
 
 ```cpp
   if (finishing_indexes_ == true) {
@@ -598,16 +612,20 @@ class PartitionIndexReader : public BlockBasedTable::IndexReaderCommon {
   Statistics* kNullStats = nullptr;
   // Filters are already checked before seeking the index
   if (!partition_map_.empty()) {
+    // We don't return pinned data from index blocks, so no need
+    // to set `block_contents_pinned`.
     it = NewTwoLevelIterator(
         new BlockBasedTable::PartitionedIndexIteratorState(table(),
                                                            &partition_map_),
-        index_block.GetValue()->NewIndexIterator(/* ... 上位インデックス ... */));
+        index_block.GetValue()->NewIndexIterator(
+            // ... (中略：上位インデックス) ...
+            user_defined_timestamps_persisted()));
   } else {
     // ... (中略) ...
     it = new PartitionedIndexIterator(
         table(), ro, *internal_comparator(), std::move(index_iter),
-        // ... (中略) ...
-        );
+        lookup_context ? lookup_context->caller
+                       : TableReaderCaller::kUncategorized);
   }
 ```
 
@@ -624,11 +642,17 @@ Block Cache がどのようにブロックを保持し追い出すかは[第38�
 
 ## まとめ
 
-- インデックスブロックは、各データブロックの区切りキー（最後のキー以上、次ブロックの最初のキー未満）から `BlockHandle` への対応表である。リーダーはこの区切りキーを二分探索し、目的キーが入るデータブロックを一つに絞る。
-- 区切りキーは `FindShortestSeparator` と `FindShortSuccessor` で最短に縮める。短くするとインデックスブロックが小さくなり、キャッシュに載りやすく比較も速い。既定の `kShortenSeparators` はファイル末尾の上限キーだけ縮めない。
+- インデックスブロックは、各データブロックの区切りキー（最後のキー以上、次ブロックの最初のキー未満）から `BlockHandle` への対応表である。
+  リーダーはこの区切りキーを二分探索し、目的キーが入るデータブロックを一つに絞る。
+- 区切りキーは `FindShortestSeparator` と `FindShortSuccessor` で最短に縮める。
+  短くするとインデックスブロックが小さくなり、キャッシュに載りやすく比較も速い。
+  既定の `kShortenSeparators` はファイル末尾の上限キーだけ縮めない。
 - `ShortenedIndexBuilder` はインデックスの `block_restart_interval` を 1 にし、二分探索の着地点からの線形復元をなくす。
-- `kBinarySearch` は単一の二分探索インデックス。`kHashSearch` はプレフィックスからブロックを引くハッシュ表を足し、失敗時は二分探索に退避する。`kBinarySearchWithFirstKey` は各エントリに先頭キーを持たせ、データブロック読みを遅延させる代わりにインデックスが膨らむ。
-- `kTwoLevelIndexSearch`（パーティションドインデックス）はインデックスをブロック分割し、上位インデックスから必要な下位インデックスだけを読む。巨大 SST でインデックス全読みを避け、常駐メモリを下位インデックス単位に分割する。
+- `kBinarySearch` は単一の二分探索インデックス。
+  `kHashSearch` はプレフィックスからブロックを引くハッシュ表を足し、失敗時は二分探索に退避する。
+  `kBinarySearchWithFirstKey` は各エントリに先頭キーを持たせ、データブロック読みを遅延させる代わりにインデックスが膨らむ。
+- `kTwoLevelIndexSearch`（パーティションドインデックス）はインデックスをブロック分割し、上位インデックスから必要な下位インデックスだけを読む。
+  巨大 SST でインデックス全読みを避け、常駐メモリを下位インデックス単位に分割する。
 
 ## 関連する章
 

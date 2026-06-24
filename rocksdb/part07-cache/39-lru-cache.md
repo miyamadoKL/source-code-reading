@@ -23,7 +23,7 @@
 このクラスは内部に2つのデータ構造を持つ。
 キーから要素を引くためのハッシュ表 `LRUHandleTable` と、退避順序を管理する LRU 双方向連結リストである。
 
-[`cache/lru_cache.h` L404-L441](https://github.com/facebook/rocksdb/blob/v11.1.1/cache/lru_cache.h#L404-L441)
+[`cache/lru_cache.h` L404-L437](https://github.com/facebook/rocksdb/blob/v11.1.1/cache/lru_cache.h#L404-L437)
 
 ```cpp
   // Dummy head of LRU list.
@@ -40,6 +40,8 @@
   LRUHandleTable table_;
   // ... (中略) ...
   // mutex_ protects the following state.
+  // We don't count mutex_ as the cache's internal state so semantically we
+  // don't mind mutex_ invoking the non-const actions.
   mutable DMutex mutex_;
 ```
 
@@ -132,7 +134,7 @@ struct LRUHandle : public Cache::Handle {
 外部参照カウント `refs` とキャッシュ在籍フラグ `M_IN_CACHE` を組み合わせると、要素は3つの状態を取る。
 ヘッダ冒頭のコメントがこの状態を定義している。
 
-[`cache/lru_cache.h` L32-L47](https://github.com/facebook/rocksdb/blob/v11.1.1/cache/lru_cache.h#L32-L47)
+[`cache/lru_cache.h` L32-L42](https://github.com/facebook/rocksdb/blob/v11.1.1/cache/lru_cache.h#L32-L42)
 
 ```cpp
 // LRUHandle can be in these states:
@@ -208,7 +210,7 @@ LRUHandle* LRUCacheShard::Lookup(const Slice& key, uint32_t hash,
 利用者が使い終えると `Release` を呼ぶ。
 ここで参照カウントが0に戻ると、状態1から状態2へ戻る。
 
-[`cache/lru_cache.cc` L480-L502](https://github.com/facebook/rocksdb/blob/v11.1.1/cache/lru_cache.cc#L480-L502)
+[`cache/lru_cache.cc` L480-L496](https://github.com/facebook/rocksdb/blob/v11.1.1/cache/lru_cache.cc#L480-L496)
 
 ```cpp
     DMutexLock l(mutex_);
@@ -390,7 +392,8 @@ void LRUCacheShard::LRU_Insert(LRUHandle* e) {
 リスト先頭ではなく中央に入れることで、一度きりのスキャンで読まれただけのブロックが、よく使われるブロックを押し出すのを防ぐ。
 この考え方は MySQL の InnoDB バッファプールでも用いられる古典的なミッドポイント挿入である[^midpoint]。
 
-[^midpoint]: 新規要素をリスト先頭ではなく中間点に挿入し、再アクセスがあったものだけを先頭へ昇格させる手法。`high_pri_pool_ratio = 0.5` のとき、未ヒットの要素が入る low-pri プールの先頭は LRU リストのちょうど中央付近にあたる。
+[^midpoint]: 新規要素をリスト先頭ではなく中間点に挿入し、再アクセスがあったものだけを先頭へ昇格させる手法。
+    `high_pri_pool_ratio = 0.5` のとき、未ヒットの要素が入る low-pri プールの先頭は LRU リストのちょうど中央付近にあたる。
 
 各プールの容量は比率で決まる。
 `high_pri_pool_ratio` と `low_pri_pool_ratio` はそれぞれシャード容量に対する比率で、`LRUCacheOptions` で設定する。
@@ -495,7 +498,7 @@ flowchart RL
 
 挿入経路の分岐を再掲する。
 
-[`cache/lru_cache.cc` L383-L399](https://github.com/facebook/rocksdb/blob/v11.1.1/cache/lru_cache.cc#L383-L399)
+[`cache/lru_cache.cc` L383-L398](https://github.com/facebook/rocksdb/blob/v11.1.1/cache/lru_cache.cc#L383-L398)
 
 ```cpp
     if ((usage_ + e->total_charge) > capacity_ &&
@@ -531,12 +534,19 @@ flowchart RL
 
 ## まとめ
 
-- `LRUCacheShard` は1シャードを表し、内部にハッシュ表 `LRUHandleTable`（lookup 経路）と LRU 双方向リスト（退避経路）を持つ。同じ `LRUHandle` が両構造から指される。
-- `LRUHandle` は外部参照カウント `refs` とキャッシュ在籍フラグ `M_IN_CACHE` の組で3状態を取る。参照中の要素は LRU リストに載らず、退避対象にならない。
-- `EvictFromLRU` は LRU リスト最古端から落とし、値は `CacheItemHelper` の deleter で解放する。解放はロックの外でまとめて行い、ロック保持時間を短く保つ。
-- 優先度プール（high-pri / low-pri / bottom-pri）が LRUCache の最適化の核である。ヒット実績や高優先指定の要素を上位プールに置き、退避は最古端から起きるため、インデックスやフィルタがデータブロックに押し出されにくい。区間の移動は要素ではなく境界ポインタの付け替えで行う。
-- 未ヒットの新規要素を中央に入れるミッドポイント挿入により、一度きりのスキャンが頻用ブロックを追い出すのを防ぐ。`high_pri_pool_ratio` の既定は 0.5。
-- `strict_capacity_limit` が真なら容量を空けきれないとき `Insert` は `Status::MemoryLimit` で失敗する。既定の偽では失敗せず、瞬間的な容量超過を許す。
+- `LRUCacheShard` は1シャードを表し、内部にハッシュ表 `LRUHandleTable`（lookup 経路）と LRU 双方向リスト（退避経路）を持つ。
+  同じ `LRUHandle` が両構造から指される。
+- `LRUHandle` は外部参照カウント `refs` とキャッシュ在籍フラグ `M_IN_CACHE` の組で3状態を取る。
+  参照中の要素は LRU リストに載らず、退避対象にならない。
+- `EvictFromLRU` は LRU リスト最古端から落とし、値は `CacheItemHelper` の deleter で解放する。
+  解放はロックの外でまとめて行い、ロック保持時間を短く保つ。
+- 優先度プール（high-pri / low-pri / bottom-pri）が LRUCache の最適化の核である。
+  ヒット実績や高優先指定の要素を上位プールに置き、退避は最古端から起きるため、インデックスやフィルタがデータブロックに押し出されにくい。
+  区間の移動は要素ではなく境界ポインタの付け替えで行う。
+- 未ヒットの新規要素を中央に入れるミッドポイント挿入により、一度きりのスキャンが頻用ブロックを追い出すのを防ぐ。
+  `high_pri_pool_ratio` の既定は 0.5。
+- `strict_capacity_limit` が真なら容量を空けきれないとき `Insert` は `Status::MemoryLimit` で失敗する。
+  既定の偽では失敗せず、瞬間的な容量超過を許す。
 
 ## 関連する章
 

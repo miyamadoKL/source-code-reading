@@ -56,7 +56,7 @@ SST は末尾に向かって自己記述的に並んでいる。
 
 メタインデックスは `ReadMetaIndexBlock` が読む。
 
-[`table/block_based/block_based_table_reader.cc` L1473-L1498](https://github.com/facebook/rocksdb/blob/v11.1.1/table/block_based/block_based_table_reader.cc#L1473-L1498)
+[`table/block_based/block_based_table_reader.cc` L1473-L1499](https://github.com/facebook/rocksdb/blob/v11.1.1/table/block_based/block_based_table_reader.cc#L1473-L1499)
 
 ```cpp
 Status BlockBasedTable::ReadMetaIndexBlock(
@@ -108,7 +108,7 @@ Status BlockBasedTable::ReadMetaIndexBlock(
 `PrefetchIndexAndFilterBlocks` は、まずフィルタブロックの位置と種別を確定させる。
 フィルタポリシーが設定されていれば、互換名に既知の接頭辞を付けたキーをメタインデックスから検索し、見つかった接頭辞でフィルタの種別（フルフィルタかパーティションフィルタか）を決める。
 
-[`table/block_based/block_based_table_reader.cc` L1220-L1241](https://github.com/facebook/rocksdb/blob/v11.1.1/table/block_based/block_based_table_reader.cc#L1220-L1241)
+[`table/block_based/block_based_table_reader.cc` L1220-L1242](https://github.com/facebook/rocksdb/blob/v11.1.1/table/block_based/block_based_table_reader.cc#L1220-L1242)
 
 ```cpp
   if (rep_->filter_policy) {
@@ -319,7 +319,7 @@ I/O が許されていれば、`RetrieveBlock` はこの後 `ReadAndParseBlockFr
 ヒットすれば解凍済みの `Block` がそのまま得られ、ファイル I/O も解凍もチェックサム検証も行わない。
 ミスしたときだけ、I/O が許され `fill_cache` が立っていれば、`BlockFetcher` でファイルから読み、`PutDataBlockToCache` でキャッシュへ載せる。
 
-[`table/block_based/block_based_table_reader.cc` L1873-L1916](https://github.com/facebook/rocksdb/blob/v11.1.1/table/block_based/block_based_table_reader.cc#L1873-L1916)
+[`table/block_based/block_based_table_reader.cc` L1871-L1916](https://github.com/facebook/rocksdb/blob/v11.1.1/table/block_based/block_based_table_reader.cc#L1871-L1916)
 
 ```cpp
     // Can't find the block from the cache. If I/O is allowed, read from the
@@ -383,7 +383,7 @@ IOStatus BlockFetcher::ReadBlockContents() {
 読み込んだバイト列のトレーラを処理するのが `ProcessTrailerIfPresent` である。
 各ブロックの末尾には 5 バイトのトレーラ（1 バイトの圧縮種別と 4 バイトのチェックサム）が付く。
 
-[`table/block_fetcher.cc` L59-L77](https://github.com/facebook/rocksdb/blob/v11.1.1/table/block_fetcher.cc#L59-L77)
+[`table/block_fetcher.cc` L59-L78](https://github.com/facebook/rocksdb/blob/v11.1.1/table/block_fetcher.cc#L59-L78)
 
 ```cpp
 inline void BlockFetcher::ProcessTrailerIfPresent() {
@@ -401,7 +401,11 @@ inline void BlockFetcher::ProcessTrailerIfPresent() {
     }
     compression_type() =
         BlockBasedTable::GetBlockCompressionType(slice_.data(), block_size_);
+  } else {
+    // E.g. plain table or cuckoo table
+    compression_type() = kNoCompression;
   }
+}
 ```
 
 `verify_checksums` が真なら、ブロック本体に対してチェックサムを計算し、トレーラの値と照合する。
@@ -438,7 +442,7 @@ inline void BlockFetcher::ProcessTrailerIfPresent() {
 リスタート点の位置は、ブロック末尾のリスタート配列（`uint32_t` の並び）に格納される。
 `Block` のコンストラクタはブロックのフッタを読んでリスタート配列の位置と要素数を確定させる。
 
-[`table/block_based/block.cc` L1346-L1353](https://github.com/facebook/rocksdb/blob/v11.1.1/table/block_based/block.cc#L1346-L1353)
+[`table/block_based/block.cc` L1346-L1354](https://github.com/facebook/rocksdb/blob/v11.1.1/table/block_based/block.cc#L1346-L1354)
 
 ```cpp
     // After the switch, input should end with restarts[num_restarts_]
@@ -455,7 +459,7 @@ inline void BlockFetcher::ProcessTrailerIfPresent() {
 `num_restarts_` 個のリスタート点があり、それぞれが固定長 `uint32_t` のオフセットで並ぶので、配列の `i` 番目はインデックス計算だけで取り出せる。
 この配列をキーで二分探索するのが `BinarySeekRestartPointIndex` である。
 
-[`table/block_based/block.cc` L805-L843](https://github.com/facebook/rocksdb/blob/v11.1.1/table/block_based/block.cc#L805-L843)
+[`table/block_based/block.cc` L805-L833](https://github.com/facebook/rocksdb/blob/v11.1.1/table/block_based/block.cc#L805-L833)
 
 ```cpp
   int64_t left = -1;
@@ -514,6 +518,8 @@ inline void BlockFetcher::ProcessTrailerIfPresent() {
     while (true) {
       NextImpl();
       if (!Valid()) {
+        // TODO(cbi): per key-value checksum will not be verified in UpdateKey()
+        //  since Valid() will returns false.
         break;
       }
       if (current_ == max_offset) {
@@ -604,10 +610,13 @@ void DataBlockIter::SeekImpl(const Slice& target) {
 ## まとめ
 
 - `Open` は SST 末尾の Footer を起点に、メタインデックス、プロパティ、レンジ削除、インデックスとフィルタの順で段階的に読み、テーブルリーダを組み立てる。
-- 点探索 `Get` はフィルタ、インデックス、ブロック内二分探索の三段で探索空間を絞る。フィルタの否定はインデックス探索もブロック I/O も丸ごと省く。
-- ブロック取得は `RetrieveBlock` がまず Block Cache を引き、ヒットすればファイル I/O も解凍もチェックサム検証も省ける。SST のブロックが不変であることがこの最適化を成り立たせる。
+- 点探索 `Get` はフィルタ、インデックス、ブロック内二分探索の三段で探索空間を絞る。
+  フィルタの否定はインデックス探索もブロック I/O も丸ごと省く。
+- ブロック取得は `RetrieveBlock` がまず Block Cache を引き、ヒットすればファイル I/O も解凍もチェックサム検証も省ける。
+  SST のブロックが不変であることがこの最適化を成り立たせる。
 - ミス時は `BlockFetcher` がファイルから読み、トレーラのチェックサムを検証し、必要なら解凍してから、解凍済みの `Block` をキャッシュに載せる。
-- ブロック内の探索はリスタート配列の二分探索で行う。完全形で記録されたリスタート点だけを比較し、絞り込んだ一区間だけを線形走査することで、ブロック全体の復元を避ける。
+- ブロック内の探索はリスタート配列の二分探索で行う。
+  完全形で記録されたリスタート点だけを比較し、絞り込んだ一区間だけを線形走査することで、ブロック全体の復元を避ける。
 - 走査用イテレータはインデックスとデータの二段構造を取り、下段のブロック取得経路は点探索と共通である。
 
 ## 関連する章

@@ -40,6 +40,7 @@ class CompactionPicker {
   // Returns nullptr if there is no compaction to be done.
   // Otherwise returns a pointer to a heap-allocated object that
   // describes the compaction.  Caller should delete the result.
+  // ...
   virtual Compaction* PickCompaction(
       const std::string& cf_name, const MutableCFOptions& mutable_cf_options,
       const MutableDBOptions& mutable_db_options,
@@ -254,7 +255,7 @@ void LevelCompactionBuilder::SetupInitialFiles() {
 `PickFileToCompact` は、起点レベルの中でどのファイルから併合するかを決める。
 ここで使うのが `FilesByCompactionPri` の並びで、`CompactionPri` の設定に応じて事前に並べ替えてある。
 
-[`db/compaction/compaction_picker_level.cc` L826-L854](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_picker_level.cc#L826-L854)
+[`db/compaction/compaction_picker_level.cc` L826-L856](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_picker_level.cc#L826-L856)
 
 ```cpp
   const std::vector<FileMetaData*>& level_files =
@@ -274,7 +275,14 @@ void LevelCompactionBuilder::SetupInitialFiles() {
     // do not pick a file to compact if it is being compacted
     // from n-1 level.
     if (f->being_compacted) {
-      // ...
+      if (ioptions_.compaction_pri == kRoundRobin) {
+        // TODO(zichen): this file may be involved in one compaction from
+        // an upper level, cannot advance the cursor for round-robin policy.
+        // Currently, we do not pick any file to compact in this case. We
+        // should fix this later to ensure a compaction is picked but the
+        // cursor shall not be advanced.
+        return false;
+      }
       continue;
     }
 
@@ -364,7 +372,7 @@ void LevelCompactionBuilder::SetupInitialFiles() {
 読み取りはレベルの浅い順に探すので、これでは古い値を返しかねない。
 これを防ぐのが clean cut である。
 
-[`db/compaction/compaction_picker.cc` L289-L307](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_picker.cc#L289-L307)
+[`db/compaction/compaction_picker.cc` L289-L303](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_picker.cc#L289-L303)
 
 ```cpp
   InternalKey smallest, largest;
@@ -555,7 +563,7 @@ Universal は、各レベルとそれぞれの L0 ファイルを「ソート済
 FIFO は併合ではなく、合計サイズや TTL の超過を契機に古い SST を落とす方式である。
 `PickCompaction` は TTL、サイズ、L0 内併合、温度変更の順に試す。
 
-[`db/compaction/compaction_picker_fifo.cc` L737-L757](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_picker_fifo.cc#L737-L757)
+[`db/compaction/compaction_picker_fifo.cc` L737-L753](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_picker_fifo.cc#L737-L753)
 
 ```cpp
   Compaction* c = nullptr;
@@ -612,7 +620,7 @@ FIFO は併合ではなく、合計サイズや TTL の超過を契機に古い 
 TTL 起因の `PickTTLCompaction` は、ファイルの推定最終更新時刻が `current_time - ttl` より古いものを落とす。
 最も古い側から走査し、TTL 以内のファイルに当たった時点で打ち切る。
 
-[`db/compaction/compaction_picker_fifo.cc` L101-L114](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_picker_fifo.cc#L101-L114)
+[`db/compaction/compaction_picker_fifo.cc` L101-L115](https://github.com/facebook/rocksdb/blob/v11.1.1/db/compaction/compaction_picker_fifo.cc#L101-L115)
 
 ```cpp
   if (current_time > mutable_cf_options.ttl) {
@@ -651,11 +659,14 @@ FIFO だけは独自実装を持ち、それ以外の方式は基底の共通実
 ## まとめ
 
 - `CompactionPicker` は「いつ、どのファイルを併合するか」を決める層で、方式ごとに `LevelCompactionPicker` / `UniversalCompactionPicker` / `FIFOCompactionPicker` が派生する。
-- `ComputeCompactionScore` が各レベルにスコアを与える。L0 はファイル数、L1 以降は補正サイズと上限サイズの比で、1.0 が起動閾値である。スコアは降順に並べ替えられ、Leveled はスコア最大レベルを起点にする。
+- `ComputeCompactionScore` が各レベルにスコアを与える。
+  L0 はファイル数、L1 以降は補正サイズと上限サイズの比で、1.0 が起動閾値である。
+  スコアは降順に並べ替えられ、Leveled はスコア最大レベルを起点にする。
 - 起点ファイルは `CompactionPri`（既定は `kMinOverlappingRatio`）で優先順位を付け、下位レベルとの重なりが小さいものを選んで書き込み増幅を下げる。
 - `ExpandInputsToCleanCut` は同じユーザーキーが分断されない clean cut まで入力を拡張し、古い版を上位に残す事故を防ぐ。
 - `GetGrandparents` が記録する grandparent 重なり集合は、出力ファイルを区切る判断材料となり、出力の肥大と後続の書き戻し増加を抑える。
-- Universal はソート済みランをサイズ比で束ね、FIFO は合計サイズや TTL の超過で古い SST を落とす。手動コンパクションは入力と出力のレベルが外から与えられる別の入口を通る。
+- Universal はソート済みランをサイズ比で束ね、FIFO は合計サイズや TTL の超過で古い SST を落とす。
+  手動コンパクションは入力と出力のレベルが外から与えられる別の入口を通る。
 
 ## 関連する章
 

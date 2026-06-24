@@ -124,7 +124,7 @@ flowchart TD
 それ以外は追随者となり、リーダーが自分のぶんも処理し終えるのを待つ。
 リーダーでも追随者でもない完了済みの状態 `STATE_COMPLETED` なら、リーダーが既に処理を終えているので結果を返すだけでよい。
 
-[`db/db_impl/db_impl_write.cc` L599-L611](https://github.com/facebook/rocksdb/blob/v11.1.1/db/db_impl/db_impl_write.cc#L599-L611)
+[`db/db_impl/db_impl_write.cc` L599-L610](https://github.com/facebook/rocksdb/blob/v11.1.1/db/db_impl/db_impl_write.cc#L599-L610)
 
 ```cpp
   if (w.state == WriteThread::STATE_COMPLETED) {
@@ -196,7 +196,7 @@ flowchart TD
 
 WAL 書き込みが成功すると、リーダーはグループの各書き込みに連番を順に割り当てる。
 
-[`db/db_impl/db_impl_write.cc` L820-L848](https://github.com/facebook/rocksdb/blob/v11.1.1/db/db_impl/db_impl_write.cc#L820-L848)
+[`db/db_impl/db_impl_write.cc` L819-L848](https://github.com/facebook/rocksdb/blob/v11.1.1/db/db_impl/db_impl_write.cc#L819-L848)
 
 ```cpp
     // PreReleaseCallback is called after WAL write and before memtable write
@@ -257,7 +257,7 @@ WAL の物理形式とレコードの並べ方は[第10章 WAL](10-wal.md)で扱
 シーケンス番号を割り当て終えたら、リーダーはグループの更新を MemTable に挿入する。
 グループのサイズと設定に応じて、リーダーが単独で挿入する場合と、追随者を並列ワーカーとして起こして分担する場合がある。
 
-[`db/db_impl/db_impl_write.cc` L850-L866](https://github.com/facebook/rocksdb/blob/v11.1.1/db/db_impl/db_impl_write.cc#L850-L866)
+[`db/db_impl/db_impl_write.cc` L850-L863](https://github.com/facebook/rocksdb/blob/v11.1.1/db/db_impl/db_impl_write.cc#L850-L863)
 
 ```cpp
     if (status.ok()) {
