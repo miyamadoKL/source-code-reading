@@ -345,7 +345,7 @@ void keysCommand(client *c) {
     // ... (中略) ...
     kvstoreIterator *kvs_it = NULL;
     // ... (中略) ...
-    kvs_it = kvstoreIteratorInit(c->db->keys, HASHTABLE_ITER_SAFE);
+        kvs_it = kvstoreIteratorInit(c->db->keys, HASHTABLE_ITER_SAFE);
     void *next;
     while (kvs_di ? kvstoreHashtableIteratorNext(kvs_di, &next) : kvstoreIteratorNext(kvs_it, &next)) {
         robj *val = next;
@@ -470,7 +470,7 @@ unsigned long long kvstoreScan(kvstore *kvs,
 
 走査で見つけた各キーは `keysScanCallback` が受け取り、ふるい分けたうえで結果に積む。
 
-[`src/db.c` L1016-L1046](https://github.com/valkey-io/valkey/blob/9.1.0/src/db.c#L1016-L1046)
+[`src/db.c` L1015-L1046](https://github.com/valkey-io/valkey/blob/9.1.0/src/db.c#L1015-L1046)
 
 ```c
 /* Hashtable scan callback used by scanCallback when scanning the keyspace. */
@@ -520,7 +520,7 @@ void keysScanCallback(void *privdata, void *entry, int didx) {
     /* Reply to the client. */
     addReplyArrayLen(c, 2);
 
-    /* ... (中略：クラスタモードのカーソル整形) ... */
+    // ... (中略：クラスタモードのカーソル整形) ...
     } else {
         addReplyBulkLongLong(c, cursor);
     }

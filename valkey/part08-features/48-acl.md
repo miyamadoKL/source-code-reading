@@ -234,7 +234,7 @@ int ACLCheckAllPerm(client *c, int *idxptr) {
 
 最後にチャンネルを検査する。
 
-[`src/acl.c` L1940-L1961](https://github.com/valkey-io/valkey/blob/9.1.0/src/acl.c#L1940-L1961)
+[`src/acl.c` L1940-L1962](https://github.com/valkey-io/valkey/blob/9.1.0/src/acl.c#L1940-L1962)
 
 ```c
     /* Check if the user can execute commands explicitly touching the channels
@@ -404,7 +404,7 @@ static aclSelector *ACLUserGetRootSelector(user *u) {
 `requirepass` や `ACL SETUSER ... >password` で与えたパスワードは、SHA256 のハッシュを16進文字列にして保存する。
 ハッシュ化は `ACLHashPassword` が行う。
 
-[`src/acl.c` L219-L233](https://github.com/valkey-io/valkey/blob/9.1.0/src/acl.c#L219-L233)
+[`src/acl.c` L219-L234](https://github.com/valkey-io/valkey/blob/9.1.0/src/acl.c#L219-L234)
 
 ```c
 static sds ACLHashPassword(unsigned char *cleartext, size_t len) {
@@ -490,7 +490,7 @@ static int time_independent_strcmp(char *a, char *b, int len) {
 `AUTH` コマンドの処理が `authCommand` である。
 引数2個のときは `default` ユーザーへの認証として扱う。
 
-[`src/acl.c` L3453-L3490](https://github.com/valkey-io/valkey/blob/9.1.0/src/acl.c#L3453-L3490)
+[`src/acl.c` L3453-L3491](https://github.com/valkey-io/valkey/blob/9.1.0/src/acl.c#L3453-L3491)
 
 ```c
 void authCommand(client *c) {
@@ -565,7 +565,6 @@ void authCommand(client *c) {
         else
             sdsfree(newpass);
         u->flags &= ~USER_FLAG_NOPASS;
-    }
 ```
 
 `>password` は平文を受け取り、その場で SHA256 ハッシュにしてパスワードリストへ加える。
@@ -585,7 +584,6 @@ void authCommand(client *c) {
         }
         listAddNodeTail(u->selectors, selector);
         return C_OK;
-    }
 ```
 
 括弧で囲まれていない `+@read` や `~key:*` のような規則は、root セレクタ向けの `ACLSetSelector` に渡る。
@@ -651,7 +649,6 @@ static aclSelector *aclCreateSelectorFromOpSet(const char *opset, size_t opsetle
             ACLKeyPatternFree(newpat);
         }
         selector->flags &= ~SELECTOR_FLAG_ALLKEYS;
-    }
 ```
 
 `%` 形式では R と W を読み取って読み取り権限と書き込み権限のフラグを組み立て、`~` の後ろをパターン本体とする。
@@ -680,7 +677,6 @@ static aclSelector *aclCreateSelectorFromOpSet(const char *opset, size_t opsetle
         else
             sdsfree(newpat);
         selector->flags &= ~SELECTOR_FLAG_ALLCHANNELS;
-    }
 ```
 
 `+command` のようなコマンド許可は、この続きの分岐でコマンドを名前から引き、対応するビットを立てる。

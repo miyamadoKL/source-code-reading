@@ -298,10 +298,14 @@ static inline int checkCandidateInBucket(hashtable *ht, bucket *b, int pos, cons
 バケットが満杯で目的のエントリが見つからなければ、子バケットへたどる。
 満杯のバケットは最後のスロットを子バケットへのポインタに置き換える方式で、これを連鎖と呼ぶ。
 
-[`src/hashtable.c` L235-L240](https://github.com/valkey-io/valkey/blob/9.1.0/src/hashtable.c#L235-L240)
+[`src/hashtable.c` L224-L240](https://github.com/valkey-io/valkey/blob/9.1.0/src/hashtable.c#L224-L240)
 
 ```c
-/* Bucket chaining
+/* Design
+ * ------
+ *
+// ... (中略) ...
+ * Bucket chaining
  * ---------------
  *
  * Each key hashes to a bucket in the hash table. If a bucket is full, the last
@@ -569,7 +573,7 @@ static bool resize(hashtable *ht, size_t min_capacity, int *malloc_failed) {
     /* Allocate the new hash table. */
     bucket *new_table;
     // ... (中略) ...
-    new_table = zcalloc(alloc_size);
+        new_table = zcalloc(alloc_size);
     if (ht->type->trackMemUsage) ht->type->trackMemUsage(ht, alloc_size);
     ht->bucket_exp[1] = exp;
     ht->tables[1] = new_table;
@@ -615,7 +619,7 @@ static void rehashStep(hashtable *ht) {
 コメントが述べるとおり、1ステップで主テーブルの1バケットとその子バケット連鎖をまとめて新テーブルへ移す。
 このステップを読み取り時に進めるのが `rehashStepOnReadIfNeeded` である。
 
-[`src/hashtable.c` L725-L729](https://github.com/valkey-io/valkey/blob/9.1.0/src/hashtable.c#L725-L729)
+[`src/hashtable.c` L724-L729](https://github.com/valkey-io/valkey/blob/9.1.0/src/hashtable.c#L724-L729)
 
 ```c
 /* Called internally on lookup and other reads to the table. */

@@ -261,7 +261,7 @@ sds _sdsnewlen(const void *init, size_t initlen, int trymalloc) {
 ## 追記と伸長
 
 SDS のもう一つの最適化は、追記時の事前確保（preallocation）である。
-これを担うのが `sdsMakeRoomFor` で、`_sdsMakeRoomFor` に `greedy=1` を渡した薄い包みである。
+これを担うのが `sdsMakeRoomFor` で、`_sdsMakeRoomFor` に `greedy=1` を渡した薄いラッパーである。
 
 [`src/sds.c` L246-L306](https://github.com/valkey-io/valkey/blob/9.1.0/src/sds.c#L246-L306)
 

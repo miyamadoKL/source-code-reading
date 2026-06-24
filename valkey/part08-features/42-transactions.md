@@ -76,7 +76,7 @@ void multiCommand(client *c) {
 
 `processCommand` は、コマンドを実行する直前で、クライアントがトランザクション中かどうかを見る。
 
-[`src/server.c` L4630-L4639](https://github.com/valkey-io/valkey/blob/9.1.0/src/server.c#L4630-L4639)
+[`src/server.c` L4629-L4639](https://github.com/valkey-io/valkey/blob/9.1.0/src/server.c#L4629-L4639)
 
 ```c
     /* Exec the command */
@@ -328,7 +328,7 @@ void discardCommand(client *c) {
 
 `WATCH` の登録は `watchForKey` が行う。
 
-[`src/multi.c` L356-L397](https://github.com/valkey-io/valkey/blob/9.1.0/src/multi.c#L356-L397)
+[`src/multi.c` L355-L397](https://github.com/valkey-io/valkey/blob/9.1.0/src/multi.c#L355-L397)
 
 ```c
 /* Watch for the specified key */

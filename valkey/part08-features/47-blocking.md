@@ -33,7 +33,7 @@
 クライアントを論理的に「ブロック状態」に置き、そのクライアントへの応答だけを保留したまま、イベントループは次のクライアントへ進む。
 `blocked.c` 冒頭の API コメントが、この設計の骨格を説明している。
 
-[`src/blocked.c` L36-L65](https://github.com/valkey-io/valkey/blob/9.1.0/src/blocked.c#L36-L65)
+[`src/blocked.c` L35-L65](https://github.com/valkey-io/valkey/blob/9.1.0/src/blocked.c#L35-L65)
 
 ```c
 /*
@@ -124,7 +124,6 @@ void blockingPopGenericCommand(client *c, robj **keys, int numkeys, int where, i
         return;
     }
     // ... (中略：ブロックの判断は次のコードへ続く) ...
-}
 ```
 
 すべてのキーが空、または存在しなかった場合だけ、関数の末尾に到達する。
@@ -267,7 +266,7 @@ static void signalKeyAsReadyLogic(serverDb *db, robj *key, int type, int deleted
         return;
     }
     if (!server.blocked_clients_by_type[btype] && !server.blocked_clients_by_type[BLOCKED_MODULE]) {
-        /* No clients block on this type. */
+        /* No clients block on this type. Note: Blocked modules are represented
         // ... (中略：BLOCKED_MODULE の補足コメント) ...
         return;
     }
@@ -442,7 +441,7 @@ B のプッシュが起床候補を積み、コマンド処理の区切りで起
 `blockForKeys` は `c->bstate->timeout` に期限（絶対時刻のミリ秒）を入れ、`blockClient` 経由で `addClientToTimeoutTable` がクライアントを期限つきの索引へ登録する。
 この索引は基数木（rax）で、128 ビットのキーを期限と クライアント ID で構成している。
 
-[`src/timeout.c` L76-L88](https://github.com/valkey-io/valkey/blob/9.1.0/src/timeout.c#L76-L88)
+[`src/timeout.c` L76-L87](https://github.com/valkey-io/valkey/blob/9.1.0/src/timeout.c#L76-L87)
 
 ```c
 /* For blocked clients timeouts we populate a radix tree of 128 bit keys

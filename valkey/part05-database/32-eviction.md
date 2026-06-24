@@ -183,7 +183,7 @@ int getMaxmemoryState(size_t *total, size_t *logical, size_t *tofree, float *lev
 
 退避元の `kvstore` を `db->keys` と `db->expires` のどちらにするかは、退避ループの内側でフラグから決める。
 
-[`src/evict.c` L460-L464](https://github.com/valkey-io/valkey/blob/9.1.0/src/evict.c#L460-L464)
+[`src/evict.c` L459-L464](https://github.com/valkey-io/valkey/blob/9.1.0/src/evict.c#L459-L464)
 
 ```c
                     kvstore *kvs;
@@ -368,7 +368,7 @@ flowchart TD
 サンプルしたキーのアイドル時間は `objectGetIdleness` が返す。
 この値は、各オブジェクトが持つ 24 ビットの `lru` フィールドから計算される。
 
-[`src/server.h` L820-L831](https://github.com/valkey-io/valkey/blob/9.1.0/src/server.h#L820-L831)
+[`src/server.h` L820-L830](https://github.com/valkey-io/valkey/blob/9.1.0/src/server.h#L820-L830)
 
 ```c
 struct serverObject {
@@ -557,7 +557,7 @@ flowchart LR
 
 候補が決まると、退避ループはそのキーを削除してメモリ解放量を測る。
 
-[`src/evict.c` L560-L576](https://github.com/valkey-io/valkey/blob/9.1.0/src/evict.c#L560-L576)
+[`src/evict.c` L560-L574](https://github.com/valkey-io/valkey/blob/9.1.0/src/evict.c#L560-L574)
 
 ```c
             enterExecutionUnit(1, 0);

@@ -393,7 +393,6 @@ unsigned char *lpSkip(unsigned char *p) {
 }
 
 // ... (中略) ...
-
 unsigned char *lpNext(unsigned char *lp, unsigned char *p) {
     assert(p);
     p = lpSkip(p);

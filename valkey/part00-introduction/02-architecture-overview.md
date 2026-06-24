@@ -109,7 +109,7 @@ typedef struct client {
 ソケットが読み取り可能になると、イベントループは `readQueryFromClient` を呼ぶ。
 この関数は接続からバイト列を受信バッファに読み込み、溜まったバイト列を解釈してコマンドへと組み立てる。
 
-[`src/networking.c` L4284-L4297](https://github.com/valkey-io/valkey/blob/9.1.0/src/networking.c#L4284-L4297)
+[`src/networking.c` L4284-L4298](https://github.com/valkey-io/valkey/blob/9.1.0/src/networking.c#L4284-L4298)
 
 ```c
 void readQueryFromClient(connection *conn) {
@@ -209,7 +209,7 @@ typedef struct serverDb {
 
 ### データ構造とオブジェクト
 
-キー空間に格納される値は、`robj`（Redis Object）という共通の包みで表現される。
+キー空間に格納される値は、`robj`（Redis Object）という共通のラッパーで表現される。
 `robj` は型（文字列、リスト、セット、ハッシュ、ソート済みセットなど）と、その値を内部でどう表現するかを示すエンコーディングを持つ。
 同じリスト型でも、要素が少なければコンパクトな `listpack`、大きくなれば `quicklist` というように、データの規模に応じて内部表現を切り替える。
 オブジェクトとエンコーディングの仕組みは第14章「[robj とエンコーディング](../part03-objects-types/14-object-encoding.md)」、各型の実装は第3部で扱う。
@@ -286,7 +286,7 @@ flowchart LR
 `call` の中で `c->cmd->proc` が走り、キー空間を読み書きする。
 読み書きの結果は、実装関数の中から `addReply` 系の関数で応答バッファに書き込まれる。
 
-[`src/networking.c` L786-L788](https://github.com/valkey-io/valkey/blob/9.1.0/src/networking.c#L786-L788)
+[`src/networking.c` L786-L789](https://github.com/valkey-io/valkey/blob/9.1.0/src/networking.c#L786-L789)
 
 ```c
 void addReply(client *c, robj *obj) {

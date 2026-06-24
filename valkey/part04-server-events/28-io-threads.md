@@ -31,7 +31,7 @@ I/O スレッドはデフォルトでは1本、つまり無効である。
 [`src/config.c` L3379](https://github.com/valkey-io/valkey/blob/9.1.0/src/config.c#L3379)
 
 ```c
-createIntConfig("io-threads", NULL, DEBUG_CONFIG | MODIFIABLE_CONFIG, 1, IO_THREADS_MAX_NUM, server.io_threads_num, 1, INTEGER_CONFIG, NULL, updateIOThreads), /* Single threaded by default */
+    createIntConfig("io-threads", NULL, DEBUG_CONFIG | MODIFIABLE_CONFIG, 1, IO_THREADS_MAX_NUM, server.io_threads_num, 1, INTEGER_CONFIG, NULL, updateIOThreads), /* Single threaded by default */
 ```
 
 `io-threads` を2以上に設定すると、メインスレッドに加えて補助スレッドが起動する。
@@ -395,7 +395,7 @@ I/O スレッドが outbox に積んだ結果は、メインスレッドが `pro
 
 `processClientsCommandsBatch` は、まずバッチ全体のプリフェッチを発行してから、コマンドを順に実行する。
 
-[`src/memory_prefetch.c` L217-L237](https://github.com/valkey-io/valkey/blob/9.1.0/src/memory_prefetch.c#L217-L237)
+[`src/memory_prefetch.c` L217-L243](https://github.com/valkey-io/valkey/blob/9.1.0/src/memory_prefetch.c#L217-L243)
 
 ```c
 void processClientsCommandsBatch(void) {

@@ -339,7 +339,7 @@ flowchart LR
 
 中心となる `activeDefragTimeProc` は、今回の処理に使える時間 `endtime` を決め、その時刻まで段階（ステージ）を進める。
 
-[`src/defrag.c` L1161-L1198](https://github.com/valkey-io/valkey/blob/9.1.0/src/defrag.c#L1161-L1198)
+[`src/defrag.c` L1161-L1188](https://github.com/valkey-io/valkey/blob/9.1.0/src/defrag.c#L1161-L1188)
 
 ```c
     monotime starttime = getMonotonicUs();
@@ -421,7 +421,7 @@ float getAllocatorFragmentation(size_t *out_frag_bytes) {
 
 この `frag_pct` を使い、`updateDefragCpuPercent` がデフラグの開始としきい値を判定する。
 
-[`src/defrag.c` L1264-L1293](https://github.com/valkey-io/valkey/blob/9.1.0/src/defrag.c#L1264-L1293)
+[`src/defrag.c` L1265-L1293](https://github.com/valkey-io/valkey/blob/9.1.0/src/defrag.c#L1265-L1293)
 
 ```c
 static void updateDefragCpuPercent(void) {

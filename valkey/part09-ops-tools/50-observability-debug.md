@@ -250,7 +250,6 @@ void latencyCommand(client *c) {
             for (j = 2; j < c->argc; j++) resets += latencyResetEvent(objectGetVal(c->argv[j]));
             addReplyLongLong(c, resets);
         }
-    }
     // ... (中略) ...
 ```
 

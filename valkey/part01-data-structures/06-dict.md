@@ -163,7 +163,7 @@ int dictRehash(dict *d, int n) {
     unsigned long s0 = DICTHT_SIZE(d->ht_size_exp[0]);
     unsigned long s1 = DICTHT_SIZE(d->ht_size_exp[1]);
     if (dict_can_resize == DICT_RESIZE_FORBID || !dictIsRehashing(d)) return 0;
-    /* ... (中略：DICT_RESIZE_AVOID 時の閾値判定) ... */
+    // ... (中略：DICT_RESIZE_AVOID 時の閾値判定) ...
 
     while (n-- && d->ht_used[0] != 0) {
         /* Note that rehashidx can't overflow as we are sure there are more
@@ -392,7 +392,7 @@ static unsigned long rev(unsigned long v) {
         m1 = DICTHT_SIZE_MASK(d->ht_size_exp[htidx1]);
 
         /* Emit entries at cursor */
-        /* ... (中略：小さいテーブル htidx0 の v & m0 のバケットを走査) ... */
+        // ... (中略：小さいテーブル htidx0 の v & m0 のバケットを走査) ...
         de = d->ht_table[htidx0][v & m0];
         while (de) {
             next = dictGetNext(de);
@@ -404,7 +404,7 @@ static unsigned long rev(unsigned long v) {
          * of the index pointed to by the cursor in the smaller table */
         do {
             /* Emit entries at cursor */
-            /* ... (中略：大きいテーブル htidx1 の v & m1 のバケットを走査) ... */
+            // ... (中略：大きいテーブル htidx1 の v & m1 のバケットを走査) ...
             de = d->ht_table[htidx1][v & m1];
             while (de) {
                 next = dictGetNext(de);

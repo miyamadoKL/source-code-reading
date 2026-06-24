@@ -304,7 +304,6 @@ SAMEFIELDS フラグが立つエントリ（フィールド名と num-fields を
         } else {
             raxSeek(&si->ri, "^", NULL, 0);
         }
-    } else {
 ```
 
 開始 ID に対しては `<=` でシークする。

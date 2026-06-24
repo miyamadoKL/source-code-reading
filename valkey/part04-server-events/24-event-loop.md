@@ -180,7 +180,7 @@ evport が使えればそれを、なければ epoll、kqueue、最後に select
 バックエンドの切り替えに分岐や関数ポインタを介さず、選ばれた1実装が直接インライン展開されるため、抽象化の代償が実行時にほとんど残らない。
 `ae_kqueue.c` と `ae_select.c` も同じ関数群を提供しており、本章では Linux で標準となる `ae_epoll.c` を読む。
 
-epoll 版の `aeApiPoll` は、`epoll_wait` の薄いラッパである。
+epoll 版の `aeApiPoll` は、`epoll_wait` の薄いラッパーである。
 
 [`src/ae_epoll.c` L110-L136](https://github.com/valkey-io/valkey/blob/9.1.0/src/ae_epoll.c#L110-L136)
 

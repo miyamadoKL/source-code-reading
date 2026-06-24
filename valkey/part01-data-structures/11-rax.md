@@ -280,7 +280,7 @@ raxLowWalk(rax *rax, unsigned char *s, size_t len, raxNode **stopnode, raxNode *
 子の文字は1バイトずつ連続して並ぶため、線形走査はキャッシュに乗った連続メモリを順になめるだけで済む。
 分岐の少ない単純なループは、二分探索の理論的な少ない比較回数を実際の速度で上回りやすい、というのがこのコメントの趣旨である。
 
-`raxFind` は `raxLowWalk` の薄いラッパである。
+`raxFind` は `raxLowWalk` の薄いラッパーである。
 
 [`src/rax.c` L909-L918](https://github.com/valkey-io/valkey/blob/9.1.0/src/rax.c#L909-L918)
 
@@ -394,51 +394,51 @@ int raxGenericInsert(rax *rax, unsigned char *s, size_t len, void *data, void **
 [`src/rax.c` L591-L635](https://github.com/valkey-io/valkey/blob/9.1.0/src/rax.c#L591-L635)
 
 ```text
- * The final algorithm for insertion covering all the above cases is as
- * follows.
- *
- * ============================= ALGO 1 =============================
- *
- * For the above cases 1 to 4, that is, all cases where we stopped in
- * the middle of a compressed node for a character mismatch, do:
- *
- * Let $SPLITPOS be the zero-based index at which, in the
- * compressed node array of characters, we found the mismatching
- * character. For example if the node contains "ANNIBALE" and we add
- * "ANNIENTARE" the $SPLITPOS is 4, that is, the index at which the
- * mismatching character is found.
- *
- * 1. Save the current compressed node $NEXT pointer (the pointer to the
- *    child element, that is always present in compressed nodes).
- *
- * 2. Create "split node" having as child the non common letter
- *    at the compressed node. The other non common letter (at the key)
- *    will be added later as we continue the normal insertion algorithm
- *    at step "6".
- *
- * 3a. IF $SPLITPOS == 0:
- *     Replace the old node with the split node, by copying the auxiliary
- *     data if any. Fix parent's reference. Free old node eventually
- *     (we still need its data for the next steps of the algorithm).
- *
- * 3b. IF $SPLITPOS != 0:
- *     Trim the compressed node (reallocating it as well) in order to
- *     contain $splitpos characters. Change child pointer in order to link
- *     to the split node. If new compressed node len is just 1, set
- *     iscompr to 0 (layout is the same). Fix parent's reference.
- *
- * 4a. IF the postfix len (the length of the remaining string of the
- *     original compressed node after the split character) is non zero,
- *     create a "postfix node". If the postfix node has just one character
- *     set iscompr to 0, otherwise iscompr to 1. Set the postfix node
- *     child pointer to $NEXT.
- *
- * 4b. IF the postfix len is zero, just use $NEXT as postfix pointer.
- *
- * 5. Set child[0] of split node to postfix node.
- *
- * 6. Set the split node as the current node, set current index at child[1]
- *    and continue insertion algorithm as usually.
+     * The final algorithm for insertion covering all the above cases is as
+     * follows.
+     *
+     * ============================= ALGO 1 =============================
+     *
+     * For the above cases 1 to 4, that is, all cases where we stopped in
+     * the middle of a compressed node for a character mismatch, do:
+     *
+     * Let $SPLITPOS be the zero-based index at which, in the
+     * compressed node array of characters, we found the mismatching
+     * character. For example if the node contains "ANNIBALE" and we add
+     * "ANNIENTARE" the $SPLITPOS is 4, that is, the index at which the
+     * mismatching character is found.
+     *
+     * 1. Save the current compressed node $NEXT pointer (the pointer to the
+     *    child element, that is always present in compressed nodes).
+     *
+     * 2. Create "split node" having as child the non common letter
+     *    at the compressed node. The other non common letter (at the key)
+     *    will be added later as we continue the normal insertion algorithm
+     *    at step "6".
+     *
+     * 3a. IF $SPLITPOS == 0:
+     *     Replace the old node with the split node, by copying the auxiliary
+     *     data if any. Fix parent's reference. Free old node eventually
+     *     (we still need its data for the next steps of the algorithm).
+     *
+     * 3b. IF $SPLITPOS != 0:
+     *     Trim the compressed node (reallocating it as well) in order to
+     *     contain $splitpos characters. Change child pointer in order to link
+     *     to the split node. If new compressed node len is just 1, set
+     *     iscompr to 0 (layout is the same). Fix parent's reference.
+     *
+     * 4a. IF the postfix len (the length of the remaining string of the
+     *     original compressed node after the split character) is non zero,
+     *     create a "postfix node". If the postfix node has just one character
+     *     set iscompr to 0, otherwise iscompr to 1. Set the postfix node
+     *     child pointer to $NEXT.
+     *
+     * 4b. IF the postfix len is zero, just use $NEXT as postfix pointer.
+     *
+     * 5. Set child[0] of split node to postfix node.
+     *
+     * 6. Set the split node as the current node, set current index at child[1]
+     *    and continue insertion algorithm as usually.
 ```
 
 実装はこのアルゴリズムをそのままなぞる。

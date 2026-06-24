@@ -81,7 +81,7 @@ struct connection {
 クライアントは `createClient` で作られる。
 接続の読み込みハンドラに `readQueryFromClient` を据え、固定長の応答バッファを `PROTO_REPLY_CHUNK_BYTES`（16 KB）で確保し、各メンバを初期状態に揃える。
 
-[`src/networking.c` L285-L313](https://github.com/valkey-io/valkey/blob/9.1.0/src/networking.c#L285-L313)
+[`src/networking.c` L285-L298](https://github.com/valkey-io/valkey/blob/9.1.0/src/networking.c#L285-L298)
 
 ```c
 client *createClient(connection *conn) {
