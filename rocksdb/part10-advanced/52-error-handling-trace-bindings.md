@@ -1,4 +1,4 @@
-# 第52章 エラーハンドリング・トレース・言語バインディング
+# 第52章 エラーハンドリング、トレース、言語バインディング
 
 > **本章で読むソース**
 >
@@ -596,6 +596,7 @@ Java バインディングは、この C++ コアを JNI で包む。
 
 ```java
 public abstract class RocksObject extends AbstractImmutableNativeReference {
+
   /**
    * An immutable reference to the value of the C++ pointer pointing to some
    * underlying native RocksDB C++ object.
@@ -614,18 +615,18 @@ public abstract class RocksObject extends AbstractImmutableNativeReference {
 [`java/src/main/java/org/rocksdb/RocksDB.java` L899-L902](https://github.com/facebook/rocksdb/blob/v11.1.1/java/src/main/java/org/rocksdb/RocksDB.java#L899-L902)
 
 ```java
-public void put(final byte[] key, final byte[] value)
-    throws RocksDBException {
-  put(nativeHandle_, key, 0, key.length, value, 0, value.length);
-}
+  public void put(final byte[] key, final byte[] value)
+      throws RocksDBException {
+    put(nativeHandle_, key, 0, key.length, value, 0, value.length);
+  }
 ```
 
 [`java/src/main/java/org/rocksdb/RocksDB.java` L4892-L4894](https://github.com/facebook/rocksdb/blob/v11.1.1/java/src/main/java/org/rocksdb/RocksDB.java#L4892-L4894)
 
 ```java
-private static native void put(final long handle, final byte[] key, final int keyOffset,
-    final int keyLength, final byte[] value, final int valueOffset, int valueLength)
-    throws RocksDBException;
+  private static native void put(final long handle, final byte[] key, final int keyOffset,
+      final int keyLength, final byte[] value, final int valueOffset, int valueLength)
+      throws RocksDBException;
 ```
 
 C++ 側の JNI 関数は、この `long` ハンドルを `rocksdb::DB*` に戻して本体のメソッドを呼ぶ。
