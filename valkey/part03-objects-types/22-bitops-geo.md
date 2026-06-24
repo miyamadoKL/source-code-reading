@@ -458,6 +458,7 @@ int geoGetPointsInRange(robj *zobj, double min, double max, GeoShape *shape, geo
             /* Nothing exists starting at our min.  No results. */
             return 0;
         }
+
         sptr = lpNext(zl, eptr);
         while (eptr) {
             double xy[2];

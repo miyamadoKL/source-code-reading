@@ -56,11 +56,14 @@ void feedAppendOnlyFile(int dictid, robj **argv, int argc) {
      * we appended. To issue a SELECT command is needed. */
     if (dictid != -1 && dictid != server.aof_selected_db) {
         char seldb[64];
+
         snprintf(seldb, sizeof(seldb), "%d", dictid);
         buf = sdscatprintf(buf, "*2\r\n$6\r\nSELECT\r\n$%lu\r\n%s\r\n", (unsigned long)strlen(seldb), seldb);
         server.aof_selected_db = dictid;
     }
-    // ... (中略) ...
+
+    /* All commands should be propagated the same way in AOF as in replication.
+     * No need for AOF-specific translation. */
     buf = catAppendOnlyGenericCommand(buf, argc, argv);
 
     /* Append to the AOF buffer. This will be flushed on disk just before
@@ -69,6 +72,7 @@ void feedAppendOnlyFile(int dictid, robj **argv, int argc) {
     if (server.aof_state == AOF_ON || (server.aof_state == AOF_WAIT_REWRITE && server.child_type == CHILD_TYPE_AOF)) {
         server.aof_buf = sdscatlen(server.aof_buf, buf, sdslen(buf));
     }
+
     sdsfree(buf);
 }
 ```
@@ -282,6 +286,7 @@ AOF は追記し続けるログなので、同じキーを何度も更新する�
 ```c
     if ((childpid = serverFork(CHILD_TYPE_AOF)) == 0) {
         char tmpfile[256];
+
         /* Child */
         // ... (中略) ...
         snprintf(tmpfile, 256, "temp-rewriteaof-bg-%d.aof", (int)getpid());
@@ -421,6 +426,7 @@ typedef enum {
     if (rename(tmp_am_filepath, am_filepath) != 0) {
         serverLog(LL_WARNING, "Error trying to rename the temporary AOF manifest file %s into %s: %s", tmp_am_name,
                   am_name, strerror(errno));
+
         ret = C_ERR;
         goto cleanup;
     }

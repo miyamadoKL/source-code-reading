@@ -558,6 +558,7 @@ void authCommand(client *c) {
             }
             newpass = sdsnewlen(op + 1, oplen - 1);
         }
+
         listNode *ln = listSearchKey(u->passwords, newpass);
         /* Avoid re-adding the same password multiple times. */
         if (ln == NULL)
@@ -605,6 +606,7 @@ static aclSelector *aclCreateSelectorFromOpSet(const char *opset, size_t opsetle
             break;
         }
     }
+
     sdsfreesplitres(argv, argc);
     return s;
 }
@@ -701,6 +703,7 @@ static int ACLLoadConfiguredUsers(void) {
             u = ACLGetUserByName("default", 7);
             ACLSetUser(u, "reset", -1);
         }
+
         /* Load every rule defined for this user. */
         for (int j = 1; aclrules[j]; j++) {
             if (ACLSetUser(u, aclrules[j], sdslen(aclrules[j])) != C_OK) {

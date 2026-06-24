@@ -574,6 +574,7 @@ static bool resize(hashtable *ht, size_t min_capacity, int *malloc_failed) {
     bucket *new_table;
     // ... (中略) ...
         new_table = zcalloc(alloc_size);
+    }
     if (ht->type->trackMemUsage) ht->type->trackMemUsage(ht, alloc_size);
     ht->bucket_exp[1] = exp;
     ht->tables[1] = new_table;

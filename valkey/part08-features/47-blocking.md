@@ -194,6 +194,7 @@ void blockForKeys(client *c, int btype, robj **keys, int numkeys, mstime_t timeo
         // ... (中略：unblock_on_nokey の登録) ...
     }
     c->bstate->unblock_on_nokey = unblock_on_nokey;
+    // ... (中略：pending_command フラグに関するコメント) ...
     if (btype != BLOCKED_MODULE) c->flag.pending_command = 1;
     blockClient(c, btype);
 }
@@ -516,7 +517,7 @@ void unblockClient(client *c, int queue_for_reprocessing) {
         unblockClientWaitingData(c);
     } else if (c->bstate->btype == BLOCKED_WAIT) {
         unblockClientWaitingReplicas(c);
-    }
+    } else if (c->bstate->btype == BLOCKED_MODULE) {
     // ... (中略：モジュール・POSTPONE・SHUTDOWN の後始末) ...
 
     /* We count blocked client stats on regular clients and not on module clients */

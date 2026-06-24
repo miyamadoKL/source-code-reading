@@ -46,6 +46,7 @@ robj *tryObjectEncodingEx(robj *o, int try_trim) {
     size_t len;
     // ... (中略) ...
     if (!sdsEncodedObject(o)) return o;
+    // ... (中略) ...
     if (o->refcount > 1) return o;
 
     /* Check if we can represent this string as a long integer.
@@ -466,6 +467,7 @@ void getrangeCommand(client *c) {
     if ((unsigned long long)end >= strlen) end = strlen - 1;
     // ... (中略) ...
         addReplyBulkCBuffer(c, (char *)str + start, end - start + 1);
+    }
 }
 ```
 

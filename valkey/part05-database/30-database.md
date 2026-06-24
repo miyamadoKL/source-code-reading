@@ -346,6 +346,7 @@ void keysCommand(client *c) {
     kvstoreIterator *kvs_it = NULL;
     // ... (中略) ...
         kvs_it = kvstoreIteratorInit(c->db->keys, HASHTABLE_ITER_SAFE);
+    }
     void *next;
     while (kvs_di ? kvstoreHashtableIteratorNext(kvs_di, &next) : kvstoreIteratorNext(kvs_it, &next)) {
         robj *val = next;
