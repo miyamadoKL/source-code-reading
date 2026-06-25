@@ -7,6 +7,8 @@
 > - [`storage/heap/ha_heap.h`](https://github.com/mysql/mysql-server/blob/mysql-8.4.10/storage/heap/ha_heap.h)
 > - [`storage/csv/ha_tina.cc`](https://github.com/mysql/mysql-server/blob/mysql-8.4.10/storage/csv/ha_tina.cc)
 > - [`storage/csv/ha_tina.h`](https://github.com/mysql/mysql-server/blob/mysql-8.4.10/storage/csv/ha_tina.h)
+> - [`storage/federated/ha_federated.cc`](https://github.com/mysql/mysql-server/blob/mysql-8.4.10/storage/federated/ha_federated.cc)
+> - [`storage/federated/ha_federated.h`](https://github.com/mysql/mysql-server/blob/mysql-8.4.10/storage/federated/ha_federated.h)
 
 ## この章の狙い
 
@@ -14,9 +16,10 @@
 第12章以降は、その `handler` を実装する一エンジン InnoDB を中核として深く読んできた。
 本章は最後に視点を戻し、InnoDB 以外のエンジンが同じ `handler` をどう実装しているかを軽く読む。
 
-対象は **MyISAM**、**MEMORY**（コード上は HEAP）、**CSV**（コード上は TINA）の3つである。
+対象は **MyISAM**、**MEMORY**（コード上は HEAP）、**CSV**（コード上は TINA）、**FEDERATED** の4つである。
 いずれも `handler` を継承し、第11章で読んだ `write_row` や `rnd_next` といった同じ仮想メソッドを埋める。
-ところが3つとも、InnoDB が持つトランザクション、行ロック、クラッシュリカバリのいずれも持たない。
+FEDERATED は前の3つと違い、ローカルにデータを一切持たず、`handler` の呼び出しをリモートの MySQL サーバへの SQL に翻訳して中継するプロキシ型のエンジンである。
+ところが4つとも、InnoDB が持つトランザクション、行ロック、クラッシュリカバリのいずれも持たない。
 本章では、各エンジンが `handlerton` のフラグと `table_flags()` で「自分は何をしないか」をどう宣言しているかを読み、InnoDB がなぜ既定になったかを最後に振り返る。
 
 ## 前提
@@ -313,6 +316,122 @@ int ha_tina::write_row(uchar *buf) {
 格納がプレーンテキストなので、`.CSV` ファイルは MySQL の外からもテキストエディタで読める。
 データの取り込みや書き出しの中継には向くが、インデックスもトランザクションもないため、検索は毎回の全走査になり、書き込みの原子性も保証されない。
 
+## FEDERATED、リモートのテーブルをプロキシする
+
+FEDERATED は、ここまでの3エンジンと根本的に違う。
+ローカルにデータファイルを一切持たず、行を保持するのは外部（foreign）の MySQL データベースである。
+ソース冒頭の概要コメントが、この性質と動作の流れをそのまま説明している。
+
+[`storage/federated/ha_federated.cc` L42-49](https://github.com/mysql/mysql-server/blob/mysql-8.4.10/storage/federated/ha_federated.cc#L42-L49)
+
+```cpp
+  With MySQL Federated storage engine, there will be no local files
+  for each table's data (such as .MYD). A foreign database will store
+  the data that would normally be in this file. This will necessitate
+  the use of MySQL client API to read, delete, update, insert this
+  data. The data will have to be retrieve via an SQL call "SELECT *
+  FROM users". Then, to read this data, it will have to be retrieved
+  via mysql_fetch_row one row at a time, then converted from the
+  column in this select into the format that the handler expects.
+```
+
+コメントが述べるとおり、データの読み書きは MySQL の client API を介してリモートへ SQL を送り、結果を1行ずつ受け取る。
+FEDERATED の `handler` は、ローカルに格納する代わりに、各仮想メソッドをこのリモートへの SQL に翻訳する役割を負う。
+
+`CREATE TABLE` が作るのは、`.frm` 相当のテーブル定義だけである。
+テーブルの実体に相当するのは、接続先を指す接続文字列にすぎない。
+接続文字列は `connection=scheme://user:password@host:port/database/tablename` の URL 形式か、`mysql.servers` に登録したサーバ名を `connection="server_name"` のように参照する形式を取る。
+FEDERATED はこの接続情報を覚えるだけで、行そのものはローカルに置かない。
+
+行の挿入を見ると、`write_row` がローカルへ書く代わりに `INSERT` 文を組み立ててリモートへ送る。
+文の組み立ては `append_stmt_insert` が担い、`REPLACE INTO` や `INSERT IGNORE INTO`、`INSERT INTO` の語をクエリ文字列の先頭へ書き出す。
+
+[`storage/federated/ha_federated.cc` L1651-1658](https://github.com/mysql/mysql-server/blob/mysql-8.4.10/storage/federated/ha_federated.cc#L1651-L1658)
+
+```cpp
+  insert_string.length(0);
+
+  if (replace_duplicates)
+    insert_string.append(STRING_WITH_LEN("REPLACE INTO "));
+  else if (ignore_duplicates && !insert_dup_update)
+    insert_string.append(STRING_WITH_LEN("INSERT IGNORE INTO "));
+  else
+    insert_string.append(STRING_WITH_LEN("INSERT INTO "));
+```
+
+組み立てた `INSERT` 文は、`write_row` の末尾で `real_query` に渡してリモートへ送る。
+
+[`storage/federated/ha_federated.cc` L1819-1821](https://github.com/mysql/mysql-server/blob/mysql-8.4.10/storage/federated/ha_federated.cc#L1819-L1821)
+
+```cpp
+  } else {
+    error = real_query(values_string.ptr(), values_string.length());
+  }
+```
+
+`real_query` は MySQL の client API の `mysql_real_query` を呼ぶラッパーであり、ここでリモートのサーバへ SQL が中継される。
+読み出しも同じ構図である。
+全表走査の `rnd_init` は、あらかじめ用意した `SELECT * FROM` のクエリを `real_query` でリモートへ送り、結果セットを受け取って保持する。
+
+[`storage/federated/ha_federated.cc` L2436-2441](https://github.com/mysql/mysql-server/blob/mysql-8.4.10/storage/federated/ha_federated.cc#L2436-L2441)
+
+```cpp
+  if (scan) {
+    if (real_query(share->select_query, strlen(share->select_query)) ||
+        !(stored_result = store_result(mysql)))
+      return stash_remote_error();
+  }
+  return 0;
+```
+
+1行ずつの読み出しは、`read_next` が結果セットから `mysql_fetch_row` で1行取り出し、内部の行フォーマットへ変換する。
+
+[`storage/federated/ha_federated.cc` L2516-2517](https://github.com/mysql/mysql-server/blob/mysql-8.4.10/storage/federated/ha_federated.cc#L2516-L2517)
+
+```cpp
+  /* Fetch a row, insert it back in a row format. */
+  if (!(row = mysql_fetch_row(result))) return HA_ERR_END_OF_FILE;
+```
+
+エンジンの能力の宣言も、リモート任せという性質を反映している。
+プラグイン初期化 `federated_db_init` は、`handlerton` の `flags` に `HTON_ALTER_NOT_SUPPORTED` と `HTON_NO_PARTITION` を立て、`ALTER TABLE` とパーティションを許さない。
+
+[`storage/federated/ha_federated.cc` L501-507](https://github.com/mysql/mysql-server/blob/mysql-8.4.10/storage/federated/ha_federated.cc#L501-L507)
+
+```cpp
+  handlerton *federated_hton = (handlerton *)p;
+  federated_hton->state = SHOW_OPTION_YES;
+  federated_hton->db_type = DB_TYPE_FEDERATED_DB;
+  federated_hton->commit = federated_commit;
+  federated_hton->rollback = federated_rollback;
+  federated_hton->create = federated_create_handler;
+  federated_hton->flags = HTON_ALTER_NOT_SUPPORTED | HTON_NO_PARTITION;
+```
+
+`table_flags()` も、他の3エンジンと同じく `HA_NO_TRANSACTIONS` を含む。
+
+[`storage/federated/ha_federated.h` L148-157](https://github.com/mysql/mysql-server/blob/mysql-8.4.10/storage/federated/ha_federated.h#L148-L157)
+
+```cpp
+  ulonglong table_flags() const override {
+    /* fix server to be able to get remote server table flags */
+    return (HA_PRIMARY_KEY_IN_READ_INDEX |
+            HA_PRIMARY_KEY_REQUIRED_FOR_POSITION | HA_FILE_BASED |
+            HA_AUTO_PART_KEY | HA_CAN_INDEX_BLOBS | HA_BINLOG_ROW_CAPABLE |
+            HA_BINLOG_STMT_CAPABLE | HA_NO_PREFIX_CHAR_KEYS |
+            HA_PRIMARY_KEY_REQUIRED_FOR_DELETE |
+            HA_NO_TRANSACTIONS /* until fixed by WL#2952 */ |
+            HA_PARTIAL_COLUMN_READ | HA_NULL_IN_KEY | HA_CAN_REPAIR);
+  }
+```
+
+`HA_NO_TRANSACTIONS` が立つのは、FEDERATED がローカルにトランザクションを持たず、コミットやロールバックの可否をリモートのサーバに委ねるからである。
+コメントの「until fixed by WL#2952」が示すとおり、`federated_db_init` も一度は `commit` と `rollback` の関数ポインタを埋めかけたあと、未完のため `nullptr` へ戻している。
+
+他の3エンジンが、ファイル、メモリ、プレーンテキストのいずれかの形でローカルに行を格納するのに対し、FEDERATED は格納そのものを完全に他サーバへ委ねる。
+ローカルに残るのは接続文字列と空の `handler` だけで、データの実体は1つも手元にない。
+この点が、FEDERATED を他の3エンジンから際立たせている。
+
 ## InnoDB との対比、共通の口と異なる中身
 
 ここまでの3エンジンは、第11章で読んだ `handler` の同じ仮想メソッド（`write_row`、`rnd_next`、`store_lock` など）を実装する。
@@ -330,28 +449,31 @@ flowchart TD
     api -.-> myisam
     api -.-> heap
     api -.-> csv
+    api -.-> federated
 
     innodb["InnoDB: トランザクション / 行ロック / クラッシュリカバリ あり"]
     myisam["MyISAM: 非トランザクション / テーブルロック / .MYD と .MYI"]
     heap["MEMORY（HEAP）: メモリ常駐 / 固定長行 / ハッシュ索引 / 再起動で消える"]
     csv["CSV（TINA）: プレーンテキスト / 索引なし / 全走査"]
+    federated["FEDERATED: ローカル格納なし / リモートへ SQL 中継"]
 ```
 
 破線が、第11章で読んだ仮想関数表による実行時分岐である。
 SQL 層は実線の経路だけを知り、破線の先がどのエンジンかを意識しない。
-MyISAM、MEMORY、CSV はどれも `HA_NO_TRANSACTIONS` を立て、コミットやロールバックの関数を `handlerton` に登録しない点で共通する。
+MyISAM、MEMORY、CSV、FEDERATED はどれも `HA_NO_TRANSACTIONS` を立て、コミットやロールバックの関数を `handlerton` に登録しない点で共通する。
 一方で InnoDB だけが、`commit`、`rollback`、`recover` を埋め、行ロックと redo／undo ログによる耐久性を持つ。
 
 ## まとめ
 
-MyISAM、MEMORY、CSV は、いずれも `handler` を継承して同じ仮想メソッドを実装するストレージエンジンである。
+MyISAM、MEMORY、CSV、FEDERATED は、いずれも `handler` を継承して同じ仮想メソッドを実装するストレージエンジンである。
 SQL 層は基底クラスのポインタ越しに同じ呼び出しでこれらを使い、実体の違いは仮想関数表が吸収する。
-3つとも `table_flags()` に `HA_NO_TRANSACTIONS` を立て、トランザクション、行ロック、クラッシュリカバリのいずれも持たない点で、InnoDB と対照的である。
+4つとも `table_flags()` に `HA_NO_TRANSACTIONS` を立て、トランザクション、行ロック、クラッシュリカバリのいずれも持たない点で、InnoDB と対照的である。
 
 各エンジンは、能力を `handlerton` のフラグと埋める関数ポインタで宣言する。
 MyISAM は `.MYD` と `.MYI` を分けたファイルベースで、テーブル単位のロックと事後修復の `REPAIR TABLE` を持つ。
 MEMORY は固定長行とハッシュインデックスで行をメモリに置き、確保と検索を単純高速にする代わりに、再起動で中身を失う永続性とのトレードオフを取る。
 CSV は行をプレーンテキストへ追記し、外部ツールと交換しやすい代わりに、インデックスを持たず検索は全走査になる。
+FEDERATED は行をローカルに格納せず、`handler` の呼び出しを `INSERT` や `SELECT * FROM` の SQL に翻訳してリモートの MySQL サーバへ中継するプロキシであり、格納そのものを他サーバへ委ねる。
 
 本書はサーバ層をたどったあと、InnoDB の実装を中心に深掘りしてきた。
 最後にその選択の理由を一段落で振り返る。
