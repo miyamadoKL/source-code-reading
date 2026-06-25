@@ -647,7 +647,7 @@ autovacuum の設計でとくに効いているのが、ワーカーの起動を
 ```
 
 データベースが `nelems` 個あれば、隣り合う起動時刻の間隔は `autovacuum_naptime / nelems` になる。
-ランチャは次に起動すべきデータベース（リスト末尾）の時刻まで眠り、その1個を起動して、また次まで眠る。
+ランチャは次に起動すべきデータベース（リスト末尾）の時刻までスリープし、その1個を起動して、また次までスリープする。
 
 [`src/backend/postmaster/autovacuum.c` L719-L737](https://github.com/postgres/postgres/blob/REL_18_4/src/backend/postmaster/autovacuum.c#L719-L737)
 
