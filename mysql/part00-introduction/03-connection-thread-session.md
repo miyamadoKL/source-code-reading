@@ -481,3 +481,4 @@ MySQL は既定で one-thread-per-connection を採り、接続1本ごとに OS 
 - [第2章 ソースツリーとビルド、クエリ処理の俯瞰](02-source-tree-and-build.md)
 - [第4章 パーサ](../part01-sql-layer/04-parser.md)
 - [第9章 エグゼキュータ（イテレータ実行モデル）](../part01-sql-layer/09-executor-iterators.md)
+- [第36章 接続の確立と認証、Classic Protocol](../part07-server-foundation/36-connection-and-protocol.md)

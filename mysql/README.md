@@ -65,5 +65,15 @@ MyISAM など現代では主流でないストレージエンジンは、`handle
 34. [他のストレージエンジン](part06-dictionary-ddl-ops/34-other-storage-engines.md)
 35. [グループレプリケーション](part06-dictionary-ddl-ops/35-group-replication.md)
 
+## 第7部　サーバ層の基盤
+
+PostgreSQL 編で独立章として読んだ基盤層に対応する、MySQL のサーバ層の土台を補う。
+
+36. [接続の確立と認証、Classic Protocol](part07-server-foundation/36-connection-and-protocol.md)
+37. [MEM_ROOT と文単位のメモリ寿命](part07-server-foundation/37-mem-root.md)
+38. [式評価（Item の実行時モデル）](part07-server-foundation/38-expression-evaluation.md)
+39. [メタデータロック（MDL）](part07-server-foundation/39-metadata-locking.md)
+40. [統計情報とカーディナリティ推定](part07-server-foundation/40-statistics-and-cardinality.md)
+
 > 対象バージョンは MySQL 8.4.10（LTS）。
 > 各章のコード引用は `mysql-8.4.10` タグに固定した GitHub リンクから該当行を直接参照できる。
