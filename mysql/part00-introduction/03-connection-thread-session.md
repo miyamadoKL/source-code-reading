@@ -17,7 +17,7 @@
 MySQL は既定で、接続1本ごとに OS スレッドを1本割り当てる。
 この方式を **one-thread-per-connection** と呼ぶ。
 本章では、接続を受理してスレッドへ割り当てる層（`sql/conn_handler/`）と、1接続の状態をすべて保持するセッションオブジェクト `THD`（`sql/sql_class.h`）、そしてそのスレッドが回し続けるコマンドループ `do_command`（`sql/sql_parse.cc`）の入口までをたどる。
-SQL 文字列を構文木へ変換する処理は第4章、文を実際に実行する処理は第9章以降で扱う。
+SQL 文字列を構文木へ変換する処理は第5章、文を実際に実行する処理は第13章以降で扱う。
 本章の範囲は、受理した接続を「どの実行単位の上に乗せ、どこまで状態を閉じ込めるか」という枠組みである。
 
 ## 前提
@@ -442,7 +442,7 @@ bool dispatch_command(THD *thd, const COM_DATA *com_data,
 ```
 
 `COM_QUERY` であれば SQL 文字列の解析と実行へ進み、`COM_QUIT` であれば真を返して `do_command` のループを終わらせ、接続を閉じる。
-SQL 文字列を構文木へ変換する処理（パーサ）は第4章、解析された文を実行する処理は第9章以降で扱う。
+SQL 文字列を構文木へ変換する処理（パーサ）は第5章、解析された文を実行する処理は第13章以降で扱う。
 本章は、コマンドが `dispatch_command` の入口まで届く流れの確認にとどめる。
 
 ## 接続から `do_command` ループまでの全体像
@@ -479,6 +479,6 @@ MySQL は既定で one-thread-per-connection を採り、接続1本ごとに OS 
 ## 関連する章
 
 - [第2章 ソースツリーとビルド、クエリ処理の俯瞰](02-source-tree-and-build.md)
-- [第4章 パーサ](../part01-sql-layer/04-parser.md)
-- [第9章 エグゼキュータ（イテレータ実行モデル）](../part01-sql-layer/09-executor-iterators.md)
-- [第36章 接続の確立と認証、Classic Protocol](../part07-server-foundation/36-connection-and-protocol.md)
+- [第5章 パーサ](../part01-sql-layer/05-parser.md)
+- [第13章 エグゼキュータ（イテレータ実行モデル）](../part01-sql-layer/13-executor-iterators.md)
+- [第4章 接続の確立と認証、Classic Protocol](04-connection-and-protocol.md)
