@@ -130,8 +130,7 @@ static MYSQL_SYSVAR_ENUM(
     nullptr, nullptr, IBUF_USE_NONE, &innodb_change_buffering_typelib);
 ```
 
-チェンジバッファは長くセカンダリインデックス更新の重要な最適化だったが、近年の InnoDB では既定で無効化される方向にある。
-ストレージが高速化してランダム読み込みのコストが下がったこと、併合の複雑さがクラッシュリカバリやバグの温床になりやすいことが背景にあると考えられる。
+チェンジバッファは長くセカンダリインデックス更新の重要な最適化だったが、MySQL 8.4.10 では `innodb_change_buffering` が既定で無効である。
 本章のコードは既定 OFF の状態でも残っており、`innodb_change_buffering` を明示的に有効化したときに機能する。
 
 ## バッファへの記録（`ibuf_insert`）
