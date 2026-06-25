@@ -225,9 +225,9 @@ MySQL 8.4.10 は、SQL を解釈するサーバ層と、データ格納を担う
 
 ## 関連する章
 
-- ハンドラ API とストレージエンジンプラグインの詳細は[第11章 ハンドラ API とストレージエンジンプラグイン](../part01-sql-layer/11-handler-api.md)で扱う。
-- InnoDB の全体構成は[第12章 InnoDB アーキテクチャ概観](../part02-innodb-foundation/12-innodb-architecture.md)で扱う。
+- ハンドラ API とストレージエンジンプラグインの詳細は[第15章 ハンドラ API とストレージエンジンプラグイン](../part01-sql-layer/15-handler-api.md)で扱う。
+- InnoDB の全体構成は[第17章 InnoDB アーキテクチャ概観](../part02-innodb-foundation/17-innodb-architecture.md)で扱う。
 - 接続、スレッド、セッションと `THD` は[第3章 接続、スレッド、セッション](03-connection-thread-session.md)で扱う。
-- トランザクションの仕組みは[第23章 トランザクション管理](../part04-transaction-concurrency/23-transaction-management.md)で扱う。
-- クラッシュリカバリを支える redo ログは[第27章 redo ログ](../part05-log-recovery/27-redo-log.md)で扱う。
-- MyISAM など他のストレージエンジンは[第34章 他のストレージエンジン](../part06-dictionary-ddl-ops/34-other-storage-engines.md)で扱う。
+- トランザクションの仕組みは[第28章 トランザクション管理](../part04-transaction-concurrency/28-transaction-management.md)で扱う。
+- クラッシュリカバリを支える redo ログは[第32章 redo ログ](../part05-log-recovery/32-redo-log.md)で扱う。
+- MyISAM など他のストレージエンジンは[第39章 他のストレージエンジン](../part06-dictionary-ddl-ops/39-other-storage-engines.md)で扱う。
