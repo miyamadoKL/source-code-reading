@@ -471,7 +471,7 @@ flowchart TD
     subgraph dml["同時 DML（書き込みを止めない）"]
         d0["INSERT / UPDATE / DELETE"]
         d1["row_log_online_op_try で作成中か判定"]
-        d2["オンライン log に挿入・削除を記録"]
+        d2["オンライン log に挿入と削除を記録"]
         d0 --> d1 --> d2
     end
 
