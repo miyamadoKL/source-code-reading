@@ -11,6 +11,7 @@
 | [RocksDB](rocksdb/README.md) | v11.1.1 | LSM-tree ベースの組み込み永続キーバリューストア。全11部・52章。 | [目次](rocksdb/README.md) |
 | [Valkey](valkey/README.md) | 9.1.0 | RESP プロトコルで話すインメモリのデータ構造ストア。全10部・52章。 | [目次](valkey/README.md) |
 | [PostgreSQL](postgresql/README.md) | 18.4 | MVCC と WAL を備えるリレーショナルデータベース。全11部・44章と付録。 | [目次](postgresql/README.md) |
+| [MySQL](mysql/README.md) | 8.4.10 | プラガブルなストレージエンジンを持つリレーショナルデータベース。InnoDB を中心に深掘り。全7部・34章。 | [目次](mysql/README.md) |
 
 今後、他の OSS のソースコード読解ドキュメントを `<oss-name>/` 配下に追加していく。
 
