@@ -444,6 +444,6 @@ TiDB の式は `Expression` インターフェースで表され、列参照 `Co
 
 ## 関連する章
 
-- 第5章「プリペアドステートメントとプランキャッシュ」 `Constant` の `ParamMarker` と `DeferredExpr` がプランキャッシュとどう関わるかを扱う。
-- 第7章「論理プランと論理最適化（RBO）」 AST の列名から `Column` への解決と、`ResolveIndices` による `Index` の確定を扱う。
-- 第12章「ベクトル化実行モデル」 `VecEval*` を使ったチャンク単位の実行と、評価経路の切り替えを扱う。
+- [第5章 プリペアドステートメントとプランキャッシュ](05-prepared-and-plan-cache.md)：`Constant` の `ParamMarker` と `DeferredExpr` がプランキャッシュとどう関わるかを扱う。
+- [第7章 論理プランと論理最適化（RBO）](../part02-optimizer/07-logical-optimization.md)：AST の列名から `Column` への解決と、`ResolveIndices` による `Index` の確定を扱う。
+- [第12章 ベクトル化実行モデル](../part03-executor/12-vectorized-execution.md)：`VecEval*` を使ったチャンク単位の実行と、評価経路の切り替えを扱う。
