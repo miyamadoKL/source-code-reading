@@ -502,3 +502,4 @@ InnoDB の `ALTER TABLE` は、コピー方式のほかに、コピーなしの3
 - [第17章 B+tree インデックス](../part03-index-row/17-btree-index.md)：オンライン作成が組み立てる B+tree の構造。
 - [第19章 行の挿入、更新、削除](../part03-index-row/19-row-dml.md)：作成中インデックスへの DML がオンライン log へ退避する箇所。
 - [第26章 ロック](../part04-transaction-concurrency/26-locking.md)：行レベルロックと、本章のメタデータロックの違い。
+- [第39章 メタデータロック（MDL）](../part07-server-foundation/39-metadata-locking.md)：本章の `ALTER` が依存する、テーブル定義を保護するロック階層。

@@ -506,3 +506,4 @@ flowchart TD
 
 - 第3章「[接続、スレッド、セッション](../part00-introduction/03-connection-thread-session.md)」では、本章の入口に至るコマンドループと `THD` を読んだ。
 - 第5章「[クエリの解決と準備](05-resolution-and-prepare.md)」では、本章で作った木に対する `make_cmd` 以降の意味解析（名前解決と型検査）を読む。
+- 第37章「[MEM_ROOT と文単位のメモリ寿命](../part07-server-foundation/37-mem-root.md)」では、本章のパースツリーが載る `mem_root` の仕組みと文単位のメモリ寿命を読む。

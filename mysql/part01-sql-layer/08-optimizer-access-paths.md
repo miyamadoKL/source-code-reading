@@ -583,3 +583,4 @@ WHERE 条件のうちインデックスで絞れる部分が `SEL_TREE` の `key
 - 第7章「[オプティマイザ（join 順序とコストモデル）](07-optimizer-join-cost.md)」では、本章のコスト見積もりが帰着する `Cost_estimate` とコストモデルを読んだ。
 - 第9章「[エグゼキュータ（イテレータ実行モデル）](09-executor-iterators.md)」では、本章で組んだ `AccessPath` から `IndexRangeScanIterator` を作り、実際に行を読む段を読む。
 - 第11章「[ハンドラ API とストレージエンジンプラグイン](11-handler-api.md)」では、本章の `multi_range_read_info_const` が呼ぶ `handler` の見積もり API を読む。
+- 第40章「[統計情報とカーディナリティ推定](../part07-server-foundation/40-statistics-and-cardinality.md)」では、本章のコスト見積もりが頼る統計（`records_in_range` や InnoDB の永続統計、ヒストグラム）の出所を読む。
