@@ -433,7 +433,7 @@ dberr_t row_update_for_mysql(const byte *mysql_rec, row_prebuilt_t *prebuilt) {
 ```
 
 通常のテーブルは `row_update_for_mysql_using_upd_graph` を通る。
-ここで重要なのは、UPDATE と DELETE が同じ更新ノード（`upd_node_t`）と同じ実行経路を共有することである。
+UPDATE と DELETE は、同じ更新ノード（`upd_node_t`）と同じ実行経路を共有する。
 両者は `node->is_delete` フラグで区別される。
 削除は「全列を削除マークする更新」として扱われる。
 

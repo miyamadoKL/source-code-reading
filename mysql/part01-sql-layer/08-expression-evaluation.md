@@ -14,11 +14,10 @@
 これらの式は、パーサによって `Item` という基底クラスを節とする木へ変換され、実行時に1行ごとに評価される。
 本章は、この `Item` の木が何を表し、行ごとにどう値を計算するのかを読む。
 
-PostgreSQL は、ホットな式を機械語へコンパイルする JIT を持つ。
-MySQL の式評価には JIT がなく、`Item` の木を仮想関数呼び出しでたどる解釈実行に徹する。
+MySQL の式評価は、ホットな式を機械語へコンパイルする段を持たず、`Item` の木を仮想関数呼び出しでたどる解釈実行に徹する。
 そのぶん仕組みは素直であり、本章では「型ごとに評価メソッドを分け、行ごとに必要な型の値だけを計算する」という設計が、解釈実行の素朴さをどう補うかを読む。
 
-第13章で読んだエグゼキュータの `FilterIterator` は、`WHERE` 条件の評価に `m_condition->val_int()` を呼んでいた。
+第13章で読むエグゼキュータの `FilterIterator` は、`WHERE` 条件の評価に `m_condition->val_int()` を呼ぶ。
 その呼び出しの先で何が起きるのかを、本章で具体化する。
 
 ## 前提
@@ -480,7 +479,7 @@ FALSE が確定すれば即座に0を返し、残りの子を評価しない。
 NULL のために不明な子があった場合は `null_value` を立てて読み進め、後続で FALSE が出れば0、最後まで FALSE が出なければ NULL を畳んで結果を不明とする。
 SQL の三値論理（`TRUE AND NULL = NULL`、`FALSE AND NULL = FALSE`）が、この走査でそのまま実現されている。
 
-第13章で読んだ `FilterIterator::Read` は、まさにこの条件 `Item` の `val_int` を1行ごとに呼んでいた。
+第13章で読む `FilterIterator::Read` は、まさにこの条件 `Item` の `val_int` を1行ごとに呼ぶ。
 
 [`sql/iterators/composite_iterators.cc L91-L101`](https://github.com/mysql/mysql-server/blob/mysql-8.4.10/sql/iterators/composite_iterators.cc#L91-L101)
 
