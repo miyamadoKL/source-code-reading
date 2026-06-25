@@ -6,7 +6,8 @@
     "rocksdb/**/*.md",
     "valkey/**/*.md",
     "postgresql/**/*.md",
-    "mysql/**/*.md"
+    "mysql/**/*.md",
+    "tidb/**/*.md"
   ],
   "config": {
     "default": true,
