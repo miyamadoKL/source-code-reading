@@ -27,7 +27,7 @@ INLINE_CODE = re.compile(r"`[^`]*`")
 # 相対 .md リンク(http(s) を除く)。`foo.md` も `foo.md#anchor` も .md 部分だけ取る。
 LINK_MD = re.compile(r"\]\((?!https?:)([^)#]*?\.md)(?:#[^)]*)?\)")
 PERIOD_TAIL_OK = re.compile(r"[^)）」』】、，。\s]")  # 文末「。」の後に許す closing 以外の文字
-HR = re.compile(r"-{3,}")
+HR = re.compile(r"---")  # 体裁は `---` 固定。`----` 等は許さない
 PART_HEADING = re.compile(r"^## 第(\d+)部")
 
 

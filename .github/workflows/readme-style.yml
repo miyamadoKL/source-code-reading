@@ -7,12 +7,12 @@ on:
   push:
     branches: [main]
     paths:
-      - "*/README.md"
+      - "**/*.md"
       - ".github/scripts/check-readme-style.py"
       - ".github/workflows/readme-style.yml"
   pull_request:
     paths:
-      - "*/README.md"
+      - "**/*.md"
       - ".github/scripts/check-readme-style.py"
       - ".github/workflows/readme-style.yml"
 
