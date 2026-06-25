@@ -186,7 +186,7 @@ flowchart LR
 ループは毎回ラッチをリセットしてから `ProcessRepliesIfAny` でスタンバイからの応答を読み、出力バッファが空なら `send_data`（ここでは `XLogSendPhysical`）を呼んで WAL を1メッセージ分積む。
 送るべき WAL が尽きると `WalSndCaughtUp` が真になり、ループ後半でラッチ待ちに入る。
 プライマリで新しい WAL がフラッシュされると、その経路から `walsender` のラッチが起こされ、ループが回って続きを送る。
-ポーリングではなくラッチによる起床なので、WAL が増えていない間は CPU を使わずに休止できる。
+ポーリングではなくラッチによる起床なので、WAL が増えていない間は CPU を使わずにスリープできる。
 
 ## 物理 WAL を送る `XLogSendPhysical`
 
