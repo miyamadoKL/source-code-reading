@@ -63,6 +63,7 @@ MyISAM など現代では主流でないストレージエンジンは、`handle
 32. [バイナリログとレプリケーション](part06-dictionary-ddl-ops/32-binlog-and-replication.md)
 33. [Performance Schema と監視](part06-dictionary-ddl-ops/33-performance-schema.md)
 34. [他のストレージエンジン](part06-dictionary-ddl-ops/34-other-storage-engines.md)
+35. [グループレプリケーション](part06-dictionary-ddl-ops/35-group-replication.md)
 
 > 対象バージョンは MySQL 8.4.10（LTS）。
 > 各章のコード引用は `mysql-8.4.10` タグに固定した GitHub リンクから該当行を直接参照できる。
