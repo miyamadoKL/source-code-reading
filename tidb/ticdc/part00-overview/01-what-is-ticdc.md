@@ -587,5 +587,6 @@ v8.5.4 以降の新アーキテクチャでは、データフローが LogServic
 
 ## 関連する章
 
-- [第2章 サーバーの起動と停止](02-server-lifecycle.md)（サーバーのライフサイクル管理）
-- [第3章 Coordinator と Maintainer](03-coordinator-maintainer.md)（クラスタのスケジューリング）
+- [第2章 サーバーアーキテクチャ](02-server-architecture.md)（サーバーのモジュール構成と起動シーケンス）
+- [第12章 Coordinator と Changefeed 管理](../part03-scheduling/12-coordinator.md)（クラスタ全体の Changefeed スケジューリング）
+- [第13章 Maintainer とテーブルスケジューリング](../part03-scheduling/13-maintainer.md)（Changefeed 内のテーブル割り当て）
