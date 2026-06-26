@@ -32,7 +32,7 @@ Trino の Coordinator は、クエリを受け取ったあと直ちにプラン�
 **QueryState** は、クエリの現在のフェーズを表す列挙型である。
 9つの状態が定義されており、`QUEUED` から始まって `FINISHED` または `FAILED` に到達する。
 
-[`core/trino-main/src/main/java/io/trino/execution/QueryState.java` L22-L76](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/QueryState.java#L22-L76)
+[`core/trino-main/src/main/java/io/trino/execution/QueryState.java` L22-L76](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/QueryState.java#L21-L76)
 
 ```java
 public enum QueryState
@@ -75,7 +75,7 @@ public enum QueryState
     FAILED(true);
 
     // ... (中略) ...
-
+     */
     public boolean isDone()
     {
         return doneState;
@@ -121,7 +121,7 @@ stateDiagram-v2
 [`core/trino-main/src/main/java/io/trino/execution/QueryStateMachine.java` L163](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/QueryStateMachine.java#L163)
 
 ```java
-private final StateMachine<QueryState> queryState;
+    private final StateMachine<QueryState> queryState;
 ```
 
 初期状態は `QUEUED` であり、終端状態として `TERMINAL_QUERY_STATES`（`FINISHED` と `FAILED`）が渡される。
@@ -129,7 +129,7 @@ private final StateMachine<QueryState> queryState;
 [`core/trino-main/src/main/java/io/trino/execution/QueryStateMachine.java` L242](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/QueryStateMachine.java#L242)
 
 ```java
-this.queryState = new StateMachine<>("query " + query, stateMachineExecutor, QUEUED, TERMINAL_QUERY_STATES);
+        this.queryState = new StateMachine<>("query " + query, stateMachineExecutor, QUEUED, TERMINAL_QUERY_STATES);
 ```
 
 ### 前進のみ許す遷移ガード
@@ -140,35 +140,35 @@ this.queryState = new StateMachine<>("query " + query, stateMachineExecutor, QUE
 [`core/trino-main/src/main/java/io/trino/execution/QueryStateMachine.java` L1219-L1247](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/QueryStateMachine.java#L1219-L1247)
 
 ```java
-public boolean transitionToWaitingForResources()
-{
-    queryStateTimer.beginWaitingForResources();
-    return queryState.setIf(WAITING_FOR_RESOURCES, currentState -> currentState.ordinal() < WAITING_FOR_RESOURCES.ordinal());
-}
+    public boolean transitionToWaitingForResources()
+    {
+        queryStateTimer.beginWaitingForResources();
+        return queryState.setIf(WAITING_FOR_RESOURCES, currentState -> currentState.ordinal() < WAITING_FOR_RESOURCES.ordinal());
+    }
 
-public boolean transitionToDispatching()
-{
-    queryStateTimer.beginDispatching();
-    return queryState.setIf(DISPATCHING, currentState -> currentState.ordinal() < DISPATCHING.ordinal());
-}
+    public boolean transitionToDispatching()
+    {
+        queryStateTimer.beginDispatching();
+        return queryState.setIf(DISPATCHING, currentState -> currentState.ordinal() < DISPATCHING.ordinal());
+    }
 
-public boolean transitionToPlanning()
-{
-    queryStateTimer.beginPlanning();
-    return queryState.setIf(PLANNING, currentState -> currentState.ordinal() < PLANNING.ordinal());
-}
+    public boolean transitionToPlanning()
+    {
+        queryStateTimer.beginPlanning();
+        return queryState.setIf(PLANNING, currentState -> currentState.ordinal() < PLANNING.ordinal());
+    }
 
-public boolean transitionToStarting()
-{
-    queryStateTimer.beginStarting();
-    return queryState.setIf(STARTING, currentState -> currentState.ordinal() < STARTING.ordinal());
-}
+    public boolean transitionToStarting()
+    {
+        queryStateTimer.beginStarting();
+        return queryState.setIf(STARTING, currentState -> currentState.ordinal() < STARTING.ordinal());
+    }
 
-public boolean transitionToRunning()
-{
-    queryStateTimer.beginRunning();
-    return queryState.setIf(RUNNING, currentState -> currentState.ordinal() < RUNNING.ordinal());
-}
+    public boolean transitionToRunning()
+    {
+        queryStateTimer.beginRunning();
+        return queryState.setIf(RUNNING, currentState -> currentState.ordinal() < RUNNING.ordinal());
+    }
 ```
 
 `setIf` は `StateMachine` が提供するメソッドで、述語が `true` を返したときだけ CAS（compare-and-set）方式で状態を書き換える。
@@ -177,22 +177,29 @@ public boolean transitionToRunning()
 [`core/trino-main/src/main/java/io/trino/execution/StateMachine.java` L150-L174](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/StateMachine.java#L150-L174)
 
 ```java
-public boolean setIf(T newState, Predicate<T> predicate)
-{
-    // ... (中略) ...
-    while (true) {
-        T currentState = get();
-        if (currentState.equals(newState)) {
-            return false;
-        }
-        if (!predicate.test(currentState)) {
-            return false;
-        }
-        if (compareAndSet(currentState, newState)) {
-            return true;
+    public boolean setIf(T newState, Predicate<T> predicate)
+    {
+        // ... (中略) ...
+        while (true) {
+            // check if the current state passes the predicate
+            T currentState = get();
+
+            // change to same state is not a change, and does not notify the notify listeners
+            if (currentState.equals(newState)) {
+                return false;
+            }
+
+            // do not call predicate while holding the lock
+            if (!predicate.test(currentState)) {
+                return false;
+            }
+
+            // if state did not change while, checking the predicate, apply the new state
+            if (compareAndSet(currentState, newState)) {
+                return true;
+            }
         }
     }
-}
 ```
 
 述語の評価はロックの外で行い、述語が通った後に `compareAndSet` で原子的に状態を更新する。
@@ -203,30 +210,30 @@ public boolean setIf(T newState, Predicate<T> predicate)
 `transitionToFailed` は終端状態への遷移であり、どの状態からでも呼び出せる。
 失敗原因（`failureCause`）を先にセットしてからリスナーに通知する点が特徴である。
 
-[`core/trino-main/src/main/java/io/trino/execution/QueryStateMachine.java` L1323-L1341](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/QueryStateMachine.java#L1323-L1341)
+[`core/trino-main/src/main/java/io/trino/execution/QueryStateMachine.java` L1323-L1341](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/QueryStateMachine.java#L1323-L320)
 
 ```java
-private boolean transitionToFailed(Throwable throwable, boolean log)
-{
-    queryStateTimer.endQuery();
+    private boolean transitionToFailed(Throwable throwable, boolean log)
+    {
+        queryStateTimer.endQuery();
 
-    // NOTE: The failure cause must be set before triggering the state change, so
-    // listeners can observe the exception. This is safe because the failure cause
-    // can only be observed if the transition to FAILED is successful.
-    requireNonNull(throwable, "throwable is null");
-    failureCause.compareAndSet(null, toFailure(throwable));
+        // NOTE: The failure cause must be set before triggering the state change, so
+        // listeners can observe the exception. This is safe because the failure cause
+        // can only be observed if the transition to FAILED is successful.
+        requireNonNull(throwable, "throwable is null");
+        failureCause.compareAndSet(null, toFailure(throwable));
 
-    cleanupQueryQuietly();
+        cleanupQueryQuietly();
 
-    QueryState oldState = queryState.trySet(FAILED);
-    if (oldState.isDone()) {
-        if (log) {
-            QUERY_STATE_LOG.debug(throwable, "Failure after query %s finished", queryId);
+        QueryState oldState = queryState.trySet(FAILED);
+        if (oldState.isDone()) {
+            if (log) {
+                QUERY_STATE_LOG.debug(throwable, "Failure after query %s finished", queryId);
+            }
+            return false;
         }
-        return false;
-    }
     // ... (中略) ...
-}
+            }
 ```
 
 `failureCause.compareAndSet(null, ...)` により、最初に報告された失敗原因だけが記録される。
@@ -243,20 +250,20 @@ private boolean transitionToFailed(Throwable throwable, boolean log)
 [`core/trino-main/src/main/java/io/trino/execution/QueryStateMachine.java` L1298-L1311](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/QueryStateMachine.java#L1298-L1311)
 
 ```java
-private void transitionToFinishedIfReady()
-{
-    if (queryState.get().isDone()) {
-        return;
+    private void transitionToFinishedIfReady()
+    {
+        if (queryState.get().isDone()) {
+            return;
+        }
+
+        if (!committed.get() || !consumed.get()) {
+            return;
+        }
+
+        queryStateTimer.endQuery();
+
+        queryState.setIf(FINISHED, currentState -> !currentState.isDone());
     }
-
-    if (!committed.get() || !consumed.get()) {
-        return;
-    }
-
-    queryStateTimer.endQuery();
-
-    queryState.setIf(FINISHED, currentState -> !currentState.isDone());
-}
 ```
 
 `committed` フラグと `consumed` フラグの両方が `true` になったときにだけ、`FINISHED` への遷移が実行される。
@@ -275,24 +282,24 @@ Session の構築、権限チェック、クエリの解析、リソースグル
 [`core/trino-main/src/main/java/io/trino/dispatcher/DispatchManager.java` L175-L201](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/dispatcher/DispatchManager.java#L175-L201)
 
 ```java
-public ListenableFuture<Void> createQuery(QueryId queryId, Span querySpan, Slug slug, SessionContext sessionContext, String query)
-{
+    public ListenableFuture<Void> createQuery(QueryId queryId, Span querySpan, Slug slug, SessionContext sessionContext, String query)
+    {
     // ... (中略) ...
-    DispatchQueryCreationFuture queryCreationFuture = new DispatchQueryCreationFuture();
-    dispatchExecutor.execute(Context.current().wrap(() -> {
-        Span span = tracer.spanBuilder("dispatch")
-                .addLink(Span.current().getSpanContext())
-                .setParent(Context.current().with(querySpan))
-                .startSpan();
-        try (var _ = scopedSpan(span)) {
-            createQueryInternal(queryId, querySpan, slug, sessionContext, query, resourceGroupManager);
-        }
-        finally {
-            queryCreationFuture.set(null);
-        }
-    }));
-    return queryCreationFuture;
-}
+        DispatchQueryCreationFuture queryCreationFuture = new DispatchQueryCreationFuture();
+        dispatchExecutor.execute(Context.current().wrap(() -> {
+            Span span = tracer.spanBuilder("dispatch")
+                    .addLink(Span.current().getSpanContext())
+                    .setParent(Context.current().with(querySpan))
+                    .startSpan();
+            try (var _ = scopedSpan(span)) {
+                createQueryInternal(queryId, querySpan, slug, sessionContext, query, resourceGroupManager);
+            }
+            finally {
+                queryCreationFuture.set(null);
+            }
+        }));
+        return queryCreationFuture;
+    }
 ```
 
 実際の受付処理は `dispatchExecutor` に委譲される。
@@ -301,7 +308,7 @@ public ListenableFuture<Void> createQuery(QueryId queryId, Span querySpan, Slug 
 [`core/trino-main/src/main/java/io/trino/dispatcher/DispatchManager.java` L128](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/dispatcher/DispatchManager.java#L128)
 
 ```java
-this.dispatchExecutor = new BoundedExecutor(dispatchExecutor.getExecutor(), queryManagerConfig.getDispatcherQueryPoolSize());
+        this.dispatchExecutor = new BoundedExecutor(dispatchExecutor.getExecutor(), queryManagerConfig.getDispatcherQueryPoolSize());
 ```
 
 ### createQueryInternal の処理フロー
@@ -311,53 +318,53 @@ this.dispatchExecutor = new BoundedExecutor(dispatchExecutor.getExecutor(), quer
 [`core/trino-main/src/main/java/io/trino/dispatcher/DispatchManager.java` L207-L285](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/dispatcher/DispatchManager.java#L207-L285)
 
 ```java
-private <C> void createQueryInternal(QueryId queryId, Span querySpan, Slug slug, SessionContext sessionContext, String query, ResourceGroupManager<C> resourceGroupManager)
-{
-    Session session = null;
-    PreparedQuery preparedQuery = null;
-    try {
-        if (query.length() > maxQueryLength) {
+    private <C> void createQueryInternal(QueryId queryId, Span querySpan, Slug slug, SessionContext sessionContext, String query, ResourceGroupManager<C> resourceGroupManager)
+    {
+        Session session = null;
+        PreparedQuery preparedQuery = null;
+        try {
+            if (query.length() > maxQueryLength) {
             // ... (中略) ...
-        }
+            }
 
-        // decode session
-        session = sessionSupplier.createSession(queryId, querySpan, sessionContext);
+            // decode session
+            session = sessionSupplier.createSession(queryId, querySpan, sessionContext);
 
-        // check query execute permissions
-        accessControl.checkCanExecuteQuery(sessionContext.getIdentity(), queryId);
+            // check query execute permissions
+            accessControl.checkCanExecuteQuery(sessionContext.getIdentity(), queryId);
 
-        // prepare query
-        preparedQuery = queryPreparer.prepareQuery(session, query);
+            // prepare query
+            preparedQuery = queryPreparer.prepareQuery(session, query);
 
-        // select resource group
+            // select resource group
         // ... (中略) ...
 
-        DispatchQuery dispatchQuery = dispatchQueryFactory.createDispatchQuery(
-                session,
-                sessionContext.getTransactionId(),
-                query,
-                preparedQuery,
-                slug,
-                selectionContext.getResourceGroupId());
-
-        boolean queryAdded = queryCreated(dispatchQuery);
-        if (queryAdded && !dispatchQuery.isDone()) {
-            try {
-                resourceGroupManager.submit(dispatchQuery, selectionContext, dispatchExecutor);
-            }
-            catch (Throwable e) {
-                dispatchQuery.fail(e);
-            }
+import com.google.common.util.concurrent.AbstractFuture;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.inject.Inject;
+import io.airlift.concurrent.BoundedExecutor;
+import io.airlift.log.Logger;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Context;
+import io.trino.Session;
+import io.trino.event.QueryMonitor;
+import io.trino.execution.QueryIdGenerator;
+import io.trino.execution.QueryInfo;
+import io.trino.execution.QueryManagerConfig;
+import io.trino.execution.QueryManagerStats;
+import io.trino.execution.QueryPreparer;
+import io.trino.execution.QueryPreparer.PreparedQuery;
+import io.trino.execution.QueryTracker;
+import io.trino.execution.resourcegroups.ResourceGroupManager;
+        // ... (中略) ...
+            DispatchQuery failedDispatchQuery = failedDispatchQueryFactory.createFailedDispatchQuery(session, query, preparedSql, Optional.empty(), throwable);
+            queryCreated(failedDispatchQuery);
+        // ... (中略) ...
         }
     }
-    catch (Throwable throwable) {
-        // creation must never fail, so register a failed query in this case
-        // ... (中略) ...
-        DispatchQuery failedDispatchQuery = failedDispatchQueryFactory.createFailedDispatchQuery(session, query, preparedSql, Optional.empty(), throwable);
-        queryCreated(failedDispatchQuery);
-        // ... (中略) ...
-    }
-}
 ```
 
 処理の流れを順に追う。
@@ -378,34 +385,34 @@ Javadoc が "This method will never fail to register a query with the query trac
 **QueryPreparer** は、SQL 文字列をパースして `PreparedQuery` に変換する。
 `EXECUTE` 文の場合は、事前に `PREPARE` で保存されたクエリ本体を Session から取得して再パースする。
 
-[`core/trino-main/src/main/java/io/trino/execution/QueryPreparer.java` L51-L89](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/QueryPreparer.java#L51-L89)
+[`core/trino-main/src/main/java/io/trino/execution/QueryPreparer.java` L51-L89](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/QueryPreparer.java#L51-L90)
 
 ```java
-public PreparedQuery prepareQuery(Session session, String query)
-        throws ParsingException, TrinoException
-{
-    Statement wrappedStatement = sqlParser.createStatement(query);
-    return prepareQuery(session, wrappedStatement);
-}
+    public PreparedQuery prepareQuery(Session session, String query)
+            throws ParsingException, TrinoException
+    {
+        Statement wrappedStatement = sqlParser.createStatement(query);
+        return prepareQuery(session, wrappedStatement);
+    }
 
-public PreparedQuery prepareQuery(Session session, Statement wrappedStatement)
-        throws ParsingException, TrinoException
-{
-    Statement statement = wrappedStatement;
-    Optional<String> prepareSql = Optional.empty();
-    if (statement instanceof Execute executeStatement) {
-        prepareSql = Optional.of(session.getPreparedStatementFromExecute(executeStatement));
-        statement = sqlParser.createStatement(prepareSql.get());
-    }
-    else if (statement instanceof ExecuteImmediate executeImmediateStatement) {
-        statement = sqlParser.createStatement(
-                executeImmediateStatement.getStatement().getValue(),
-                executeImmediateStatement.getStatement().getLocation().orElseThrow());
-    }
+    public PreparedQuery prepareQuery(Session session, Statement wrappedStatement)
+            throws ParsingException, TrinoException
+    {
+        Statement statement = wrappedStatement;
+        Optional<String> prepareSql = Optional.empty();
+        if (statement instanceof Execute executeStatement) {
+            prepareSql = Optional.of(session.getPreparedStatementFromExecute(executeStatement));
+            statement = sqlParser.createStatement(prepareSql.get());
+        }
+        else if (statement instanceof ExecuteImmediate executeImmediateStatement) {
+            statement = sqlParser.createStatement(
+                    executeImmediateStatement.getStatement().getValue(),
+                    executeImmediateStatement.getStatement().getLocation().orElseThrow());
+        }
     // ... (中略) ...
 
-    return new PreparedQuery(statement, parameters, prepareSql);
-}
+        return new PreparedQuery(statement, parameters, prepareSql);
+    }
 ```
 
 `PreparedQuery` は、解析済みの AST（`Statement`）、バインドパラメータ、元の `PREPARE` 文の SQL を保持する。
@@ -424,26 +431,26 @@ public PreparedQuery prepareQuery(Session session, Statement wrappedStatement)
 [`core/trino-main/src/main/java/io/trino/dispatcher/LocalDispatchQueryFactory.java` L126-L145](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/dispatcher/LocalDispatchQueryFactory.java#L126-L145)
 
 ```java
-QueryStateMachine stateMachine = QueryStateMachine.begin(
-        existingTransactionId,
-        query,
-        preparedQuery.getPrepareSql(),
-        session,
-        locationFactory.createQueryLocation(session.getQueryId()),
-        resourceGroup,
-        isTransactionControlStatement(preparedQuery.getStatement()),
-        transactionManager,
-        accessControl,
-        // limit the number of state change listener callback threads for each query
-        new BoundedExecutor(executor, maxStateMachineThreadsPerQuery),
-        metadata,
-        warningCollector,
-        planOptimizersStatsCollector,
-        exchangeMetricsCollector,
-        getQueryType(preparedQuery.getStatement()),
-        externalExchangeEncryptionEnabled,
-        Optional.of(sessionPropertyResolver.getSessionPropertiesApplier(preparedQuery)),
-        version);
+        QueryStateMachine stateMachine = QueryStateMachine.begin(
+                existingTransactionId,
+                query,
+                preparedQuery.getPrepareSql(),
+                session,
+                locationFactory.createQueryLocation(session.getQueryId()),
+                resourceGroup,
+                isTransactionControlStatement(preparedQuery.getStatement()),
+                transactionManager,
+                accessControl,
+                // limit the number of state change listener callback threads for each query
+                new BoundedExecutor(executor, maxStateMachineThreadsPerQuery),
+                metadata,
+                warningCollector,
+                planOptimizersStatsCollector,
+                exchangeMetricsCollector,
+                getQueryType(preparedQuery.getStatement()),
+                externalExchangeEncryptionEnabled,
+                Optional.of(sessionPropertyResolver.getSessionPropertiesApplier(preparedQuery)),
+                version);
 ```
 
 リスナーコールバック用のエグゼキュータに `BoundedExecutor` を使っている点が重要である。
@@ -454,32 +461,32 @@ QueryStateMachine stateMachine = QueryStateMachine.begin(
 `QueryExecution` オブジェクト（通常は `SqlQueryExecution`）の生成は、非同期で行われる。
 `executor.submit` でバックグラウンドのスレッドに委譲する理由は、`SqlQueryExecution` のコンストラクタ内で意味解析（`analyze`）が実行されるためである。
 
-[`core/trino-main/src/main/java/io/trino/dispatcher/LocalDispatchQueryFactory.java` L156-L182](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/dispatcher/LocalDispatchQueryFactory.java#L156-L182)
+[`core/trino-main/src/main/java/io/trino/dispatcher/LocalDispatchQueryFactory.java` L156-L182](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/dispatcher/LocalDispatchQueryFactory.java#L156-L190)
 
 ```java
-ListenableFuture<QueryExecution> queryExecutionFuture = executor.submit(() -> {
-    QueryExecutionFactory<?> queryExecutionFactory = executionFactories.get(preparedQuery.getStatement().getClass());
-    if (queryExecutionFactory == null) {
-        throw new TrinoException(NOT_SUPPORTED, "Unsupported statement type: " + preparedQuery.getStatement().getClass().getSimpleName());
-    }
+        ListenableFuture<QueryExecution> queryExecutionFuture = executor.submit(() -> {
+            QueryExecutionFactory<?> queryExecutionFactory = executionFactories.get(preparedQuery.getStatement().getClass());
+            if (queryExecutionFactory == null) {
+                throw new TrinoException(NOT_SUPPORTED, "Unsupported statement type: " + preparedQuery.getStatement().getClass().getSimpleName());
+            }
 
-    try {
-        return queryExecutionFactory.createQueryExecution(preparedQuery, stateMachine, slug, warningCollector, planOptimizersStatsCollector);
-    }
-    catch (Throwable e) {
+            try {
+                return queryExecutionFactory.createQueryExecution(preparedQuery, stateMachine, slug, warningCollector, planOptimizersStatsCollector);
+            }
+            catch (Throwable e) {
         // ... (中略) ...
-        stateMachine.transitionToFailed(e);
-        throw e;
-    }
-});
+                stateMachine.transitionToFailed(e);
+                throw e;
+            }
+        });
 
-return new LocalDispatchQuery(
-        stateMachine,
-        queryExecutionFuture,
-        queryMonitor,
-        clusterSizeMonitor,
-        executor,
-        queryManager::createQuery);
+        return new LocalDispatchQuery(
+                stateMachine,
+                queryExecutionFuture,
+                queryMonitor,
+                clusterSizeMonitor,
+                executor,
+                queryManager::createQuery);
 ```
 
 `executionFactories` は `Statement` の型をキーとする `Map` であり、SQL の種類（SELECT、INSERT、DDL など）に応じて適切な `QueryExecutionFactory` を選択する。
@@ -499,13 +506,11 @@ return new LocalDispatchQuery(
 [`core/trino-main/src/main/java/io/trino/dispatcher/LocalDispatchQuery.java` L117-L121](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/dispatcher/LocalDispatchQuery.java#L117-L121)
 
 ```java
-@Override
-public void startWaitingForResources()
-{
-    if (stateMachine.transitionToWaitingForResources()) {
-        waitForMinimumWorkers();
-    }
-}
+    public void startWaitingForResources()
+    {
+        if (stateMachine.transitionToWaitingForResources()) {
+            waitForMinimumWorkers();
+        }
 ```
 
 ### Worker 数の待機
@@ -515,28 +520,27 @@ public void startWaitingForResources()
 [`core/trino-main/src/main/java/io/trino/dispatcher/LocalDispatchQuery.java` L125-L145](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/dispatcher/LocalDispatchQuery.java#L125-L145)
 
 ```java
-private void waitForMinimumWorkers()
-{
-    // wait for query execution to finish construction
-    addSuccessCallback(queryExecutionFuture, queryExecution -> {
-        Session session = stateMachine.getSession();
-        int executionMinCount = 1; // always wait for 1 node to be up
-        if (queryExecution.shouldWaitForMinWorkers()) {
-            executionMinCount = getRequiredWorkers(session);
-        }
-        ListenableFuture<Void> minimumWorkerFuture = clusterSizeMonitor.waitForMinimumWorkers(executionMinCount, getRequiredWorkersMaxWait(session));
-        // when worker requirement is met, start the execution
-        addSuccessCallback(minimumWorkerFuture, () -> startExecution(queryExecution), queryExecutor);
-        addExceptionCallback(minimumWorkerFuture, stateMachine::transitionToFailed, queryExecutor);
-
-        // cancel minimumWorkerFuture if query fails for some reason or is cancelled by user
-        stateMachine.addStateChangeListener(state -> {
-            if (state.isDone()) {
-                minimumWorkerFuture.cancel(true);
+    {
+        // wait for query execution to finish construction
+        addSuccessCallback(queryExecutionFuture, queryExecution -> {
+            Session session = stateMachine.getSession();
+            int executionMinCount = 1; // always wait for 1 node to be up
+            if (queryExecution.shouldWaitForMinWorkers()) {
+                executionMinCount = getRequiredWorkers(session);
             }
+            ListenableFuture<Void> minimumWorkerFuture = clusterSizeMonitor.waitForMinimumWorkers(executionMinCount, getRequiredWorkersMaxWait(session));
+            // when worker requirement is met, start the execution
+            addSuccessCallback(minimumWorkerFuture, () -> startExecution(queryExecution), queryExecutor);
+            addExceptionCallback(minimumWorkerFuture, stateMachine::transitionToFailed, queryExecutor);
+
+            // cancel minimumWorkerFuture if query fails for some reason or is cancelled by user
+            stateMachine.addStateChangeListener(state -> {
+                if (state.isDone()) {
+                    minimumWorkerFuture.cancel(true);
+                }
+            });
         });
-    });
-}
+    }
 ```
 
 最低1台の Worker の起動を常に待ち、Session プロパティで指定された `required_workers` の数まで待機する。
@@ -549,26 +553,26 @@ Worker 数の条件が満たされると `startExecution` が呼ばれる。
 [`core/trino-main/src/main/java/io/trino/dispatcher/LocalDispatchQuery.java` L147-L166](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/dispatcher/LocalDispatchQuery.java#L147-L166)
 
 ```java
-private void startExecution(QueryExecution queryExecution)
-{
-    if (stateMachine.transitionToDispatching()) {
-        try {
-            querySubmitter.accept(queryExecution);
-            if (notificationSentOrGuaranteed.compareAndSet(false, true)) {
-                queryExecution.addFinalQueryInfoListener(queryMonitor::queryCompletedEvent);
+    private void startExecution(QueryExecution queryExecution)
+    {
+        if (stateMachine.transitionToDispatching()) {
+            try {
+                querySubmitter.accept(queryExecution);
+                if (notificationSentOrGuaranteed.compareAndSet(false, true)) {
+                    queryExecution.addFinalQueryInfoListener(queryMonitor::queryCompletedEvent);
+                }
+            }
+            catch (Throwable t) {
+                // this should never happen but be safe
+                stateMachine.transitionToFailed(t);
+                log.error(t, "query submitter threw exception");
+                throw t;
+            }
+            finally {
+                submitted.set(null);
             }
         }
-        catch (Throwable t) {
-            // this should never happen but be safe
-            stateMachine.transitionToFailed(t);
-            log.error(t, "query submitter threw exception");
-            throw t;
-        }
-        finally {
-            submitted.set(null);
-        }
     }
-}
 ```
 
 `submitted` フラグは `SettableFuture<Void>` であり、クエリがディスパッチされたことをクライアントに通知するために使われる。
@@ -587,27 +591,27 @@ private void startExecution(QueryExecution queryExecution)
 [`core/trino-main/src/main/java/io/trino/execution/QueryManager.java` L300-L320](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/QueryManager.java#L300-L320)
 
 ```java
-public void createQuery(QueryExecution queryExecution)
-{
-    requireNonNull(queryExecution, "queryExecution is null");
+    public void createQuery(QueryExecution queryExecution)
+    {
+        requireNonNull(queryExecution, "queryExecution is null");
 
-    if (!queryTracker.addQuery(queryExecution)) {
-        throw new TrinoException(GENERIC_INTERNAL_ERROR, format("Query %s already registered", queryExecution.getQueryId()));
-    }
+        if (!queryTracker.addQuery(queryExecution)) {
+            throw new TrinoException(GENERIC_INTERNAL_ERROR, format("Query %s already registered", queryExecution.getQueryId()));
+        }
 
-    queryExecution.addFinalQueryInfoListener(_ -> {
-        // execution MUST be added to the expiration queue or there will be a leak
-        queryTracker.expireQuery(queryExecution.getQueryId());
-    });
+        queryExecution.addFinalQueryInfoListener(_ -> {
+            // execution MUST be added to the expiration queue or there will be a leak
+            queryTracker.expireQuery(queryExecution.getQueryId());
+        });
 
-    try (SetThreadName _ = new SetThreadName("Query-" + queryExecution.getQueryId())) {
-        try (var ignoredStartScope = scopedSpan(tracer.spanBuilder("query-start")
-                .setParent(Context.current().with(queryExecution.getSession().getQuerySpan()))
-                .startSpan())) {
-            queryExecution.start();
+        try (SetThreadName _ = new SetThreadName("Query-" + queryExecution.getQueryId())) {
+            try (var ignoredStartScope = scopedSpan(tracer.spanBuilder("query-start")
+                    .setParent(Context.current().with(queryExecution.getSession().getQuerySpan()))
+                    .startSpan())) {
+                queryExecution.start();
+            }
         }
     }
-}
 ```
 
 このメソッドは3つのことを行う。
@@ -651,62 +655,68 @@ queryManagementExecutor.scheduleWithFixedDelay(() -> {
 
 `SqlQueryExecution.start()` は、プランニングからスケジューラの起動までを一気に実行する。
 
-[`core/trino-main/src/main/java/io/trino/execution/SqlQueryExecution.java` L398-L454](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/SqlQueryExecution.java#L398-L454)
+[`core/trino-main/src/main/java/io/trino/execution/SqlQueryExecution.java` L396-L454](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/SqlQueryExecution.java#L396-L454)
 
 ```java
-@Override
-public void start()
-{
-    try (SetThreadName _ = new SetThreadName("Query-" + stateMachine.getQueryId())) {
-        try {
-            if (!stateMachine.transitionToPlanning()) {
-                // query already started or finished
-                return;
-            }
+    @Override
+    public void start()
+    {
+        try (SetThreadName _ = new SetThreadName("Query-" + stateMachine.getQueryId())) {
+            try {
+                if (!stateMachine.transitionToPlanning()) {
+                    // query already started or finished
+                    return;
+                }
 
-            AtomicReference<Thread> planningThread = new AtomicReference<>(currentThread());
-            stateMachine.getStateChange(PLANNING).addListener(() -> {
-                if (stateMachine.getQueryState() == FAILED) {
-                    synchronized (planningThread) {
-                        Thread thread = planningThread.get();
-                        if (thread != null) {
-                            thread.interrupt();
+                AtomicReference<Thread> planningThread = new AtomicReference<>(currentThread());
+                stateMachine.getStateChange(PLANNING).addListener(() -> {
+                    if (stateMachine.getQueryState() == FAILED) {
+                        synchronized (planningThread) {
+                            Thread thread = planningThread.get();
+                            if (thread != null) {
+                                thread.interrupt();
+                            }
                         }
                     }
+                }, directExecutor());
+
+                try {
+                    CachingTableStatsProvider tableStatsProvider = new CachingTableStatsProvider(plannerContext.getMetadata(), getSession(), stateMachine::isDone);
+                    PlanRoot plan = planQuery(tableStatsProvider);
+                    // DynamicFilterService needs plan for query to be registered.
+                    // Query should be registered before dynamic filter suppliers are requested in distribution planning.
+                    registerDynamicFilteringQuery(plan);
+                    planDistribution(plan, tableStatsProvider);
                 }
-            }, directExecutor());
+                finally {
+                    synchronized (planningThread) {
+                        planningThread.set(null);
+                        // Clear the interrupted flag in case there was a race condition where
+                        // the planning thread was interrupted right after planning completes above
+                        Thread.interrupted();
+                    }
+                }
 
-            try {
-                CachingTableStatsProvider tableStatsProvider = new CachingTableStatsProvider(plannerContext.getMetadata(), getSession(), stateMachine::isDone);
-                PlanRoot plan = planQuery(tableStatsProvider);
-                registerDynamicFilteringQuery(plan);
-                planDistribution(plan, tableStatsProvider);
-            }
-            finally {
-                synchronized (planningThread) {
-                    planningThread.set(null);
-                    Thread.interrupted();
+                // ... (中略) ...
+
+                if (!stateMachine.transitionToStarting()) {
+                    // query already started or finished
+                    return;
+                }
+
+                // if query is not finished, start the scheduler, otherwise cancel it
+                QueryScheduler scheduler = queryScheduler.get();
+
+                if (!stateMachine.isDone()) {
+                    scheduler.start();
                 }
             }
-
-            // ... (中略) ...
-
-            if (!stateMachine.transitionToStarting()) {
-                return;
+            catch (Throwable e) {
+                fail(e);
+                throwIfInstanceOf(e, Error.class);
             }
-
-            QueryScheduler scheduler = queryScheduler.get();
-
-            if (!stateMachine.isDone()) {
-                scheduler.start();
-            }
-        }
-        catch (Throwable e) {
-            fail(e);
-            throwIfInstanceOf(e, Error.class);
         }
     }
-}
 ```
 
 処理は以下の順で進む。
@@ -724,39 +734,39 @@ public void start()
 [`core/trino-main/src/main/java/io/trino/execution/SqlQueryExecution.java` L489-L521](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/SqlQueryExecution.java#L489-L521)
 
 ```java
-private PlanRoot doPlanQuery(CachingTableStatsProvider tableStatsProvider)
-{
-    // plan query
-    PlanNodeIdAllocator idAllocator = new PlanNodeIdAllocator();
-    LogicalPlanner logicalPlanner = new LogicalPlanner(
-            stateMachine.getSession(),
-            planOptimizers,
-            idAllocator,
-            plannerContext,
-            statsCalculator,
-            costCalculator,
-            stateMachine.getWarningCollector(),
-            planOptimizersStatsCollector,
-            tableStatsProvider);
-    Plan plan = logicalPlanner.plan(analysis);
-    queryPlan.set(plan);
+    private PlanRoot doPlanQuery(CachingTableStatsProvider tableStatsProvider)
+    {
+        // plan query
+        PlanNodeIdAllocator idAllocator = new PlanNodeIdAllocator();
+        LogicalPlanner logicalPlanner = new LogicalPlanner(
+                stateMachine.getSession(),
+                planOptimizers,
+                idAllocator,
+                plannerContext,
+                statsCalculator,
+                costCalculator,
+                stateMachine.getWarningCollector(),
+                planOptimizersStatsCollector,
+                tableStatsProvider);
+        Plan plan = logicalPlanner.plan(analysis);
+        queryPlan.set(plan);
 
-    // fragment the plan
-    SubPlan fragmentedPlan;
-    try (var _ = scopedSpan(tracer, "fragment-plan")) {
-        fragmentedPlan = planFragmenter.createSubPlans(stateMachine.getSession(), plan, false, stateMachine.getWarningCollector());
+        // fragment the plan
+        SubPlan fragmentedPlan;
+        try (var _ = scopedSpan(tracer, "fragment-plan")) {
+            fragmentedPlan = planFragmenter.createSubPlans(stateMachine.getSession(), plan, false, stateMachine.getWarningCollector());
+        }
+
+        // extract inputs
+        try (var _ = scopedSpan(tracer, "extract-inputs")) {
+            stateMachine.setInputs(new InputExtractor(plannerContext.getMetadata(), stateMachine.getSession()).extractInputs(fragmentedPlan));
+        }
+
+        stateMachine.setOutput(analysis.getTarget());
+
+        boolean explainAnalyze = analysis.getStatement() instanceof ExplainAnalyze;
+        return new PlanRoot(fragmentedPlan, !explainAnalyze);
     }
-
-    // extract inputs
-    try (var _ = scopedSpan(tracer, "extract-inputs")) {
-        stateMachine.setInputs(new InputExtractor(plannerContext.getMetadata(), stateMachine.getSession()).extractInputs(fragmentedPlan));
-    }
-
-    stateMachine.setOutput(analysis.getTarget());
-
-    boolean explainAnalyze = analysis.getStatement() instanceof ExplainAnalyze;
-    return new PlanRoot(fragmentedPlan, !explainAnalyze);
-}
 ```
 
 `analysis` フィールドはコンストラクタで生成済みである。
@@ -765,27 +775,27 @@ private PlanRoot doPlanQuery(CachingTableStatsProvider tableStatsProvider)
 [`core/trino-main/src/main/java/io/trino/execution/SqlQueryExecution.java` L222](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/SqlQueryExecution.java#L222)
 
 ```java
-this.analysis = analyze(preparedQuery, stateMachine, warningCollector, planOptimizersStatsCollector, analyzerFactory);
+            this.analysis = analyze(preparedQuery, stateMachine, warningCollector, planOptimizersStatsCollector, analyzerFactory);
 ```
 
 ### planDistribution によるスケジューラ構築
 
 `planDistribution` は、リトライポリシーに応じて適切なスケジューラを選択し、`queryScheduler` にセットする。
 
-[`core/trino-main/src/main/java/io/trino/execution/SqlQueryExecution.java` L537-L590](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/SqlQueryExecution.java#L537-L590)
+[`core/trino-main/src/main/java/io/trino/execution/SqlQueryExecution.java` L536-L592](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/SqlQueryExecution.java#L536-L592)
 
 ```java
-RetryPolicy retryPolicy = getRetryPolicy(getSession());
-QueryScheduler scheduler = switch (retryPolicy) {
-    case QUERY, NONE -> new PipelinedQueryScheduler(
-            // ... (中略) ...
-    );
-    case TASK -> new EventDrivenFaultTolerantQueryScheduler(
-            // ... (中略) ...
-    );
-};
+        RetryPolicy retryPolicy = getRetryPolicy(getSession());
+        QueryScheduler scheduler = switch (retryPolicy) {
+            case QUERY, NONE -> new PipelinedQueryScheduler(
+                    // ... (中略) ...
+                    coordinatorTaskManager);
+            case TASK -> new EventDrivenFaultTolerantQueryScheduler(
+                    // ... (中略) ...
+                    plan.getRoot());
+        };
 
-queryScheduler.set(scheduler);
+        queryScheduler.set(scheduler);
 ```
 
 `RetryPolicy` が `NONE` または `QUERY` の場合は `PipelinedQueryScheduler` が、`TASK` の場合は耐障害性の高い `EventDrivenFaultTolerantQueryScheduler` が使われる。
@@ -801,19 +811,19 @@ queryScheduler.set(scheduler);
 [`core/trino-main/src/main/java/io/trino/execution/QueryTracker.java` L164-L176](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/QueryTracker.java#L164-L176)
 
 ```java
-public boolean addQuery(T execution)
-{
-    return queries.putIfAbsent(execution.getQueryId(), execution) == null;
-}
+    public boolean addQuery(T execution)
+    {
+        return queries.putIfAbsent(execution.getQueryId(), execution) == null;
+    }
 
-/**
- * Query is finished and expiration should begin.
- */
-public void expireQuery(QueryId queryId)
-{
-    tryGetQuery(queryId)
-            .ifPresent(expirationQueue::add);
-}
+    /**
+     * Query is finished and expiration should begin.
+     */
+    public void expireQuery(QueryId queryId)
+    {
+        tryGetQuery(queryId)
+                .ifPresent(expirationQueue::add);
+    }
 ```
 
 `queries` は `ConcurrentHashMap<QueryId, T>` であり、`putIfAbsent` によるアトミックな登録で重複を防ぐ。
@@ -823,27 +833,27 @@ public void expireQuery(QueryId queryId)
 
 `QueryTracker` は1秒ごとのバックグラウンドタスクで4つの管理処理を実行する。
 
-[`core/trino-main/src/main/java/io/trino/execution/QueryTracker.java` L80-L109](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/QueryTracker.java#L80-L109)
+[`core/trino-main/src/main/java/io/trino/execution/QueryTracker.java` L81-L109](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/QueryTracker.java#L81-L109)
 
 ```java
-backgroundTask = queryManagementExecutor.scheduleWithFixedDelay(() -> {
-    try {
-        failAbandonedQueries();
-    }
-    // ... (中略) ...
-    try {
-        enforceTimeLimits();
-    }
-    // ... (中略) ...
-    try {
-        removeExpiredQueries();
-    }
-    // ... (中略) ...
-    try {
-        pruneExpiredQueries();
-    }
-    // ... (中略) ...
-}, 1, 1, TimeUnit.SECONDS);
+        backgroundTask = queryManagementExecutor.scheduleWithFixedDelay(() -> {
+            try {
+                failAbandonedQueries();
+            }
+            // ... (中略) ...
+            try {
+                enforceTimeLimits();
+            }
+            // ... (中略) ...
+            try {
+                removeExpiredQueries();
+            }
+            // ... (中略) ...
+            try {
+                pruneExpiredQueries();
+            }
+            // ... (中略) ...
+        }, 1, 1, TimeUnit.SECONDS);
 ```
 
 - `failAbandonedQueries`：クライアントからのハートビートが `clientTimeout` を超えて途絶えたクエリを `ABANDONED_QUERY` エラーで強制終了する。

@@ -32,10 +32,10 @@ Trino サーバーのエントリーポイントは `Server#start` メソッド�
 [`core/trino-main/src/main/java/io/trino/server/Server.java` L75-L78](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/server/Server.java#L75-L78)
 
 ```java
-public final void start(String trinoVersion)
-{
-    new EmbedVersion(trinoVersion).embedVersion(() -> doStart(trinoVersion)).run();
-}
+    public final void start(String trinoVersion)
+    {
+        new EmbedVersion(trinoVersion).embedVersion(() -> doStart(trinoVersion)).run();
+    }
 ```
 
 `doStart` はまずロケールを `Locale.US` に固定し、`verifySystemRequirements()` で JVM バージョンやファイルディスクリプタ数などのシステム要件を検証する。
@@ -43,14 +43,15 @@ public final void start(String trinoVersion)
 [`core/trino-main/src/main/java/io/trino/server/Server.java` L80-L88](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/server/Server.java#L80-L88)
 
 ```java
-private void doStart(String trinoVersion)
-{
-    // Trino server behavior does not depend on locale settings.
-    // Use en_US as this is what Trino is tested with.
-    Locale.setDefault(Locale.US);
+    private void doStart(String trinoVersion)
+    {
+        // Trino server behavior does not depend on locale settings.
+        // Use en_US as this is what Trino is tested with.
+        Locale.setDefault(Locale.US);
 
-    long startTime = System.nanoTime();
-    verifySystemRequirements();
+        long startTime = System.nanoTime();
+        verifySystemRequirements();
+
 ```
 
 ### Guice モジュールの組み立て
@@ -61,28 +62,28 @@ private void doStart(String trinoVersion)
 [`core/trino-main/src/main/java/io/trino/server/Server.java` L92-L113](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/server/Server.java#L92-L113)
 
 ```java
-ImmutableList.Builder<Module> modules = ImmutableList.builder();
-modules.add(
-        new NodeModule(),
-        new HttpServerModule(),
-        new JsonModule(),
-        new JaxrsModule(),
-        new MBeanModule(),
-        new PrefixObjectNameGeneratorModule("io.trino"),
-        new JmxModule(),
-        new JmxOpenMetricsModule(),
-        new LogJmxModule(),
-        new TracingModule("trino", trinoVersion),
-        new ServerSecurityModule(),
-        new AccessControlModule(),
-        new EventListenerModule(),
-        new ExchangeManagerModule(),
-        new CatalogManagerModule(),
-        new TransactionManagerModule(),
-        new NodeManagerModule(trinoVersion),
-        new ServerMainModule(trinoVersion),
-        new NodeStateManagerModule(),
-        new WarningCollectorModule());
+        ImmutableList.Builder<Module> modules = ImmutableList.builder();
+        modules.add(
+                new NodeModule(),
+                new HttpServerModule(),
+                new JsonModule(),
+                new JaxrsModule(),
+                new MBeanModule(),
+                new PrefixObjectNameGeneratorModule("io.trino"),
+                new JmxModule(),
+                new JmxOpenMetricsModule(),
+                new LogJmxModule(),
+                new TracingModule("trino", trinoVersion),
+                new ServerSecurityModule(),
+                new AccessControlModule(),
+                new EventListenerModule(),
+                new ExchangeManagerModule(),
+                new CatalogManagerModule(),
+                new TransactionManagerModule(),
+                new NodeManagerModule(trinoVersion),
+                new ServerMainModule(trinoVersion),
+                new NodeStateManagerModule(),
+                new WarningCollectorModule());
 ```
 
 `NodeModule` や `HttpServerModule` は Airlift が提供する基盤モジュールであり、Node 識別子の生成や HTTP サーバーの起動を担う。
@@ -95,11 +96,11 @@ modules.add(
 [`core/trino-main/src/main/java/io/trino/server/Server.java` L117-L121](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/server/Server.java#L117-L121)
 
 ```java
-Bootstrap app = new Bootstrap("io.trino.bootstrap.engine", modules.build())
-        .loadSecretsPlugins();
+        Bootstrap app = new Bootstrap("io.trino.bootstrap.engine", modules.build())
+                .loadSecretsPlugins();
 
-try {
-    Injector injector = app.initialize();
+        try {
+            Injector injector = app.initialize();
 ```
 
 `Injector` の生成後、起動シーケンスは以下の順に各サブシステムを初期化する。
@@ -113,7 +114,7 @@ try {
 7. `Announcer#start()` でクラスタへの自己通知を開始
 8. `StartupStatus#startupComplete()` で起動完了を記録
 
-[`core/trino-main/src/main/java/io/trino/server/Server.java` L131-L161](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/server/Server.java#L131-L161)
+[`core/trino-main/src/main/java/io/trino/server/Server.java` L131-L162](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/server/Server.java#L131-L162)
 
 ```java
 injector.getInstance(PluginInstaller.class).loadPlugins();
@@ -171,17 +172,17 @@ flowchart TD
 [`core/trino-main/src/main/java/io/trino/server/ServerMainModule.java` L199-L209](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/server/ServerMainModule.java#L199-L209)
 
 ```java
-@Override
-protected void setup(Binder binder)
-{
-    ServerConfig serverConfig = buildConfigObject(ServerConfig.class);
+    protected void setup(Binder binder)
+    {
+        ServerConfig serverConfig = buildConfigObject(ServerConfig.class);
 
-    if (serverConfig.isCoordinator()) {
-        install(new CoordinatorModule());
-    }
-    else {
-        install(new WorkerModule());
-    }
+        if (serverConfig.isCoordinator()) {
+            install(new CoordinatorModule());
+        }
+        else {
+            install(new WorkerModule());
+        }
+
 ```
 
 この分岐が Trino のアーキテクチャの核である。
@@ -207,25 +208,25 @@ Task 実行のスケジューラは設定によって切り替わる。
 [`core/trino-main/src/main/java/io/trino/server/ServerMainModule.java` L288-L306](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/server/ServerMainModule.java#L288-L306)
 
 ```java
-TaskManagerConfig taskManagerConfig = buildConfigObject(TaskManagerConfig.class);
-if (taskManagerConfig.isThreadPerDriverSchedulerEnabled()) {
-    newExporter(binder).export(ThreadPerDriverTaskExecutor.class).withGeneratedName();
+        TaskManagerConfig taskManagerConfig = buildConfigObject(TaskManagerConfig.class);
+        if (taskManagerConfig.isThreadPerDriverSchedulerEnabled()) {
+            newExporter(binder).export(ThreadPerDriverTaskExecutor.class).withGeneratedName();
 
-    binder.bind(TaskExecutor.class)
-            .to(ThreadPerDriverTaskExecutor.class)
-            .in(Scopes.SINGLETON);
-    binder.bind(ThreadPerDriverTaskExecutor.class).in(Scopes.SINGLETON);
-}
-else {
-    jaxrsBinder(binder).bind(TaskExecutorResource.class);
-    newExporter(binder).export(TaskExecutorResource.class).withGeneratedName();
-    newExporter(binder).export(TimeSharingTaskExecutor.class).withGeneratedName();
+            binder.bind(TaskExecutor.class)
+                    .to(ThreadPerDriverTaskExecutor.class)
+                    .in(Scopes.SINGLETON);
+            binder.bind(ThreadPerDriverTaskExecutor.class).in(Scopes.SINGLETON);
+        }
+        else {
+            jaxrsBinder(binder).bind(TaskExecutorResource.class);
+            newExporter(binder).export(TaskExecutorResource.class).withGeneratedName();
+            newExporter(binder).export(TimeSharingTaskExecutor.class).withGeneratedName();
 
-    binder.bind(TaskExecutor.class)
-            .to(TimeSharingTaskExecutor.class)
-            .in(Scopes.SINGLETON);
-    binder.bind(TimeSharingTaskExecutor.class).in(Scopes.SINGLETON);
-}
+            binder.bind(TaskExecutor.class)
+                    .to(TimeSharingTaskExecutor.class)
+                    .in(Scopes.SINGLETON);
+            binder.bind(TimeSharingTaskExecutor.class).in(Scopes.SINGLETON);
+        }
 ```
 
 `ServerMainModule` はまた、起動時の並列化をサポートする。
@@ -234,16 +235,14 @@ else {
 [`core/trino-main/src/main/java/io/trino/server/ServerMainModule.java` L558-L565](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/server/ServerMainModule.java#L558-L565)
 
 ```java
-@Provides
-@Singleton
-@ForStartup
-public static Executor createStartupExecutor(ServerConfig config)
-{
-    if (!config.isConcurrentStartup()) {
-        return directExecutor();
+    @ForStartup
+    public static Executor createStartupExecutor(ServerConfig config)
+    {
+        if (!config.isConcurrentStartup()) {
+            return directExecutor();
+        }
+        return newThreadPerTaskExecutor(virtualThreadsNamed("startup#v%s"));
     }
-    return newThreadPerTaskExecutor(virtualThreadsNamed("startup#v%s"));
-}
 ```
 
 ## CoordinatorModule のバインディング
@@ -263,15 +262,15 @@ Coordinator はクエリの受け付け、解析、最適化、スケジュー�
 [`core/trino-main/src/main/java/io/trino/server/CoordinatorModule.java` L167-L175](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/server/CoordinatorModule.java#L167-L175)
 
 ```java
-@Override
-protected void setup(Binder binder)
-{
-    install(new WebUiModule());
+    protected void setup(Binder binder)
+    {
+        install(new WebUiModule());
 
-    // statement resource
-    jsonCodecBinder(binder).bindJsonCodec(TaskInfo.class);
-    jaxrsBinder(binder).bind(QueuedStatementResource.class);
-    jaxrsBinder(binder).bind(ExecutingStatementResource.class);
+        // statement resource
+        jsonCodecBinder(binder).bindJsonCodec(TaskInfo.class);
+        jaxrsBinder(binder).bind(QueuedStatementResource.class);
+        jaxrsBinder(binder).bind(ExecutingStatementResource.class);
+        binder.bind(StatementHttpExecutionMBean.class).in(Scopes.SINGLETON);
 ```
 
 クエリ実行用のスレッドプールは `ThreadPoolExecutor` で構成され、コアサイズは `QueryManagerConfig#getQueryExecutorPoolSize()` で決まる。
@@ -280,21 +279,18 @@ protected void setup(Binder binder)
 [`core/trino-main/src/main/java/io/trino/server/CoordinatorModule.java` L457-L468](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/server/CoordinatorModule.java#L457-L468)
 
 ```java
-@Provides
-@Singleton
-@QueryExecutorInternal
-public static ExecutorService createQueryExecutor(QueryManagerConfig queryManagerConfig)
-{
-    ThreadPoolExecutor queryExecutor = new ThreadPoolExecutor(
-            queryManagerConfig.getQueryExecutorPoolSize(),
-            queryManagerConfig.getQueryExecutorPoolSize(),
-            60,
-            SECONDS,
-            new LinkedBlockingQueue<>(1000),
-            threadsNamed("query-execution-%s"));
-    queryExecutor.allowCoreThreadTimeOut(true);
-    return queryExecutor;
-}
+    public static ExecutorService createQueryExecutor(QueryManagerConfig queryManagerConfig)
+    {
+        ThreadPoolExecutor queryExecutor = new ThreadPoolExecutor(
+                queryManagerConfig.getQueryExecutorPoolSize(),
+                queryManagerConfig.getQueryExecutorPoolSize(),
+                60,
+                SECONDS,
+                new LinkedBlockingQueue<>(1000),
+                threadsNamed("query-execution-%s"));
+        queryExecutor.allowCoreThreadTimeOut(true);
+        return queryExecutor;
+    }
 ```
 
 ## WorkerModule のバインディング
@@ -305,24 +301,23 @@ Worker はクエリの解析やスケジューリングを行わないため、�
 [`core/trino-main/src/main/java/io/trino/server/WorkerModule.java` L33-L49](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/server/WorkerModule.java#L33-L49)
 
 ```java
-@Override
-protected void setup(Binder binder)
-{
-    // Install no-op session supplier on workers, since only coordinators create sessions.
-    binder.bind(SessionSupplier.class).to(NoOpSessionSupplier.class).in(Scopes.SINGLETON);
+    @Override
+    protected void setup(Binder binder)
+    {
+        // Install no-op session supplier on workers, since only coordinators create sessions.
+        binder.bind(SessionSupplier.class).to(NoOpSessionSupplier.class).in(Scopes.SINGLETON);
 
-    // Install no-op resource group manager on workers, since only coordinators manage resource groups.
-    binder.bind(ResourceGroupManager.class).to(NoOpResourceGroupManager.class).in(Scopes.SINGLETON);
+        // Install no-op resource group manager on workers, since only coordinators manage resource groups.
+        binder.bind(ResourceGroupManager.class).to(NoOpResourceGroupManager.class).in(Scopes.SINGLETON);
 
-    // Install no-op failure detector on workers, since only coordinators need global node selection.
-    binder.bind(FailureDetector.class).to(NoOpFailureDetector.class).in(Scopes.SINGLETON);
+        // Install no-op failure detector on workers, since only coordinators need global node selection.
+        binder.bind(FailureDetector.class).to(NoOpFailureDetector.class).in(Scopes.SINGLETON);
 
-    // language functions
-    binder.bind(WorkerLanguageFunctionProvider.class).in(Scopes.SINGLETON);
-    binder.bind(LanguageFunctionProvider.class).to(WorkerLanguageFunctionProvider.class).in(Scopes.SINGLETON);
+        // language functions
+        binder.bind(WorkerLanguageFunctionProvider.class).in(Scopes.SINGLETON);
+        binder.bind(LanguageFunctionProvider.class).to(WorkerLanguageFunctionProvider.class).in(Scopes.SINGLETON);
 
-    binder.bind(WebUiAuthenticationFilter.class).to(NoWebUiAuthenticationFilter.class).in(Scopes.SINGLETON);
-}
+        binder.bind(WebUiAuthenticationFilter.class).to(NoWebUiAuthenticationFilter.class).in(Scopes.SINGLETON);
 ```
 
 コードコメントが明示しているとおり、`SessionSupplier`、`ResourceGroupManager`、`FailureDetector` はすべて No-Op 実装に差し替えられる。
@@ -367,7 +362,7 @@ flowchart LR
 `ServerConfig` は Coordinator/Worker の分岐を含むサーバー全体の設定を保持する。
 Airlift の `@Config` アノテーションにより、プロパティファイルの値が自動的にフィールドにマッピングされる。
 
-[`core/trino-main/src/main/java/io/trino/server/ServerConfig.java` L26-L33](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/server/ServerConfig.java#L26-L33)
+[`core/trino-main/src/main/java/io/trino/server/ServerConfig.java` L26-L33](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/server/ServerConfig.java#L25-L32)
 
 ```java
 public class ServerConfig
@@ -401,30 +396,28 @@ public class ServerConfig
 [`core/trino-main/src/main/java/io/trino/node/NodeManagerModule.java` L38-L59](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/node/NodeManagerModule.java#L38-L59)
 
 ```java
-@Override
-protected void setup(Binder binder)
-{
-    ServerConfig serverConfig = buildConfigObject(ServerConfig.class);
-    if (serverConfig.isCoordinator()) {
-        binder.bind(CoordinatorNodeManager.class).in(Scopes.SINGLETON);
-        binder.bind(InternalNodeManager.class).to(CoordinatorNodeManager.class).in(Scopes.SINGLETON);
-        newExporter(binder).export(CoordinatorNodeManager.class).withGeneratedName();
-        install(internalHttpClientModule("node-manager", ForNodeManager.class)
-                .withConfigDefaults(config -> {
-                    config.setIdleTimeout(new Duration(30, SECONDS));
-                    config.setRequestTimeout(new Duration(10, SECONDS));
-                }).build());
-    }
-    else {
-        binder.bind(InternalNodeManager.class).to(WorkerInternalNodeManager.class).in(Scopes.SINGLETON);
-    }
+    {
+        ServerConfig serverConfig = buildConfigObject(ServerConfig.class);
+        if (serverConfig.isCoordinator()) {
+            binder.bind(CoordinatorNodeManager.class).in(Scopes.SINGLETON);
+            binder.bind(InternalNodeManager.class).to(CoordinatorNodeManager.class).in(Scopes.SINGLETON);
+            newExporter(binder).export(CoordinatorNodeManager.class).withGeneratedName();
+            install(internalHttpClientModule("node-manager", ForNodeManager.class)
+                    .withConfigDefaults(config -> {
+                        config.setIdleTimeout(new Duration(30, SECONDS));
+                        config.setRequestTimeout(new Duration(10, SECONDS));
+                    }).build());
+        }
+        else {
+            binder.bind(InternalNodeManager.class).to(WorkerInternalNodeManager.class).in(Scopes.SINGLETON);
+        }
 
-    switch (buildConfigObject(NodeInventoryConfig.class).getType()) {
-        case AIRLIFT_DISCOVERY -> install(new AirliftNodeInventoryModule(nodeVersion));
-        case ANNOUNCE -> install(new AnnounceNodeInventoryModule());
-        case DNS -> install(new DnsNodeInventoryModule());
+        switch (buildConfigObject(NodeInventoryConfig.class).getType()) {
+            case AIRLIFT_DISCOVERY -> install(new AirliftNodeInventoryModule(nodeVersion));
+            case ANNOUNCE -> install(new AnnounceNodeInventoryModule());
+            case DNS -> install(new DnsNodeInventoryModule());
+        }
     }
-}
 ```
 
 ノードの発見方式（`NodeInventory` の実装）は `discovery.type` プロパティで3種類から選択できる。
@@ -440,19 +433,18 @@ Coordinator 側でノード管理を担う `CoordinatorNodeManager` は、5 秒�
 [`core/trino-main/src/main/java/io/trino/node/CoordinatorNodeManager.java` L121-L132](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/node/CoordinatorNodeManager.java#L121-L132)
 
 ```java
-@PostConstruct
-public void startPollingNodeStates()
-{
-    nodeStateUpdateExecutor.scheduleWithFixedDelay(() -> {
-        try {
-            refreshNodes(false);
-        }
-        catch (Exception e) {
-            log.error(e, "Error polling state of nodes");
-        }
-    }, 5, 5, TimeUnit.SECONDS);
-    refreshNodes(false);
-}
+    public void startPollingNodeStates()
+    {
+        nodeStateUpdateExecutor.scheduleWithFixedDelay(() -> {
+            try {
+                refreshNodes(false);
+            }
+            catch (Exception e) {
+                log.error(e, "Error polling state of nodes");
+            }
+        }, 5, 5, TimeUnit.SECONDS);
+        refreshNodes(false);
+    }
 ```
 
 `refreshNodes` メソッドは、`NodeInventory` から取得したノード URI の一覧と、各ノードへの HTTP リクエスト結果を突き合わせて状態を分類する。
@@ -462,27 +454,29 @@ public void startPollingNodeStates()
 [`core/trino-main/src/main/java/io/trino/node/RemoteNodeState.java` L139-L161](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/node/RemoteNodeState.java#L139-L161)
 
 ```java
-ServerInfo serverInfo = result.getValue();
+                            ServerInfo serverInfo = result.getValue();
 
-// Set state to INVALID if the node is not in the expected environment or version
-// This prevents the node from being visible outside the node manager
-if (!serverInfo.environment().equals(expectedNodeEnvironment)) {
-    logWarning("Node environment mismatch: expected %s, got %s", expectedNodeEnvironment, serverInfo.environment());
-    nodeState = INVALID;
-}
-else if (!serverInfo.nodeVersion().equals(expectedNodeVersion)) {
-    logWarning("Node version mismatch: expected %s, got %s", expectedNodeVersion, serverInfo.nodeVersion());
-    nodeState = INVALID;
-}
-else {
-    nodeState = serverInfo.state();
-}
+                            // Set state to INVALID if the node is not in the expected environment or version
+                            // This prevents the node from being visible outside the node manager
+                            if (!serverInfo.environment().equals(expectedNodeEnvironment)) {
+                                logWarning("Node environment mismatch: expected %s, got %s", expectedNodeEnvironment, serverInfo.environment());
+                                nodeState = INVALID;
+                            }
+                            else if (!serverInfo.nodeVersion().equals(expectedNodeVersion)) {
+                                logWarning("Node version mismatch: expected %s, got %s", expectedNodeVersion, serverInfo.nodeVersion());
+                                nodeState = INVALID;
+                            }
+                            else {
+                                nodeState = serverInfo.state();
+                            }
 
-internalNode.set(new InternalNode(
-        serverInfo.nodeId(),
-        serverUri,
-        serverInfo.nodeVersion(),
-        serverInfo.coordinator()));
+                            internalNode.set(new InternalNode(
+                                    serverInfo.nodeId(),
+                                    serverUri,
+                                    serverInfo.nodeVersion(),
+                                    serverInfo.coordinator()));
+                        }
+
 ```
 
 ノードの状態は `NodeState` 列挙型で7種類に分類される。
@@ -490,14 +484,38 @@ internalNode.set(new InternalNode(
 [`core/trino-main/src/main/java/io/trino/node/NodeState.java` L17-L50](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/node/NodeState.java#L17-L50)
 
 ```java
-public enum NodeState
 {
+    /**
+     * The node is up and ready to handle tasks.
+     */
     ACTIVE,
+    /**
+     * The node is currently not handling tasks, but it is still part of the cluster.
+     * This is an internal state used by node manager when communication errors occur.
+     */
     INACTIVE,
+    /**
+     * A reversible graceful shutdown can go to forward to DRAINED or back to ACTIVE.
+     */
     DRAINING,
+    /**
+     * All tasks are finished, server can be safely and quickly stopped. Can also go back to ACTIVE.
+     */
     DRAINED,
+    /**
+     * Graceful shutdown, non-reversible, when observed will drain and terminate
+     */
     SHUTTING_DOWN,
+    /**
+     * The node is not valid for this cluster. Nodes in this state are not visible to the node manager.
+     * This is an internal state used by node manager when the environment or version of the node is
+     * not valid for the cluster.
+     */
     INVALID,
+    /**
+     * Connections to the node have been refused. Nodes in this state are not visible to the node manager.
+     * This is an internal state used to by execution engine to produce better error messages.
+     */
     GONE,
 }
 ```
@@ -516,16 +534,16 @@ public enum NodeState
 [`core/trino-main/src/main/java/io/trino/node/CoordinatorNodeManager.java` L238-L247](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/node/CoordinatorNodeManager.java#L238-L247)
 
 ```java
-AllNodes allNodes = new AllNodes(activeNodes, inactiveNodes, drainingNodes, drainedNodes, shuttingDownNodes, coordinators);
-// only update if all nodes actually changed (note: this does not include the connectors registered with the nodes)
-if (!allNodes.equals(this.allNodes)) {
-    // assign allNodes to a local variable for use in the callback below
-    this.allNodes = allNodes;
+        AllNodes allNodes = new AllNodes(activeNodes, inactiveNodes, drainingNodes, drainedNodes, shuttingDownNodes, coordinators);
+        // only update if all nodes actually changed (note: this does not include the connectors registered with the nodes)
+        if (!allNodes.equals(this.allNodes)) {
+            // assign allNodes to a local variable for use in the callback below
+            this.allNodes = allNodes;
 
-    // notify listeners
-    List<Consumer<AllNodes>> listeners = ImmutableList.copyOf(this.listeners);
-    nodeStateEventExecutor.submit(() -> listeners.forEach(listener -> listener.accept(allNodes)));
-}
+            // notify listeners
+            List<Consumer<AllNodes>> listeners = ImmutableList.copyOf(this.listeners);
+            nodeStateEventExecutor.submit(() -> listeners.forEach(listener -> listener.accept(allNodes)));
+        }
 ```
 
 ## HeartbeatFailureDetector によるハートビート
@@ -538,21 +556,20 @@ if (!allNodes.equals(this.allNodes)) {
 [`core/trino-main/src/main/java/io/trino/failuredetector/HeartbeatFailureDetector.java` L129-L142](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/failuredetector/HeartbeatFailureDetector.java#L129-L142)
 
 ```java
-@PostConstruct
-public void start()
-{
-    if (isEnabled && started.compareAndSet(false, true)) {
-        executor.scheduleWithFixedDelay(() -> {
-            try {
-                updateMonitoredServices();
-            }
-            catch (Throwable e) {
-                // ignore to avoid getting unscheduled
-                log.warn(e, "Error updating services");
-            }
-        }, 0, 5, TimeUnit.SECONDS);
+    public void start()
+    {
+        if (isEnabled && started.compareAndSet(false, true)) {
+            executor.scheduleWithFixedDelay(() -> {
+                try {
+                    updateMonitoredServices();
+                }
+                catch (Throwable e) {
+                    // ignore to avoid getting unscheduled
+                    log.warn(e, "Error updating services");
+                }
+            }, 0, 5, TimeUnit.SECONDS);
+        }
     }
-}
 ```
 
 ### ハートビートの仕組み
@@ -560,7 +577,7 @@ public void start()
 各 `MonitoringTask` は、設定された間隔（デフォルト 500ms）で対象ノードの `/v1/status` エンドポイントに HTTP HEAD リクエストを送信する。
 レスポンスの成否は `DecayCounter`（指数減衰カウンター）で記録され、直近1分間の失敗率が `failureRatioThreshold`（デフォルト 0.1）を超えると、そのノードは failed と判定される。
 
-[`core/trino-main/src/main/java/io/trino/failuredetector/HeartbeatFailureDetector.java` L345-L368](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/failuredetector/HeartbeatFailureDetector.java#L345-L368)
+[`core/trino-main/src/main/java/io/trino/failuredetector/HeartbeatFailureDetector.java` L345-L373](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/failuredetector/HeartbeatFailureDetector.java#L345-L373)
 
 ```java
 private void ping()
@@ -598,30 +615,27 @@ private void ping()
 [`core/trino-main/src/main/java/io/trino/failuredetector/HeartbeatFailureDetector.java` L168-L188](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/failuredetector/HeartbeatFailureDetector.java#L168-L188)
 
 ```java
-@Override
-public State getState(HostAddress hostAddress)
-{
-    for (MonitoringTask task : tasks.values()) {
-        if (hostAddress.equals(fromUri(task.uri))) {
-            if (!task.isFailed()) {
-                return ALIVE;
-            }
+    {
+        for (MonitoringTask task : tasks.values()) {
+            if (hostAddress.equals(fromUri(task.uri))) {
+                if (!task.isFailed()) {
+                    return ALIVE;
+                }
 
-            Exception lastFailureException = task.getStats().getLastFailureException();
-            if (lastFailureException instanceof ConnectException) {
-                return GONE;
-            }
-            if (lastFailureException instanceof SocketTimeoutException) {
-                // TODO: distinguish between process unresponsiveness (e.g. GC pause) and host reboot
-                return UNRESPONSIVE;
-            }
+                Exception lastFailureException = task.getStats().getLastFailureException();
+                if (lastFailureException instanceof ConnectException) {
+                    return GONE;
+                }
+                if (lastFailureException instanceof SocketTimeoutException) {
+                    // TODO: distinguish between process unresponsiveness (e.g. GC pause) and host reboot
+                    return UNRESPONSIVE;
+                }
 
-            return UNKNOWN;
+                return UNKNOWN;
+            }
         }
-    }
 
-    return UNKNOWN;
-}
+        return UNKNOWN;
 ```
 
 ### ウォームアップとサービスの GC
@@ -632,12 +646,12 @@ public State getState(HostAddress hostAddress)
 [`core/trino-main/src/main/java/io/trino/failuredetector/HeartbeatFailureDetector.java` L338-L343](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/failuredetector/HeartbeatFailureDetector.java#L338-L343)
 
 ```java
-public synchronized boolean isFailed()
-{
-    return future == null || // are we disabled?
-            successTransitionTimestamp == null || // are we in success state?
-            Duration.nanosSince(successTransitionTimestamp).compareTo(warmupInterval) < 0; // are we within the warmup period?
-}
+        public synchronized boolean isFailed()
+        {
+            return future == null || // are we disabled?
+                    successTransitionTimestamp == null || // are we in success state?
+                    Duration.nanosSince(successTransitionTimestamp).compareTo(warmupInterval) < 0; // are we within the warmup period?
+        }
 ```
 
 ディスカバリサービスから消えたノードのタスクは `disable()` で停止され、`gcGraceInterval`（デフォルト 10 分）が経過すると `tasks` マップから除去される。
@@ -674,22 +688,22 @@ flowchart TD
 [`core/trino-main/src/main/java/io/trino/server/ServerInfoResource.java` L74-L89](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/server/ServerInfoResource.java#L74-L89)
 
 ```java
-@ResourceSecurity(PUBLIC)
-@GET
-@Produces(APPLICATION_JSON)
-public ServerInfo getInfo()
-{
-    boolean starting = !startupStatus.isStartupComplete();
-    return new ServerInfo(
-            nodeId,
-            nodeStateManager.getServerState(),
-            version,
-            environment,
-            coordinator,
-            queryIdGenerator.map(QueryIdGenerator::getCoordinatorId),
-            starting,
-            nanosSince(startTime));
-}
+    @ResourceSecurity(PUBLIC)
+    @GET
+    @Produces(APPLICATION_JSON)
+    public ServerInfo getInfo()
+    {
+        boolean starting = !startupStatus.isStartupComplete();
+        return new ServerInfo(
+                nodeId,
+                nodeStateManager.getServerState(),
+                version,
+                environment,
+                coordinator,
+                queryIdGenerator.map(QueryIdGenerator::getCoordinatorId),
+                starting,
+                nanosSince(startTime));
+    }
 ```
 
 レスポンスには Node ID、現在の状態、バージョン、環境名、Coordinator かどうか、起動中かどうか、起動からの経過時間が含まれる。
@@ -700,18 +714,17 @@ public ServerInfo getInfo()
 [`core/trino-main/src/main/java/io/trino/server/ServerInfoResource.java` L119-L129](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/server/ServerInfoResource.java#L119-L129)
 
 ```java
-@ResourceSecurity(PUBLIC)
-@GET
-@Path("coordinator")
-@Produces(TEXT_PLAIN)
-public Response getServerCoordinator()
-{
-    if (coordinator) {
-        return Response.ok().build();
+    @GET
+    @Path("coordinator")
+    @Produces(TEXT_PLAIN)
+    public Response getServerCoordinator()
+    {
+        if (coordinator) {
+            return Response.ok().build();
+        }
+        // return 404 to allow load balancers to only send traffic to the coordinator
+        throw new NotFoundException();
     }
-    // return 404 to allow load balancers to only send traffic to the coordinator
-    throw new NotFoundException();
-}
 ```
 
 ## 高速化の工夫：単一バイナリアーキテクチャと指数減衰カウンター
@@ -733,9 +746,9 @@ Trino は Coordinator と Worker を同一バイナリから起動する設計�
 [`core/trino-main/src/main/java/io/trino/failuredetector/HeartbeatFailureDetector.java` L392-L394](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/failuredetector/HeartbeatFailureDetector.java#L392-L394)
 
 ```java
-private final DecayCounter recentRequests = new DecayCounter(ExponentialDecay.oneMinute());
-private final DecayCounter recentFailures = new DecayCounter(ExponentialDecay.oneMinute());
-private final DecayCounter recentSuccesses = new DecayCounter(ExponentialDecay.oneMinute());
+        private final DecayCounter recentRequests = new DecayCounter(ExponentialDecay.oneMinute());
+        private final DecayCounter recentFailures = new DecayCounter(ExponentialDecay.oneMinute());
+        private final DecayCounter recentSuccesses = new DecayCounter(ExponentialDecay.oneMinute());
 ```
 
 失敗率の算出は `recentFailures.getCount() / recentRequests.getCount()` という単純な除算であり、この値が `failureRatioThreshold`（デフォルト 0.1）を超えたかどうかで障害判定が行われる。

@@ -154,36 +154,36 @@ public Page getOutput()
 [`core/trino-main/src/main/java/io/trino/operator/StreamingAggregationOperator.java` L272-L301](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/operator/StreamingAggregationOperator.java#L272-L301)
 
 ```java
-private void processInput(Page page)
-{
-    requireNonNull(page, "page is null");
+        private void processInput(Page page)
+        {
+            requireNonNull(page, "page is null");
 
-    Page groupByPage = page.getColumns(groupByChannels);
-    if (currentGroup != null) {
-        if (!pagesHashStrategy.rowIdenticalToRow(0, currentGroup.getColumns(groupByChannels), 0, groupByPage)) {
-            // page starts with new group, so flush it
-            evaluateAndFlushGroup(currentGroup, 0);
-        }
-        currentGroup = null;
-    }
+            Page groupByPage = page.getColumns(groupByChannels);
+            if (currentGroup != null) {
+                if (!pagesHashStrategy.rowIdenticalToRow(0, currentGroup.getColumns(groupByChannels), 0, groupByPage)) {
+                    // page starts with new group, so flush it
+                    evaluateAndFlushGroup(currentGroup, 0);
+                }
+                currentGroup = null;
+            }
 
-    int startPosition = 0;
-    while (true) {
-        // may be equal to page.getPositionCount() if the end is not found in this page
-        int nextGroupStart = findNextGroupStart(startPosition, groupByPage);
-        addRowsToAggregates(page, startPosition, nextGroupStart - 1);
+            int startPosition = 0;
+            while (true) {
+                // may be equal to page.getPositionCount() if the end is not found in this page
+                int nextGroupStart = findNextGroupStart(startPosition, groupByPage);
+                addRowsToAggregates(page, startPosition, nextGroupStart - 1);
 
-        if (nextGroupStart < page.getPositionCount()) {
-            // current group stops somewhere in the middle of the page, so flush it
-            evaluateAndFlushGroup(page, startPosition);
-            startPosition = nextGroupStart;
+                if (nextGroupStart < page.getPositionCount()) {
+                    // current group stops somewhere in the middle of the page, so flush it
+                    evaluateAndFlushGroup(page, startPosition);
+                    startPosition = nextGroupStart;
+                }
+                else {
+                    currentGroup = page.getRegion(page.getPositionCount() - 1, 1);
+                    return;
+                }
+            }
         }
-        else {
-            currentGroup = page.getRegion(page.getPositionCount() - 1, 1);
-            return;
-        }
-    }
-}
 ```
 
 `findNextGroupStart` は Page 内を線形スキャンし、`pagesHashStrategy.rowIdenticalToRow` でグループキーが変化した位置を返す。
@@ -197,27 +197,27 @@ private void processInput(Page page)
 [`core/trino-main/src/main/java/io/trino/operator/StreamingAggregationOperator.java` L311-L331](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/operator/StreamingAggregationOperator.java#L311-L331)
 
 ```java
-private void evaluateAndFlushGroup(Page page, int position)
-{
-    pageBuilder.declarePosition();
-    for (int i = 0; i < groupByTypes.size(); i++) {
-        Block block = page.getBlock(groupByChannels[i]);
-        pageBuilder.getBlockBuilder(i).append(block.getUnderlyingValueBlock(), block.getUnderlyingValuePosition(position));
-    }
-    int offset = groupByTypes.size();
-    for (int i = 0; i < aggregates.size(); i++) {
-        aggregates.get(i).evaluate(pageBuilder.getBlockBuilder(offset + i));
-    }
+        private void evaluateAndFlushGroup(Page page, int position)
+        {
+            pageBuilder.declarePosition();
+            for (int i = 0; i < groupByTypes.size(); i++) {
+                Block block = page.getBlock(groupByChannels[i]);
+                pageBuilder.getBlockBuilder(i).append(block.getUnderlyingValueBlock(), block.getUnderlyingValuePosition(position));
+            }
+            int offset = groupByTypes.size();
+            for (int i = 0; i < aggregates.size(); i++) {
+                aggregates.get(i).evaluate(pageBuilder.getBlockBuilder(offset + i));
+            }
 
-    if (pageBuilder.isFull()) {
-        outputPages.add(pageBuilder.build());
-        pageBuilder.reset();
-    }
+            if (pageBuilder.isFull()) {
+                outputPages.add(pageBuilder.build());
+                pageBuilder.reset();
+            }
 
-    aggregates = aggregatorFactories.stream()
-            .map(factory -> factory.createAggregator(aggregationMetrics))
-            .collect(toImmutableList());
-}
+            aggregates = aggregatorFactories.stream()
+                    .map(factory -> factory.createAggregator(aggregationMetrics))
+                    .collect(toImmutableList());
+        }
 ```
 
 グループが切り替わると、現在の `Aggregator` の結果を `PageBuilder` へ書き出す。
@@ -286,29 +286,29 @@ public interface GroupedAccumulator
 [`core/trino-main/src/main/java/io/trino/operator/aggregation/Aggregator.java` L71-L93](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/operator/aggregation/Aggregator.java#L71-L93)
 
 ```java
-public void processPage(Page page)
-{
-    if (step.isInputRaw()) {
-        Page arguments = page.getColumns(inputChannels);
-        Optional<Block> maskBlock = Optional.empty();
-        if (maskChannel.isPresent()) {
-            maskBlock = Optional.of(page.getBlock(maskChannel.getAsInt()));
-        }
-        AggregationMask mask = maskBuilder.buildAggregationMask(arguments, maskBlock);
+    public void processPage(Page page)
+    {
+        if (step.isInputRaw()) {
+            Page arguments = page.getColumns(inputChannels);
+            Optional<Block> maskBlock = Optional.empty();
+            if (maskChannel.isPresent()) {
+                maskBlock = Optional.of(page.getBlock(maskChannel.getAsInt()));
+            }
+            AggregationMask mask = maskBuilder.buildAggregationMask(arguments, maskBlock);
 
-        if (mask.isSelectNone()) {
-            return;
+            if (mask.isSelectNone()) {
+                return;
+            }
+            long start = System.nanoTime();
+            accumulator.addInput(arguments, mask);
+            metrics.recordAccumulatorUpdateTimeSince(start);
         }
-        long start = System.nanoTime();
-        accumulator.addInput(arguments, mask);
-        metrics.recordAccumulatorUpdateTimeSince(start);
+        else {
+            long start = System.nanoTime();
+            accumulator.addIntermediate(page.getBlock(inputChannels[0]));
+            metrics.recordAccumulatorUpdateTimeSince(start);
+        }
     }
-    else {
-        long start = System.nanoTime();
-        accumulator.addIntermediate(page.getBlock(inputChannels[0]));
-        metrics.recordAccumulatorUpdateTimeSince(start);
-    }
-}
 ```
 
 `step.isInputRaw()` が true のとき（`PARTIAL` または `SINGLE`）は、入力列の抽出とマスク構築を行ったうえで `addInput` を呼ぶ。
@@ -322,25 +322,25 @@ false のとき（`FINAL` または `INTERMEDIATE`）は、前段の部分集約
 [`core/trino-main/src/main/java/io/trino/operator/GroupByHash.java` L82-L100](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/operator/GroupByHash.java#L82-L100)
 
 ```java
-static GroupByHash createGroupByHash(
-        List<Type> types,
-        boolean cacheHashValue,
-        int expectedSize,
-        boolean dictionaryAggregationEnabled,
-        FlatHashStrategyCompiler hashStrategyCompiler,
-        UpdateMemory updateMemory)
-{
-    if (types.size() == 1 && types.get(0).equals(BIGINT)) {
-        return new BigintGroupByHash(expectedSize, updateMemory);
+    static GroupByHash createGroupByHash(
+            List<Type> types,
+            boolean cacheHashValue,
+            int expectedSize,
+            boolean dictionaryAggregationEnabled,
+            FlatHashStrategyCompiler hashStrategyCompiler,
+            UpdateMemory updateMemory)
+    {
+        if (types.size() == 1 && types.get(0).equals(BIGINT)) {
+            return new BigintGroupByHash(expectedSize, updateMemory);
+        }
+        return new FlatGroupByHash(
+                types,
+                cacheHashValue,
+                expectedSize,
+                dictionaryAggregationEnabled,
+                hashStrategyCompiler,
+                updateMemory);
     }
-    return new FlatGroupByHash(
-            types,
-            cacheHashValue,
-            expectedSize,
-            dictionaryAggregationEnabled,
-            hashStrategyCompiler,
-            updateMemory);
-}
 ```
 
 グループキーが `BIGINT` 1列の場合は専用の `BigintGroupByHash` が使われ、それ以外は **FlatGroupByHash** が使われる。
@@ -353,25 +353,25 @@ static GroupByHash createGroupByHash(
 [`core/trino-main/src/main/java/io/trino/operator/FlatHash.java` L64-L82](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/operator/FlatHash.java#L64-L82)
 
 ```java
-private final FlatHashStrategy flatHashStrategy;
-private final AppendOnlyVariableWidthData variableWidthData;
-private final UpdateMemory checkMemoryReservation;
+    private final FlatHashStrategy flatHashStrategy;
+    private final AppendOnlyVariableWidthData variableWidthData;
+    private final UpdateMemory checkMemoryReservation;
 
-private final boolean cacheHashValue;
-private final int fixedRecordSize;
-private final int variableWidthOffset;
-private final int fixedValueOffset;
+    private final boolean cacheHashValue;
+    private final int fixedRecordSize;
+    private final int variableWidthOffset;
+    private final int fixedValueOffset;
 
-private byte[] control;
-private int[] groupIdsByHash;
-private byte[][] fixedSizeRecords;
+    private byte[] control;
+    private int[] groupIdsByHash;
+    private byte[][] fixedSizeRecords;
 
-private long fixedRecordGroupsRetainedSize;
-private long temporaryRehashRetainedSize;
-private int capacity;
-private int mask;
-private int nextGroupId;
-private int maxFill;
+    private long fixedRecordGroupsRetainedSize;
+    private long temporaryRehashRetainedSize;
+    private int capacity;
+    private int mask;
+    private int nextGroupId;
+    private int maxFill;
 ```
 
 3つの並列データ構造でハッシュテーブルを構成する。
@@ -385,13 +385,13 @@ private int maxFill;
 [`core/trino-main/src/main/java/io/trino/operator/FlatHash.java` L92-L98](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/operator/FlatHash.java#L92-L98)
 
 ```java
-// the record is laid out as follows:
-// 1. optional raw hash (long)
-// 2. optional variable width pointer (int chunkIndex, int chunkOffset)
-// 3. fixed data for each type
-this.variableWidthOffset = cacheHashValue ? Long.BYTES : 0;
-this.fixedValueOffset = variableWidthOffset + (hasVariableData ? AppendOnlyVariableWidthData.POINTER_SIZE : 0);
-this.fixedRecordSize = fixedValueOffset + flatHashStrategy.getTotalFlatFixedLength();
+        // the record is laid out as follows:
+        // 1. optional raw hash (long)
+        // 2. optional variable width pointer (int chunkIndex, int chunkOffset)
+        // 3. fixed data for each type
+        this.variableWidthOffset = cacheHashValue ? Long.BYTES : 0;
+        this.fixedValueOffset = variableWidthOffset + (hasVariableData ? AppendOnlyVariableWidthData.POINTER_SIZE : 0);
+        this.fixedRecordSize = fixedValueOffset + flatHashStrategy.getTotalFlatFixedLength();
 ```
 
 オプションのハッシュキャッシュ（8バイト）、オプションの可変長ポインタ（8バイト）、固定長列データが連結されて1レコードになる。
@@ -404,32 +404,32 @@ this.fixedRecordSize = fixedValueOffset + flatHashStrategy.getTotalFlatFixedLeng
 [`core/trino-main/src/main/java/io/trino/operator/FlatHash.java` L276-L301](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/operator/FlatHash.java#L276-L301)
 
 ```java
-private int getIndex(Block[] blocks, int position, long hash)
-{
-    checkState(!isReleasingOutput(), "already releasing output");
-    byte hashPrefix = (byte) (hash & 0x7F | 0x80);
-    int bucket = bucket((int) (hash >> 7));
+    private int getIndex(Block[] blocks, int position, long hash)
+    {
+        checkState(!isReleasingOutput(), "already releasing output");
+        byte hashPrefix = (byte) (hash & 0x7F | 0x80);
+        int bucket = bucket((int) (hash >> 7));
 
-    int step = 1;
-    long repeated = repeat(hashPrefix);
+        int step = 1;
+        long repeated = repeat(hashPrefix);
 
-    while (true) {
-        final long controlVector = (long) LONG_HANDLE.get(control, bucket);
+        while (true) {
+            final long controlVector = (long) LONG_HANDLE.get(control, bucket);
 
-        int matchIndex = matchInVector(blocks, position, hash, bucket, repeated, controlVector);
-        if (matchIndex >= 0) {
-            return matchIndex;
+            int matchIndex = matchInVector(blocks, position, hash, bucket, repeated, controlVector);
+            if (matchIndex >= 0) {
+                return matchIndex;
+            }
+
+            int emptyIndex = findEmptyInVector(controlVector, bucket);
+            if (emptyIndex >= 0) {
+                return -emptyIndex - 1;
+            }
+
+            bucket = bucket(bucket + step);
+            step += VECTOR_LENGTH;
         }
-
-        int emptyIndex = findEmptyInVector(controlVector, bucket);
-        if (emptyIndex >= 0) {
-            return -emptyIndex - 1;
-        }
-
-        bucket = bucket(bucket + step);
-        step += VECTOR_LENGTH;
     }
-}
 ```
 
 ハッシュ値の下位7ビットにフラグビット `0x80` を立てたものがコントロールバイトとなり、上位ビットがバケット位置を決める。
@@ -438,17 +438,17 @@ private int getIndex(Block[] blocks, int position, long hash)
 [`core/trino-main/src/main/java/io/trino/operator/FlatHash.java` L503-L513](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/operator/FlatHash.java#L503-L513)
 
 ```java
-private static long repeat(byte value)
-{
-    return ((value & 0xFF) * 0x01_01_01_01_01_01_01_01L);
-}
+    private static long repeat(byte value)
+    {
+        return ((value & 0xFF) * 0x01_01_01_01_01_01_01_01L);
+    }
 
-private static long match(long vector, long repeatedValue)
-{
-    // HD 6-1
-    long comparison = vector ^ repeatedValue;
-    return (comparison - 0x01_01_01_01_01_01_01_01L) & ~comparison & 0x80_80_80_80_80_80_80_80L;
-}
+    private static long match(long vector, long repeatedValue)
+    {
+        // HD 6-1
+        long comparison = vector ^ repeatedValue;
+        return (comparison - 0x01_01_01_01_01_01_01_01L) & ~comparison & 0x80_80_80_80_80_80_80_80L;
+    }
 ```
 
 `repeat` は1バイトの値を8バイト全体に複製する。
@@ -550,7 +550,7 @@ private void rehash(int minimumRequiredCapacity)
 
 `FlatGroupByHash` は `FlatHash` を包み、入力 Block の種類に応じた4つの Work 実装を使い分ける。
 
-[`core/trino-main/src/main/java/io/trino/operator/FlatGroupByHash.java` L338-L374](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/operator/FlatGroupByHash.java#L338-L374)
+[`core/trino-main/src/main/java/io/trino/operator/FlatGroupByHash.java` L338-L381](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/operator/FlatGroupByHash.java#L338-L381)
 
 ```java
 class AddNonDictionaryPageWork
@@ -579,6 +579,7 @@ class AddNonDictionaryPageWork
         }
         // ... (中略) ...
     }
+    // ... (中略) ...
 }
 ```
 
@@ -641,44 +642,43 @@ Window 関数（`ROW_NUMBER()`、`RANK()`、`SUM() OVER (...)`）は **WindowOpe
 
 ### 4段階のパイプライン
 
-[`core/trino-main/src/main/java/io/trino/operator/WindowOperator.java` L525-L586](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/operator/WindowOperator.java#L525-L586)
+[`core/trino-main/src/main/java/io/trino/operator/WindowOperator.java` L525-L581](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/operator/WindowOperator.java#L525-L580)
 
 ```java
-private class PagesToPagesIndexes
-        implements Transformation<Page, PagesIndexWithHashStrategies>
-{
-    // ... (中略) ...
-    @Override
-    public TransformationState<PagesIndexWithHashStrategies> process(Page pendingInput)
+    private class PagesToPagesIndexes
+            implements Transformation<Page, PagesIndexWithHashStrategies>
     {
-        if (resetPagesIndex) {
-            pagesIndexWithHashStrategies.pagesIndex.clear();
-            updateMemoryUsage();
-            resetPagesIndex = false;
-        }
+    // ... (中略) ...
+        @Override
+        public TransformationState<PagesIndexWithHashStrategies> process(Page pendingInput)
+        {
+            if (resetPagesIndex) {
+                pagesIndexWithHashStrategies.pagesIndex.clear();
+                updateMemoryUsage();
+                resetPagesIndex = false;
+            }
 
-        boolean finishing = pendingInput == null;
-        if (finishing && pagesIndexWithHashStrategies.pagesIndex.getPositionCount() == 0) {
-            memoryContext.close();
-            return TransformationState.finished();
-        }
+            boolean finishing = pendingInput == null;
+            if (finishing && pagesIndexWithHashStrategies.pagesIndex.getPositionCount() == 0) {
+                memoryContext.close();
+                return TransformationState.finished();
+            }
 
-        if (!finishing) {
-            pendingInputPosition = updatePagesIndex(pagesIndexWithHashStrategies, pendingInput, pendingInputPosition, Optional.empty());
-            updateMemoryUsage();
-        }
+            if (!finishing) {
+                pendingInputPosition = updatePagesIndex(pagesIndexWithHashStrategies, pendingInput, pendingInputPosition, Optional.empty());
+                updateMemoryUsage();
+            }
 
-        // If we have unused input or are finishing, then we have buffered a full group
-        if (finishing || pendingInputPosition < pendingInput.getPositionCount()) {
-            sortPagesIndexIfNecessary(pagesIndexWithHashStrategies.pagesIndex, pagesIndexWithHashStrategies.preSortedPartitionHashStrategy, pagesIndexOrdering);
-            resetPagesIndex = true;
-            return TransformationState.ofResult(pagesIndexWithHashStrategies, false);
-        }
+            // If we have unused input or are finishing, then we have buffered a full group
+            if (finishing || pendingInputPosition < pendingInput.getPositionCount()) {
+                sortPagesIndexIfNecessary(pagesIndexWithHashStrategies.pagesIndex, pagesIndexWithHashStrategies.preSortedPartitionHashStrategy, pagesIndexOrdering);
+                resetPagesIndex = true;
+                return TransformationState.ofResult(pagesIndexWithHashStrategies, false);
+            }
 
-        pendingInputPosition = 0;
-        return TransformationState.needsMoreData();
-    }
-}
+            pendingInputPosition = 0;
+            return TransformationState.needsMoreData();
+        }
 ```
 
 4つの段階を順に説明する。
@@ -740,38 +740,37 @@ private WorkProcessor<WindowPartition> pagesIndexToWindowPartitions(PagesIndexWi
 [`core/trino-main/src/main/java/io/trino/operator/window/RegularWindowPartition.java` L147-L177](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/operator/window/RegularWindowPartition.java#L147-L177)
 
 ```java
-@Override
-public void processNextRow(PageBuilder pageBuilder)
-{
-    checkState(hasNext(), "No more rows in partition");
+    public void processNextRow(PageBuilder pageBuilder)
+    {
+        checkState(hasNext(), "No more rows in partition");
 
-    // copy output channels
-    pageBuilder.declarePosition();
-    int channel = 0;
-    while (channel < outputChannels.length) {
-        pagesIndex.appendTo(outputChannels[channel], currentPosition, pageBuilder.getBlockBuilder(channel));
-        channel++;
+        // copy output channels
+        pageBuilder.declarePosition();
+        int channel = 0;
+        while (channel < outputChannels.length) {
+            pagesIndex.appendTo(outputChannels[channel], currentPosition, pageBuilder.getBlockBuilder(channel));
+            channel++;
+        }
+
+        // check for new peer group
+        if (currentPosition == peerGroupEnd) {
+            updatePeerGroup();
+        }
+
+        for (int i = 0; i < windowFunctions.size(); i++) {
+            WindowFunction windowFunction = windowFunctions.get(i);
+            Framing.Range range = framings.get(i).getRange(currentPosition, currentGroupIndex, peerGroupStart, peerGroupEnd);
+            windowFunction.processRow(
+                    pageBuilder.getBlockBuilder(channel),
+                    peerGroupStart - partitionStart,
+                    peerGroupEnd - partitionStart - 1,
+                    range.getStart(),
+                    range.getEnd());
+            channel++;
+        }
+
+        currentPosition++;
     }
-
-    // check for new peer group
-    if (currentPosition == peerGroupEnd) {
-        updatePeerGroup();
-    }
-
-    for (int i = 0; i < windowFunctions.size(); i++) {
-        WindowFunction windowFunction = windowFunctions.get(i);
-        Framing.Range range = framings.get(i).getRange(currentPosition, currentGroupIndex, peerGroupStart, peerGroupEnd);
-        windowFunction.processRow(
-                pageBuilder.getBlockBuilder(channel),
-                peerGroupStart - partitionStart,
-                peerGroupEnd - partitionStart - 1,
-                range.getStart(),
-                range.getEnd());
-        channel++;
-    }
-
-    currentPosition++;
-}
 ```
 
 1行ごとの処理は次の3ステップからなる。
@@ -821,14 +820,14 @@ Window 関数のフレーム（`ROWS BETWEEN ...` や `RANGE BETWEEN ...`）は 
 [`core/trino-main/src/main/java/io/trino/operator/window/RangeFraming.java` L42-L49](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/operator/window/RangeFraming.java#L42-L49)
 
 ```java
-// Recently computed frame bounds.
-// When computing frame start and frame end for a row, frame bounds for the previous row
-// are used as the starting point. Then they are moved backward or forward based on the sort order
-// until the matching position for a current row is found.
-// This approach is efficient in case when frame offset values are constant. It was chosen
-// based on the assumption that in most use cases frame offset is constant rather than
-// row-dependent.
-private Range recentRange;
+    // Recently computed frame bounds.
+    // When computing frame start and frame end for a row, frame bounds for the previous row
+    // are used as the starting point. Then they are moved backward or forward based on the sort order
+    // until the matching position for a current row is found.
+    // This approach is efficient in case when frame offset values are constant. It was chosen
+    // based on the assumption that in most use cases frame offset is constant rather than
+    // row-dependent.
+    private Range recentRange;
 ```
 
 この `recentRange` フィールドにより、フレームオフセットが定数の場合（`RANGE BETWEEN 10 PRECEDING AND CURRENT ROW` など）、フレーム境界の移動量は通常1行ずつとなり、パーティション全体での計算量が O(n) で済む。
@@ -882,24 +881,23 @@ private int seek(
 [`core/trino-main/src/main/java/io/trino/operator/window/AggregateWindowFunction.java` L52-L68](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/operator/window/AggregateWindowFunction.java#L52-L68)
 
 ```java
-@Override
-public void processRow(BlockBuilder output, int peerGroupStart, int peerGroupEnd, int frameStart, int frameEnd)
-{
-    if (frameStart < 0) {
-        // empty frame
-        resetAccumulator();
-    }
-    else if ((frameStart == currentStart) && (frameEnd >= currentEnd)) {
-        // same or expanding frame
-        accumulate(currentEnd + 1, frameEnd);
-        currentEnd = frameEnd;
-    }
-    else {
-        buildNewFrame(frameStart, frameEnd);
-    }
+    public void processRow(BlockBuilder output, int peerGroupStart, int peerGroupEnd, int frameStart, int frameEnd)
+    {
+        if (frameStart < 0) {
+            // empty frame
+            resetAccumulator();
+        }
+        else if ((frameStart == currentStart) && (frameEnd >= currentEnd)) {
+            // same or expanding frame
+            accumulate(currentEnd + 1, frameEnd);
+            currentEnd = frameEnd;
+        }
+        else {
+            buildNewFrame(frameStart, frameEnd);
+        }
 
-    accumulator.output(output);
-}
+        accumulator.output(output);
+    }
 ```
 
 3つの分岐がある。
@@ -949,26 +947,26 @@ private void buildNewFrame(int frameStart, int frameEnd)
 [`core/trino-main/src/main/java/io/trino/operator/TopNOperator.java` L115-L134](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/operator/TopNOperator.java#L115-L134)
 
 ```java
-private TopNOperator(
-        OperatorContext operatorContext,
-        WorkProcessor<Page> sourcePages,
-        List<Type> types,
-        int n,
-        PageWithPositionComparator comparator)
-{
-    if (n == 0) {
-        pages = WorkProcessor.of();
+    private TopNOperator(
+            OperatorContext operatorContext,
+            WorkProcessor<Page> sourcePages,
+            List<Type> types,
+            int n,
+            PageWithPositionComparator comparator)
+    {
+        if (n == 0) {
+            pages = WorkProcessor.of();
+        }
+        else {
+            pages = sourcePages.transform(
+                    new TopNPages(
+                            new TopNProcessor(
+                                    operatorContext.aggregateUserMemoryContext(),
+                                    types,
+                                    n,
+                                    comparator)));
+        }
     }
-    else {
-        pages = sourcePages.transform(
-                new TopNPages(
-                        new TopNProcessor(
-                                operatorContext.aggregateUserMemoryContext(),
-                                types,
-                                n,
-                                comparator)));
-    }
-}
 ```
 
 `TopNProcessor` が入力 Page を受け取りながら上位 n 件を内部のヒープで管理する。
@@ -979,26 +977,27 @@ private TopNOperator(
 [`core/trino-main/src/main/java/io/trino/operator/TopNOperator.java` L152-L172](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/operator/TopNOperator.java#L152-L172)
 
 ```java
-@Override
-public TransformationState<Page> process(Page inputPage)
-{
-    if (inputPage != null) {
-        topNProcessor.addInput(inputPage);
-        return TransformationState.needsMoreData();
-    }
+        @Override
+        public TransformationState<Page> process(Page inputPage)
+        {
+            if (inputPage != null) {
+                topNProcessor.addInput(inputPage);
+                return TransformationState.needsMoreData();
+            }
 
-    // no more input, return results
-    Page page = null;
-    while (page == null && !topNProcessor.noMoreOutput()) {
-        page = topNProcessor.getOutput();
-    }
+            // no more input, return results
+            Page page = null;
+            while (page == null && !topNProcessor.noMoreOutput()) {
+                page = topNProcessor.getOutput();
+            }
 
-    if (page != null) {
-        return TransformationState.ofResult(page, false);
-    }
+            if (page != null) {
+                return TransformationState.ofResult(page, false);
+            }
 
-    return TransformationState.finished();
-}
+            return TransformationState.finished();
+        }
+    }
 ```
 
 全入力を蓄積フェーズ（`needsMoreData`）で受け取り、入力終了後に出力フェーズへ遷移する。
@@ -1058,7 +1057,7 @@ private static Supplier<GroupedTopNBuilder> getGroupedTopNBuilderSupplier(
 
 ### addInput と getOutput の状態遷移
 
-[`core/trino-main/src/main/java/io/trino/operator/TopNRankingOperator.java` L308-L358](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/operator/TopNRankingOperator.java#L308-L358)
+[`core/trino-main/src/main/java/io/trino/operator/TopNRankingOperator.java` L307-L358](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/operator/TopNRankingOperator.java#L307-L358)
 
 ```java
 @Override

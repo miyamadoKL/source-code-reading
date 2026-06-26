@@ -74,23 +74,23 @@ graph TD
 [`core/trino-main/src/main/java/io/trino/execution/resourcegroups/InternalResourceGroup.java` L149-L165](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/resourcegroups/InternalResourceGroup.java#L149-L165)
 
 ```java
-private InternalResourceGroup(Optional<InternalResourceGroup> parent, String name, BiConsumer<InternalResourceGroup, Boolean> jmxExportListener, Executor executor)
-{
-    this.parent = requireNonNull(parent, "parent is null");
-    this.jmxExportListener = requireNonNull(jmxExportListener, "jmxExportListener is null");
-    this.executor = requireNonNull(executor, "executor is null");
-    requireNonNull(name, "name is null");
-    if (parent.isPresent()) {
-        id = new ResourceGroupId(parent.get().id, name);
-        root = parent.get().root;
-        resourceUsageStagingInProgress = root.resourceUsageStagingInProgress;
+    private InternalResourceGroup(Optional<InternalResourceGroup> parent, String name, BiConsumer<InternalResourceGroup, Boolean> jmxExportListener, Executor executor)
+    {
+        this.parent = requireNonNull(parent, "parent is null");
+        this.jmxExportListener = requireNonNull(jmxExportListener, "jmxExportListener is null");
+        this.executor = requireNonNull(executor, "executor is null");
+        requireNonNull(name, "name is null");
+        if (parent.isPresent()) {
+            id = new ResourceGroupId(parent.get().id, name);
+            root = parent.get().root;
+            resourceUsageStagingInProgress = root.resourceUsageStagingInProgress;
+        }
+        else {
+            id = new ResourceGroupId(name);
+            root = this;
+            resourceUsageStagingInProgress = new AtomicBoolean();
+        }
     }
-    else {
-        id = new ResourceGroupId(name);
-        root = this;
-        resourceUsageStagingInProgress = new AtomicBoolean();
-    }
-}
 ```
 
 子ノードのコンストラクタは `root = parent.get().root` としてルートへの参照を保持する。
@@ -101,7 +101,7 @@ private InternalResourceGroup(Optional<InternalResourceGroup> parent, String nam
 
 `InternalResourceGroup` は SPI の `ResourceGroup` インターフェイスを実装し、以下の制限パラメーターを公開している。
 
-[`core/trino-spi/src/main/java/io/trino/spi/resourcegroups/ResourceGroup.java` L19-L104](https://github.com/trinodb/trino/blob/482/core/trino-spi/src/main/java/io/trino/spi/resourcegroups/ResourceGroup.java#L19-L104)
+[`core/trino-spi/src/main/java/io/trino/spi/resourcegroups/ResourceGroup.java` L18-L124](https://github.com/trinodb/trino/blob/482/core/trino-spi/src/main/java/io/trino/spi/resourcegroups/ResourceGroup.java#L18-L124)
 
 ```java
 public interface ResourceGroup
@@ -135,31 +135,31 @@ public interface ResourceGroup
 [`core/trino-main/src/main/java/io/trino/execution/resourcegroups/InternalResourceGroup.java` L1072-L1096](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/resourcegroups/InternalResourceGroup.java#L1072-L1096)
 
 ```java
-private boolean canRunMore()
-{
-    checkState(Thread.holdsLock(root), "Must hold lock");
-    synchronized (root) {
-        long cpuUsageMillis = cachedResourceUsage.getCpuUsageMillis();
-        long memoryUsageBytes = cachedResourceUsage.getMemoryUsageBytes();
-        long physicalInputDataUsageBytes = cachedResourceUsage.getPhysicalInputDataUsageBytes();
-        if ((cpuUsageMillis >= hardCpuLimitMillis) || (memoryUsageBytes > softMemoryLimitBytes) || (physicalInputDataUsageBytes >= hardPhysicalDataScanLimitBytes)) {
-            return false;
-        }
+    private boolean canRunMore()
+    {
+        checkState(Thread.holdsLock(root), "Must hold lock");
+        synchronized (root) {
+            long cpuUsageMillis = cachedResourceUsage.getCpuUsageMillis();
+            long memoryUsageBytes = cachedResourceUsage.getMemoryUsageBytes();
+            long physicalInputDataUsageBytes = cachedResourceUsage.getPhysicalInputDataUsageBytes();
+            if ((cpuUsageMillis >= hardCpuLimitMillis) || (memoryUsageBytes > softMemoryLimitBytes) || (physicalInputDataUsageBytes >= hardPhysicalDataScanLimitBytes)) {
+                return false;
+            }
 
-        int hardConcurrencyLimit = this.hardConcurrencyLimit;
-        if (cpuUsageMillis >= softCpuLimitMillis) {
-            // TODO: Consider whether CPU limit math should be performed on softConcurrency or hardConcurrency
-            // Linear penalty between soft and hard limit
-            double penalty = (cpuUsageMillis - softCpuLimitMillis) / (double) (hardCpuLimitMillis - softCpuLimitMillis);
-            hardConcurrencyLimit = (int) Math.floor(hardConcurrencyLimit * (1 - penalty));
-            // Always penalize by at least one
-            hardConcurrencyLimit = min(this.hardConcurrencyLimit - 1, hardConcurrencyLimit);
-            // Always allow at least one running query
-            hardConcurrencyLimit = Math.max(1, hardConcurrencyLimit);
+            int hardConcurrencyLimit = this.hardConcurrencyLimit;
+            if (cpuUsageMillis >= softCpuLimitMillis) {
+                // TODO: Consider whether CPU limit math should be performed on softConcurrency or hardConcurrency
+                // Linear penalty between soft and hard limit
+                double penalty = (cpuUsageMillis - softCpuLimitMillis) / (double) (hardCpuLimitMillis - softCpuLimitMillis);
+                hardConcurrencyLimit = (int) Math.floor(hardConcurrencyLimit * (1 - penalty));
+                // Always penalize by at least one
+                hardConcurrencyLimit = min(this.hardConcurrencyLimit - 1, hardConcurrencyLimit);
+                // Always allow at least one running query
+                hardConcurrencyLimit = Math.max(1, hardConcurrencyLimit);
+            }
+            return runningQueries.size() + descendantRunningQueries < hardConcurrencyLimit;
         }
-        return runningQueries.size() + descendantRunningQueries < hardConcurrencyLimit;
     }
-}
 ```
 
 CPU 使用量がソフトリミットとハードリミットの間にあるとき、`penalty` の値に応じて `hardConcurrencyLimit` が線形に低下する。
@@ -176,12 +176,12 @@ CPU 使用量がソフトリミットとハードリミットの間にあると�
 [`core/trino-main/src/main/java/io/trino/execution/resourcegroups/InternalResourceGroupManager.java` L117-L122](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/resourcegroups/InternalResourceGroupManager.java#L117-L122)
 
 ```java
-@Override
-public SelectionContext<C> selectGroup(SelectionCriteria criteria)
-{
-    return configurationManager.get().match(criteria)
-            .orElseThrow(() -> new TrinoException(QUERY_REJECTED, "No matching resource group found with the configured selection rules"));
-}
+    @Override
+    public SelectionContext<C> selectGroup(SelectionCriteria criteria)
+    {
+        return configurationManager.get().match(criteria)
+                .orElseThrow(() -> new TrinoException(QUERY_REJECTED, "No matching resource group found with the configured selection rules"));
+    }
 ```
 
 マッチするルールが見つからなければ `QUERY_REJECTED` で即座にエラーとなる。
@@ -191,13 +191,12 @@ public SelectionContext<C> selectGroup(SelectionCriteria criteria)
 [`core/trino-main/src/main/java/io/trino/execution/resourcegroups/InternalResourceGroupManager.java` L110-L115](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/resourcegroups/InternalResourceGroupManager.java#L110-L115)
 
 ```java
-@Override
-public void submit(ManagedQueryExecution queryExecution, SelectionContext<C> selectionContext, Executor executor)
-{
-    checkState(configurationManager.get() != null, "configurationManager not set");
-    createGroupIfNecessary(selectionContext, executor);
-    groups.get(selectionContext.getResourceGroupId()).run(queryExecution);
-}
+    public void submit(ManagedQueryExecution queryExecution, SelectionContext<C> selectionContext, Executor executor)
+    {
+        checkState(configurationManager.get() != null, "configurationManager not set");
+        createGroupIfNecessary(selectionContext, executor);
+        groups.get(selectionContext.getResourceGroupId()).run(queryExecution);
+    }
 ```
 
 ### run() の処理フロー
@@ -207,41 +206,41 @@ public void submit(ManagedQueryExecution queryExecution, SelectionContext<C> sel
 [`core/trino-main/src/main/java/io/trino/execution/resourcegroups/InternalResourceGroup.java` L672-L706](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/resourcegroups/InternalResourceGroup.java#L672-L706)
 
 ```java
-public void run(ManagedQueryExecution query)
-{
-    synchronized (root) {
-        if (!isLeafGroup()) {
-            throw new TrinoException(INVALID_RESOURCE_GROUP, format("Cannot add queries to '%s'. It is not a leaf group.", id));
-        }
-        // Check all ancestors for capacity
-        InternalResourceGroup group = this;
-        boolean canQueue = true;
-        boolean canRun = true;
-        while (true) {
-            canQueue = canQueue && group.canQueueMore();
-            canRun = canRun && group.canRunMore();
-            if (group.parent.isEmpty()) {
-                break;
+    public void run(ManagedQueryExecution query)
+    {
+        synchronized (root) {
+            if (!isLeafGroup()) {
+                throw new TrinoException(INVALID_RESOURCE_GROUP, format("Cannot add queries to '%s'. It is not a leaf group.", id));
             }
-            group = group.parent.get();
-        }
-        if (!canQueue && !canRun) {
-            query.fail(new QueryQueueFullException(id));
-            return;
-        }
-        if (canRun) {
-            startInBackground(query);
-        }
-        else {
-            enqueueQuery(query);
-        }
-        query.addStateChangeListener(state -> {
-            if (state.isDone()) {
-                queryFinished(query);
+            // Check all ancestors for capacity
+            InternalResourceGroup group = this;
+            boolean canQueue = true;
+            boolean canRun = true;
+            while (true) {
+                canQueue = canQueue && group.canQueueMore();
+                canRun = canRun && group.canRunMore();
+                if (group.parent.isEmpty()) {
+                    break;
+                }
+                group = group.parent.get();
             }
-        });
+            if (!canQueue && !canRun) {
+                query.fail(new QueryQueueFullException(id));
+                return;
+            }
+            if (canRun) {
+                startInBackground(query);
+            }
+            else {
+                enqueueQuery(query);
+            }
+            query.addStateChangeListener(state -> {
+                if (state.isDone()) {
+                    queryFinished(query);
+                }
+            });
+        }
     }
-}
 ```
 
 判定は葉から根まで祖先をすべて遡り、どの階層でも `canRunMore()` が true であれば即座に実行を開始する。
@@ -269,19 +268,19 @@ flowchart TD
 [`core/trino-main/src/main/java/io/trino/execution/resourcegroups/InternalResourceGroup.java` L708-L720](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/resourcegroups/InternalResourceGroup.java#L708-L720)
 
 ```java
-private void enqueueQuery(ManagedQueryExecution query)
-{
-    checkState(Thread.holdsLock(root), "Must hold lock to enqueue a query");
-    synchronized (root) {
-        queuedQueries.addOrUpdate(query, getQueryPriority(query.getSession()));
-        InternalResourceGroup group = this;
-        while (group.parent.isPresent()) {
-            group.parent.get().descendantQueuedQueries++;
-            group = group.parent.get();
+    private void enqueueQuery(ManagedQueryExecution query)
+    {
+        checkState(Thread.holdsLock(root), "Must hold lock to enqueue a query");
+        synchronized (root) {
+            queuedQueries.addOrUpdate(query, getQueryPriority(query.getSession()));
+            InternalResourceGroup group = this;
+            while (group.parent.isPresent()) {
+                group.parent.get().descendantQueuedQueries++;
+                group = group.parent.get();
+            }
+            updateEligibility();
         }
-        updateEligibility();
     }
-}
 ```
 
 `descendantQueuedQueries` と `descendantRunningQueries` は、各グループが子孫全体のクエリ数を O(1) で把握するためのカウンタである。
@@ -333,35 +332,35 @@ private void refreshAndStartQueries()
 [`core/trino-main/src/main/java/io/trino/execution/resourcegroups/InternalResourceGroup.java` L763-L791](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/resourcegroups/InternalResourceGroup.java#L763-L791)
 
 ```java
-public void updateGroupsAndProcessQueuedQueries()
-{
-    boolean acquired = acquireResourceUsageStaging();
-    if (acquired) {
-        try {
-            // Resource usage updates use a two-phase algorithm to keep stats consistent across the
-            // entire resource group tree while minimizing lock contention:
-            //
-            // 1. Staging (without root lock): Read current usage from queries into "staged" slot.
-            //    This step is expensive as it aggregates stats across stages and tasks.
-            //
-            // 2. Applying deltas (with root lock): Compute delta = staged - current, update current,
-            //    and propagate deltas up the group hierarchy to root.
-            stageResourceUsage();
-            synchronized (root) {
-                updateResourceUsageAndGetDelta();
+    public void updateGroupsAndProcessQueuedQueries()
+    {
+        boolean acquired = acquireResourceUsageStaging();
+        if (acquired) {
+            try {
+                // Resource usage updates use a two-phase algorithm to keep stats consistent across the
+                // entire resource group tree while minimizing lock contention:
+                //
+                // 1. Staging (without root lock): Read current usage from queries into "staged" slot.
+                //    This step is expensive as it aggregates stats across stages and tasks.
+                //
+                // 2. Applying deltas (with root lock): Compute delta = staged - current, update current,
+                //    and propagate deltas up the group hierarchy to root.
+                stageResourceUsage();
+                synchronized (root) {
+                    updateResourceUsageAndGetDelta();
+                }
+            }
+            finally {
+                releaseResourceUsageStaging();
             }
         }
-        finally {
-            releaseResourceUsageStaging();
-        }
-    }
 
-    synchronized (root) {
-        while (internalStartNext()) {
-            // start all the queries we can
+        synchronized (root) {
+            while (internalStartNext()) {
+                // start all the queries we can
+            }
         }
     }
-}
 ```
 
 フェーズ1（ステージング）ではロックを取らずに各クエリの最新リソース使用量を読み取り、`StagedResourceUsage` に格納する。
@@ -378,41 +377,41 @@ public void updateGroupsAndProcessQueuedQueries()
 [`core/trino-main/src/main/java/io/trino/execution/resourcegroups/InternalResourceGroup.java` L967-L1001](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/resourcegroups/InternalResourceGroup.java#L967-L1001)
 
 ```java
-private boolean internalStartNext()
-{
-    checkState(Thread.holdsLock(root), "Must hold lock to find next query");
-    synchronized (root) {
-        if (!canRunMore()) {
-            return false;
-        }
-        ManagedQueryExecution query = queuedQueries.poll();
-        if (query != null) {
-            startInBackground(query);
+    private boolean internalStartNext()
+    {
+        checkState(Thread.holdsLock(root), "Must hold lock to find next query");
+        synchronized (root) {
+            if (!canRunMore()) {
+                return false;
+            }
+            ManagedQueryExecution query = queuedQueries.poll();
+            if (query != null) {
+                startInBackground(query);
+                return true;
+            }
+
+            // Remove even if the sub group still has queued queries, so that it goes to the back of the queue
+            InternalResourceGroup subGroup = eligibleSubGroups.poll();
+            if (subGroup == null) {
+                return false;
+            }
+            boolean started = subGroup.internalStartNext();
+            checkState(started, "Eligible sub group had no queries to run");
+
+            long currentTime = System.nanoTime();
+            if (lastStartNanos != 0) {
+                timeBetweenStartsSec.update(Math.max(0, (currentTime - lastStartNanos) / 1_000_000));
+            }
+            lastStartNanos = currentTime;
+
+            descendantQueuedQueries--;
+            // Don't call updateEligibility here, as we're in a recursive call, and don't want to repeatedly update our ancestors.
+            if (subGroup.isEligibleToStartNext()) {
+                addOrUpdateSubGroup(subGroup);
+            }
             return true;
         }
-
-        // Remove even if the sub group still has queued queries, so that it goes to the back of the queue
-        InternalResourceGroup subGroup = eligibleSubGroups.poll();
-        if (subGroup == null) {
-            return false;
-        }
-        boolean started = subGroup.internalStartNext();
-        checkState(started, "Eligible sub group had no queries to run");
-
-        long currentTime = System.nanoTime();
-        if (lastStartNanos != 0) {
-            timeBetweenStartsSec.update(Math.max(0, (currentTime - lastStartNanos) / 1_000_000));
-        }
-        lastStartNanos = currentTime;
-
-        descendantQueuedQueries--;
-        // Don't call updateEligibility here, as we're in a recursive call, and don't want to repeatedly update our ancestors.
-        if (subGroup.isEligibleToStartNext()) {
-            addOrUpdateSubGroup(subGroup);
-        }
-        return true;
     }
-}
 ```
 
 処理の流れは以下のとおりである。
@@ -431,16 +430,16 @@ private boolean internalStartNext()
 [`core/trino-main/src/main/java/io/trino/execution/resourcegroups/InternalResourceGroup.java` L1041-L1050](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/resourcegroups/InternalResourceGroup.java#L1041-L1050)
 
 ```java
-private boolean isEligibleToStartNext()
-{
-    checkState(Thread.holdsLock(root), "Must hold lock");
-    synchronized (root) {
-        if (!canRunMore()) {
-            return false;
+    private boolean isEligibleToStartNext()
+    {
+        checkState(Thread.holdsLock(root), "Must hold lock");
+        synchronized (root) {
+            if (!canRunMore()) {
+                return false;
+            }
+            return !queuedQueries.isEmpty() || !eligibleSubGroups.isEmpty();
         }
-        return !queuedQueries.isEmpty() || !eligibleSubGroups.isEmpty();
     }
-}
 ```
 
 子グループが「実行可能な状態にあり、かつキューにクエリを持つ（あるいは適格な孫グループを持つ）」場合にのみ、親の `eligibleSubGroups` に登録される。
@@ -449,30 +448,30 @@ private boolean isEligibleToStartNext()
 [`core/trino-main/src/main/java/io/trino/execution/resourcegroups/InternalResourceGroup.java` L726-L742](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/resourcegroups/InternalResourceGroup.java#L726-L742)
 
 ```java
-private void updateEligibility()
-{
-    checkState(Thread.holdsLock(root), "Must hold lock to update eligibility");
-    synchronized (root) {
-        if (parent.isEmpty()) {
-            return;
+    private void updateEligibility()
+    {
+        checkState(Thread.holdsLock(root), "Must hold lock to update eligibility");
+        synchronized (root) {
+            if (parent.isEmpty()) {
+                return;
+            }
+            if (isEligibleToStartNext()) {
+                parent.get().addOrUpdateSubGroup(this);
+            }
+            else {
+                parent.get().eligibleSubGroups.remove(this);
+                lastStartNanos = 0;
+            }
+            parent.get().updateEligibility();
         }
-        if (isEligibleToStartNext()) {
-            parent.get().addOrUpdateSubGroup(this);
-        }
-        else {
-            parent.get().eligibleSubGroups.remove(this);
-            lastStartNanos = 0;
-        }
-        parent.get().updateEligibility();
     }
-}
 ```
 
 ## 4種類のスケジューリングポリシー
 
 `SchedulingPolicy` は4つの値を持つ列挙型であり、各ポリシーに対応するキュー実装がある。
 
-[`core/trino-spi/src/main/java/io/trino/spi/resourcegroups/SchedulingPolicy.java` L17-L22](https://github.com/trinodb/trino/blob/482/core/trino-spi/src/main/java/io/trino/spi/resourcegroups/SchedulingPolicy.java#L17-L22)
+[`core/trino-spi/src/main/java/io/trino/spi/resourcegroups/SchedulingPolicy.java` L17-L22](https://github.com/trinodb/trino/blob/482/core/trino-spi/src/main/java/io/trino/spi/resourcegroups/SchedulingPolicy.java#L16-L22)
 
 ```java
 public enum SchedulingPolicy
@@ -489,29 +488,29 @@ public enum SchedulingPolicy
 [`core/trino-main/src/main/java/io/trino/execution/resourcegroups/InternalResourceGroup.java` L586-L608](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/resourcegroups/InternalResourceGroup.java#L586-L608)
 
 ```java
-switch (policy) {
-    case FAIR -> {
-        queue = new FifoQueue<>();
-        queryQueue = new FifoQueue<>();
-    }
-    case WEIGHTED -> {
-        queue = new StochasticPriorityQueue<>();
-        queryQueue = new StochasticPriorityQueue<>();
-    }
-    case WEIGHTED_FAIR -> {
-        queue = new WeightedFairQueue<>();
-        queryQueue = new IndexedPriorityQueue<>();
-    }
-    case QUERY_PRIORITY -> {
-        // Sub groups must use query priority to ensure ordering
-        for (InternalResourceGroup group : subGroups.values()) {
-            group.setSchedulingPolicy(QUERY_PRIORITY);
-        }
-        queue = new IndexedPriorityQueue<>();
-        queryQueue = new IndexedPriorityQueue<>();
-    }
-    default -> throw new UnsupportedOperationException("Unsupported scheduling policy: " + policy);
-}
+            switch (policy) {
+                case FAIR -> {
+                    queue = new FifoQueue<>();
+                    queryQueue = new FifoQueue<>();
+                }
+                case WEIGHTED -> {
+                    queue = new StochasticPriorityQueue<>();
+                    queryQueue = new StochasticPriorityQueue<>();
+                }
+                case WEIGHTED_FAIR -> {
+                    queue = new WeightedFairQueue<>();
+                    queryQueue = new IndexedPriorityQueue<>();
+                }
+                case QUERY_PRIORITY -> {
+                    // Sub groups must use query priority to ensure ordering
+                    for (InternalResourceGroup group : subGroups.values()) {
+                        group.setSchedulingPolicy(QUERY_PRIORITY);
+                    }
+                    queue = new IndexedPriorityQueue<>();
+                    queryQueue = new IndexedPriorityQueue<>();
+                }
+                default -> throw new UnsupportedOperationException("Unsupported scheduling policy: " + policy);
+            }
 ```
 
 | ポリシー | 子グループキュー | クエリキュー | 動作 |
@@ -578,26 +577,26 @@ public final class IndexedPriorityQueue<E>
 [`core/trino-main/src/main/java/io/trino/execution/resourcegroups/IndexedPriorityQueue.java` L67-L86](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/resourcegroups/IndexedPriorityQueue.java#L67-L86)
 
 ```java
-@Override
-public boolean addOrUpdate(E element, long priority)
-{
-    Entry<E> entry = index.get(element);
-    if (entry != null) {
-        if (entry.getPriority() == priority) {
+    @Override
+    public boolean addOrUpdate(E element, long priority)
+    {
+        Entry<E> entry = index.get(element);
+        if (entry != null) {
+            if (entry.getPriority() == priority) {
+                return false;
+            }
+            queue.remove(entry);
+            Entry<E> newEntry = new Entry<>(element, priority, entry.getGeneration());
+            queue.add(newEntry);
+            index.put(element, newEntry);
             return false;
         }
-        queue.remove(entry);
-        Entry<E> newEntry = new Entry<>(element, priority, entry.getGeneration());
+        Entry<E> newEntry = new Entry<>(element, priority, generation);
+        generation++;
         queue.add(newEntry);
         index.put(element, newEntry);
-        return false;
+        return true;
     }
-    Entry<E> newEntry = new Entry<>(element, priority, generation);
-    generation++;
-    queue.add(newEntry);
-    index.put(element, newEntry);
-    return true;
-}
 ```
 
 優先度が変わった場合は `TreeSet` から削除して新しい `Entry` を挿入し直す。
@@ -610,7 +609,7 @@ public boolean addOrUpdate(E element, long priority)
 
 内部的には二分木（Fenwick tree に似た構造）を構築し、各ノードが自身のチケット数と子孫全体のチケット合計（`totalTickets`）を保持する。
 
-[`core/trino-main/src/main/java/io/trino/execution/resourcegroups/StochasticPriorityQueue.java` L25-L33](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/resourcegroups/StochasticPriorityQueue.java#L25-L33)
+[`core/trino-main/src/main/java/io/trino/execution/resourcegroups/StochasticPriorityQueue.java` L25-L33](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/resourcegroups/StochasticPriorityQueue.java#L25-L32)
 
 ```java
 final class StochasticPriorityQueue<E>
@@ -628,38 +627,37 @@ final class StochasticPriorityQueue<E>
 [`core/trino-main/src/main/java/io/trino/execution/resourcegroups/StochasticPriorityQueue.java` L88-L118](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/resourcegroups/StochasticPriorityQueue.java#L88-L118)
 
 ```java
-@Override
-public E poll()
-{
-    if (root == null) {
-        return null;
-    }
-
-    long winningTicket = ThreadLocalRandom.current().nextLong(root.getTotalTickets());
-    Node<E> candidate = root;
-    while (!candidate.isLeaf()) {
-        long leftTickets = candidate.getLeft().map(Node::getTotalTickets).orElse(0L);
-
-        if (winningTicket < leftTickets) {
-            candidate = candidate.getLeft().get();
-            continue;
+    public E poll()
+    {
+        if (root == null) {
+            return null;
         }
-        winningTicket -= leftTickets;
 
-        if (winningTicket < candidate.getTickets()) {
-            break;
+        long winningTicket = ThreadLocalRandom.current().nextLong(root.getTotalTickets());
+        Node<E> candidate = root;
+        while (!candidate.isLeaf()) {
+            long leftTickets = candidate.getLeft().map(Node::getTotalTickets).orElse(0L);
+
+            if (winningTicket < leftTickets) {
+                candidate = candidate.getLeft().get();
+                continue;
+            }
+            winningTicket -= leftTickets;
+
+            if (winningTicket < candidate.getTickets()) {
+                break;
+            }
+            winningTicket -= candidate.getTickets();
+
+            checkState(candidate.getRight().isPresent(), "Expected right node to contain the winner, but it does not exist");
+            candidate = candidate.getRight().get();
         }
-        winningTicket -= candidate.getTickets();
+        checkState(winningTicket < candidate.getTickets(), "Inconsistent winner");
 
-        checkState(candidate.getRight().isPresent(), "Expected right node to contain the winner, but it does not exist");
-        candidate = candidate.getRight().get();
+        E value = candidate.getValue();
+        remove(value);
+        return value;
     }
-    checkState(winningTicket < candidate.getTickets(), "Inconsistent winner");
-
-    E value = candidate.getValue();
-    remove(value);
-    return value;
-}
 ```
 
 アルゴリズムはルートから葉に向かって二分木を下る。
@@ -694,21 +692,22 @@ graph TD
 [`core/trino-main/src/main/java/io/trino/execution/resourcegroups/StochasticPriorityQueue.java` L190-L205](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/resourcegroups/StochasticPriorityQueue.java#L190-L205)
 
 ```java
-public void setTickets(long tickets)
-{
-    checkArgument(tickets > 0, "tickets must be positive");
-    if (tickets == this.tickets) {
-        return;
-    }
-    long ticketDelta = tickets - this.tickets;
-    Node<E> node = this;
-    // Update total tickets in this node and all ancestors
-    while (node != null) {
-        node.totalTickets += ticketDelta;
-        node = node.parent.orElse(null);
-    }
-    this.tickets = tickets;
-}
+
+        public void setTickets(long tickets)
+        {
+            checkArgument(tickets > 0, "tickets must be positive");
+            if (tickets == this.tickets) {
+                return;
+            }
+            long ticketDelta = tickets - this.tickets;
+            Node<E> node = this;
+            // Update total tickets in this node and all ancestors
+            while (node != null) {
+                node.totalTickets += ticketDelta;
+                node = node.parent.orElse(null);
+            }
+            this.tickets = tickets;
+        }
 ```
 
 ノードの挿入は木のバランスを保つよう、子孫数が少ない側に挿入される。
@@ -716,28 +715,28 @@ public void setTickets(long tickets)
 [`core/trino-main/src/main/java/io/trino/execution/resourcegroups/StochasticPriorityQueue.java` L251-L272](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/resourcegroups/StochasticPriorityQueue.java#L251-L272)
 
 ```java
-public Node<E> addNode(E value, long tickets)
-{
-    // setTickets call in base case will update totalTickets
-    descendants++;
-    if (left.isPresent() && right.isPresent()) {
-        // Keep the tree balanced when inserting
-        if (left.get().descendants < right.get().descendants) {
-            return left.get().addNode(value, tickets);
-        }
-        return right.get().addNode(value, tickets);
-    }
+        public Node<E> addNode(E value, long tickets)
+        {
+            // setTickets call in base case will update totalTickets
+            descendants++;
+            if (left.isPresent() && right.isPresent()) {
+                // Keep the tree balanced when inserting
+                if (left.get().descendants < right.get().descendants) {
+                    return left.get().addNode(value, tickets);
+                }
+                return right.get().addNode(value, tickets);
+            }
 
-    Node<E> child = new Node<>(Optional.of(this), value);
-    if (left.isPresent()) {
-        right = Optional.of(child);
-    }
-    else {
-        left = Optional.of(child);
-    }
-    child.setTickets(tickets);
-    return child;
-}
+            Node<E> child = new Node<>(Optional.of(this), value);
+            if (left.isPresent()) {
+                right = Optional.of(child);
+            }
+            else {
+                left = Optional.of(child);
+            }
+            child.setTickets(tickets);
+            return child;
+        }
 ```
 
 この確率的選択が Trino のリソースグループにもたらす効果は大きい。
@@ -752,47 +751,44 @@ public Node<E> addNode(E value, long tickets)
 [`core/trino-main/src/main/java/io/trino/execution/resourcegroups/WeightedFairQueue.java` L69-L106](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/resourcegroups/WeightedFairQueue.java#L69-L106)
 
 ```java
-@Override
-public E poll()
-{
-    Collection<Node<E>> candidates = index.values();
-    long totalShare = 0;
-    long totalUtilization = 1; // prevent / by zero
+        Collection<Node<E>> candidates = index.values();
+        long totalShare = 0;
+        long totalUtilization = 1; // prevent / by zero
 
-    for (Node<E> candidate : candidates) {
-        totalShare += candidate.getShare();
-        totalUtilization += candidate.getUtilization();
-    }
-
-    List<Node<E>> winners = new ArrayList<>();
-    double winnerDelta = 1;
-
-    for (Node<E> candidate : candidates) {
-        double actualFraction = 1.0 * candidate.getUtilization() / totalUtilization;
-        double expectedFraction = 1.0 * candidate.getShare() / totalShare;
-        double delta = actualFraction / expectedFraction;
-
-        if (delta <= winnerDelta) {
-            if (delta < winnerDelta) {
-                winnerDelta = delta;
-                winners.clear();
-            }
-
-            // if multiple candidates have the same delta, picking deterministically could cause starvation
-            // we use a stochastic method (weighted by share) to pick amongst these candidates
-            winners.add(candidate);
+        for (Node<E> candidate : candidates) {
+            totalShare += candidate.getShare();
+            totalUtilization += candidate.getUtilization();
         }
-    }
 
-    if (winners.isEmpty()) {
-        return null;
-    }
+        List<Node<E>> winners = new ArrayList<>();
+        double winnerDelta = 1;
 
-    Node<E> winner = Collections.min(winners);
-    E value = winner.getValue();
-    index.remove(value);
-    return value;
-}
+        for (Node<E> candidate : candidates) {
+            double actualFraction = 1.0 * candidate.getUtilization() / totalUtilization;
+            double expectedFraction = 1.0 * candidate.getShare() / totalShare;
+            double delta = actualFraction / expectedFraction;
+
+            if (delta <= winnerDelta) {
+                if (delta < winnerDelta) {
+                    winnerDelta = delta;
+                    winners.clear();
+                }
+
+                // if multiple candidates have the same delta, picking deterministically could cause starvation
+                // we use a stochastic method (weighted by share) to pick amongst these candidates
+                winners.add(candidate);
+            }
+        }
+
+        if (winners.isEmpty()) {
+            return null;
+        }
+
+        Node<E> winner = Collections.min(winners);
+        E value = winner.getValue();
+        index.remove(value);
+        return value;
+    }
 ```
 
 各候補について `actualFraction / expectedFraction`（実際の利用率 / 期待される利用率）を計算し、この値が最も小さいグループ、つまり期待に対して最も「遅れている」グループを優先する。
@@ -805,16 +801,16 @@ CPU 使用量とデータスキャン量は累積値であるため、制限を�
 [`core/trino-main/src/main/java/io/trino/execution/resourcegroups/InternalResourceGroup.java` L956-L965](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/resourcegroups/InternalResourceGroup.java#L956-L965)
 
 ```java
-private static long computeNewUsage(long currentUsage, long elapsedSeconds, long generationRate)
-{
-    long quotaToRegenerate = saturatedMultiply(elapsedSeconds, generationRate);
-    long newUsage = saturatedSubtract(currentUsage, quotaToRegenerate);
+    private static long computeNewUsage(long currentUsage, long elapsedSeconds, long generationRate)
+    {
+        long quotaToRegenerate = saturatedMultiply(elapsedSeconds, generationRate);
+        long newUsage = saturatedSubtract(currentUsage, quotaToRegenerate);
 
-    if (newUsage < 0 || newUsage == Long.MAX_VALUE) {
-        newUsage = 0;
+        if (newUsage < 0 || newUsage == Long.MAX_VALUE) {
+            newUsage = 0;
+        }
+        return newUsage;
     }
-    return newUsage;
-}
 ```
 
 経過秒数と再生成レートの積を使用量から減算する。
@@ -825,20 +821,20 @@ private static long computeNewUsage(long currentUsage, long elapsedSeconds, long
 [`plugin/trino-resource-group-managers/src/main/java/io/trino/plugin/resourcegroups/AbstractResourceConfigurationManager.java` L223-L236](https://github.com/trinodb/trino/blob/482/plugin/trino-resource-group-managers/src/main/java/io/trino/plugin/resourcegroups/AbstractResourceConfigurationManager.java#L223-L236)
 
 ```java
-if (match.getSoftCpuLimit().isPresent() || match.getHardCpuLimit().isPresent()) {
-    // This will never throw an exception if the validateRootGroups method succeeds
-    checkState(getCpuQuotaPeriod().isPresent(), "cpuQuotaPeriod must be specified to use CPU limits on group: %s", group.getId());
-    Duration limit;
-    if (match.getHardCpuLimit().isPresent()) {
-        limit = match.getHardCpuLimit().get();
-    }
-    else {
-        limit = match.getSoftCpuLimit().get();
-    }
-    long rate = (long) Math.min(1000.0 * limit.toMillis() / (double) getCpuQuotaPeriod().get().toMillis(), Long.MAX_VALUE);
-    rate = Math.max(1, rate);
-    group.setCpuQuotaGenerationMillisPerSecond(rate);
-}
+        if (match.getSoftCpuLimit().isPresent() || match.getHardCpuLimit().isPresent()) {
+            // This will never throw an exception if the validateRootGroups method succeeds
+            checkState(getCpuQuotaPeriod().isPresent(), "cpuQuotaPeriod must be specified to use CPU limits on group: %s", group.getId());
+            Duration limit;
+            if (match.getHardCpuLimit().isPresent()) {
+                limit = match.getHardCpuLimit().get();
+            }
+            else {
+                limit = match.getSoftCpuLimit().get();
+            }
+            long rate = (long) Math.min(1000.0 * limit.toMillis() / (double) getCpuQuotaPeriod().get().toMillis(), Long.MAX_VALUE);
+            rate = Math.max(1, rate);
+            group.setCpuQuotaGenerationMillisPerSecond(rate);
+        }
 ```
 
 たとえば `hardCpuLimit` が 1 時間（3,600,000 ms）で `cpuQuotaPeriod` が 1 時間であれば、再生成レートは `1000 * 3600000 / 3600000 = 1000` ms/秒となる。
@@ -854,9 +850,30 @@ if (match.getSoftCpuLimit().isPresent() || match.getHardCpuLimit().isPresent()) 
 ```java
 public interface ResourceGroupConfigurationManager<C>
 {
+    /**
+     * Implementations may retain a reference to the group, and re-configure it asynchronously.
+     * This method is called in two cases: when the group is created, and when it was previously
+     * disabled and is now reactivated. In the latter case, the reference passed to this method
+     * is the same as during creation, so implementations don’t need to invalidate retained
+     * references.
+     */
     void configure(ResourceGroup group, SelectionContext<C> criteria);
+
+    /**
+     * This method is called for every query that is submitted, so it should be fast.
+     */
     Optional<SelectionContext<C>> match(SelectionCriteria criteria);
+
+    /**
+     * This method is called when parent group of the one specified by {@link #match(SelectionCriteria)}'s
+     * {@link SelectionContext#getResourceGroupId()} does not exist yet. It should return a {@link SelectionContext}
+     * appropriate for {@link #configure(ResourceGroup, SelectionContext) configuration} of the parent group.
+     *
+     * @param context a selection context returned from {@link #match(SelectionCriteria)}
+     * @return a selection context suitable for {@link #configure(ResourceGroup, SelectionContext)} for the parent group
+     */
     SelectionContext<C> parentGroupContext(SelectionContext<C> context);
+
     void shutdown();
 }
 ```
@@ -866,7 +883,7 @@ public interface ResourceGroupConfigurationManager<C>
 
 `SelectionCriteria` はクエリの属性を保持するイミュータブルなオブジェクトである。
 
-[`core/trino-spi/src/main/java/io/trino/spi/resourcegroups/SelectionCriteria.java` L26-L36](https://github.com/trinodb/trino/blob/482/core/trino-spi/src/main/java/io/trino/spi/resourcegroups/SelectionCriteria.java#L26-L36)
+[`core/trino-spi/src/main/java/io/trino/spi/resourcegroups/SelectionCriteria.java` L26-L36](https://github.com/trinodb/trino/blob/482/core/trino-spi/src/main/java/io/trino/spi/resourcegroups/SelectionCriteria.java#L24-L34)
 
 ```java
 public final class SelectionCriteria
@@ -913,7 +930,7 @@ public class FileResourceGroupConfigurationManager
 JSON ファイルは `ManagerSpec` にデシリアライズされる。
 `ManagerSpec` はルートグループの階層構造（`rootGroups`）、セレクター（`selectors`）、CPU クォータ期間を保持する。
 
-[`plugin/trino-resource-group-managers/src/main/java/io/trino/plugin/resourcegroups/ManagerSpec.java` L29-L42](https://github.com/trinodb/trino/blob/482/plugin/trino-resource-group-managers/src/main/java/io/trino/plugin/resourcegroups/ManagerSpec.java#L29-L42)
+[`plugin/trino-resource-group-managers/src/main/java/io/trino/plugin/resourcegroups/ManagerSpec.java` L29-L42](https://github.com/trinodb/trino/blob/482/plugin/trino-resource-group-managers/src/main/java/io/trino/plugin/resourcegroups/ManagerSpec.java#L29-L41)
 
 ```java
 public class ManagerSpec
@@ -938,15 +955,14 @@ public class ManagerSpec
 [`plugin/trino-resource-group-managers/src/main/java/io/trino/plugin/resourcegroups/FileResourceGroupConfigurationManager.java` L146-L153](https://github.com/trinodb/trino/blob/482/plugin/trino-resource-group-managers/src/main/java/io/trino/plugin/resourcegroups/FileResourceGroupConfigurationManager.java#L146-L153)
 
 ```java
-@Override
-public Optional<SelectionContext<ResourceGroupIdTemplate>> match(SelectionCriteria criteria)
-{
-    return selectors.stream()
-            .map(s -> s.match(criteria))
-            .filter(Optional::isPresent)
-            .map(Optional::get)
-            .findFirst();
-}
+    public Optional<SelectionContext<ResourceGroupIdTemplate>> match(SelectionCriteria criteria)
+    {
+        return selectors.stream()
+                .map(s -> s.match(criteria))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst();
+    }
 ```
 
 各セレクターは `StaticSelector` として実装され、ユーザー名やソースの正規表現マッチング、クライアントタグの包含判定などを組み合わせる。
@@ -954,25 +970,24 @@ public Optional<SelectionContext<ResourceGroupIdTemplate>> match(SelectionCriter
 [`plugin/trino-resource-group-managers/src/main/java/io/trino/plugin/resourcegroups/StaticSelector.java` L111-L128](https://github.com/trinodb/trino/blob/482/plugin/trino-resource-group-managers/src/main/java/io/trino/plugin/resourcegroups/StaticSelector.java#L111-L128)
 
 ```java
-@Override
-public Optional<SelectionContext<ResourceGroupIdTemplate>> match(SelectionCriteria criteria)
-{
-    if (!selectionMatchers.stream().allMatch(matcher -> matcher.matches(criteria))) {
-        return Optional.empty();
+    public Optional<SelectionContext<ResourceGroupIdTemplate>> match(SelectionCriteria criteria)
+    {
+        if (!selectionMatchers.stream().allMatch(matcher -> matcher.matches(criteria))) {
+            return Optional.empty();
+        }
+        Map<String, String> variables = new HashMap<>();
+        for (SelectionMatcher matcher : selectionMatchers) {
+            matcher.populateVariables(criteria, variables);
+        }
+
+        variables.putIfAbsent(USER_VARIABLE, criteria.getUser());
+
+        // Special handling for source, which is an optional field that is part of the standard variables
+        variables.putIfAbsent(SOURCE_VARIABLE, criteria.getSource().orElse(""));
+
+        ResourceGroupId id = group.expandTemplate(new VariableMap(variables));
+        return Optional.of(new SelectionContext<>(id, group));
     }
-    Map<String, String> variables = new HashMap<>();
-    for (SelectionMatcher matcher : selectionMatchers) {
-        matcher.populateVariables(criteria, variables);
-    }
-
-    variables.putIfAbsent(USER_VARIABLE, criteria.getUser());
-
-    // Special handling for source, which is an optional field that is part of the standard variables
-    variables.putIfAbsent(SOURCE_VARIABLE, criteria.getSource().orElse(""));
-
-    ResourceGroupId id = group.expandTemplate(new VariableMap(variables));
-    return Optional.of(new SelectionContext<>(id, group));
-}
 ```
 
 すべてのマッチャーが成功すると、正規表現の名前付きキャプチャグループから変数を抽出し、テンプレートを展開して `ResourceGroupId` を生成する。
@@ -985,24 +1000,25 @@ public Optional<SelectionContext<ResourceGroupIdTemplate>> match(SelectionCriter
 [`plugin/trino-resource-group-managers/src/main/java/io/trino/plugin/resourcegroups/AbstractResourceConfigurationManager.java` L200-L218](https://github.com/trinodb/trino/blob/482/plugin/trino-resource-group-managers/src/main/java/io/trino/plugin/resourcegroups/AbstractResourceConfigurationManager.java#L200-L218)
 
 ```java
-protected void configureGroup(ResourceGroup group, ResourceGroupSpec match)
-{
-    if (match.getSoftMemoryLimit().isPresent()) {
-        synchronized (memoryPoolFraction) {
-            memoryPoolFraction.remove(group);
-            group.setSoftMemoryLimitBytes(match.getSoftMemoryLimit().get().toBytes());
+    protected void configureGroup(ResourceGroup group, ResourceGroupSpec match)
+    {
+        if (match.getSoftMemoryLimit().isPresent()) {
+            synchronized (memoryPoolFraction) {
+                memoryPoolFraction.remove(group);
+                group.setSoftMemoryLimitBytes(match.getSoftMemoryLimit().get().toBytes());
+            }
         }
-    }
-    else {
-        synchronized (memoryPoolFraction) {
-            double fraction = match.getSoftMemoryLimitFraction().getAsDouble();
-            memoryPoolFraction.put(group, fraction);
-            group.setSoftMemoryLimitBytes((long) (memoryPoolBytes * fraction));
+        else {
+            synchronized (memoryPoolFraction) {
+                double fraction = match.getSoftMemoryLimitFraction().getAsDouble();
+                memoryPoolFraction.put(group, fraction);
+                group.setSoftMemoryLimitBytes((long) (memoryPoolBytes * fraction));
+            }
         }
-    }
-    group.setMaxQueuedQueries(match.getMaxQueued());
-    group.setSoftConcurrencyLimit(match.getSoftConcurrencyLimit().orElse(match.getHardConcurrencyLimit()));
-    group.setHardConcurrencyLimit(match.getHardConcurrencyLimit());
+        group.setMaxQueuedQueries(match.getMaxQueued());
+        group.setSoftConcurrencyLimit(match.getSoftConcurrencyLimit().orElse(match.getHardConcurrencyLimit()));
+        group.setHardConcurrencyLimit(match.getHardConcurrencyLimit());
+        match.getSchedulingPolicy().ifPresent(group::setSchedulingPolicy);
 ```
 
 メモリ制限は絶対値(`1GB` のような指定)とパーセンテージ(`50%` のような指定)の2形式をサポートしている。

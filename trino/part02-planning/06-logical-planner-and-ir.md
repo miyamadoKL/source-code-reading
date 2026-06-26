@@ -26,37 +26,37 @@ AST の式表現と IR の式表現の違い、両者を橋渡しする `Transla
 [`LogicalPlanner.java L252-L307`](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/LogicalPlanner.java#L252-L307)
 
 ```java
-public Plan plan(Analysis analysis, Stage stage, boolean collectPlanStatistics)
-{
-    PlanNode root;
-    try (var _ = scopedSpan(plannerContext.getTracer(), "plan")) {
-        root = planStatement(analysis, analysis.getStatement());
-    }
+    public Plan plan(Analysis analysis, Stage stage, boolean collectPlanStatistics)
+    {
+        PlanNode root;
+        try (var _ = scopedSpan(plannerContext.getTracer(), "plan")) {
+            root = planStatement(analysis, analysis.getStatement());
+        }
 
-    // ... (中略) ...
+        // ... (中略) ...
 
-    try (var _ = scopedSpan(plannerContext.getTracer(), "validate-intermediate")) {
-        planSanityChecker.validateIntermediatePlan(root, session, plannerContext, warningCollector);
-    }
+        try (var _ = scopedSpan(plannerContext.getTracer(), "validate-intermediate")) {
+            planSanityChecker.validateIntermediatePlan(root, session, plannerContext, warningCollector);
+        }
 
-    if (stage.ordinal() >= OPTIMIZED.ordinal()) {
-        try (var _ = scopedSpan(plannerContext.getTracer(), "optimizer")) {
-            for (PlanOptimizer optimizer : planOptimizers) {
-                root = runOptimizer(root, tableStatsProvider, optimizer);
+        if (stage.ordinal() >= OPTIMIZED.ordinal()) {
+            try (var _ = scopedSpan(plannerContext.getTracer(), "optimizer")) {
+                for (PlanOptimizer optimizer : planOptimizers) {
+                    root = runOptimizer(root, tableStatsProvider, optimizer);
+                }
             }
         }
-    }
 
-    if (stage.ordinal() >= OPTIMIZED_AND_VALIDATED.ordinal()) {
-        // make sure we produce a valid plan after optimizations run. This is mainly to catch programming errors
-        try (var _ = scopedSpan(plannerContext.getTracer(), "validate-final")) {
-            planSanityChecker.validateFinalPlan(root, session, plannerContext, warningCollector);
+        if (stage.ordinal() >= OPTIMIZED_AND_VALIDATED.ordinal()) {
+            // make sure we produce a valid plan after optimizations run. This is mainly to catch programming errors
+            try (var _ = scopedSpan(plannerContext.getTracer(), "validate-final")) {
+                planSanityChecker.validateFinalPlan(root, session, plannerContext, warningCollector);
+            }
         }
-    }
 
-    // ... (中略: 統計収集) ...
-    return new Plan(root, statsAndCosts);
-}
+        // ... (中略: 統計収集) ...
+        return new Plan(root, statsAndCosts);
+    }
 ```
 
 処理は4段階で進む。
@@ -76,24 +76,24 @@ public Plan plan(Analysis analysis, Stage stage, boolean collectPlanStatistics)
 [`LogicalPlanner.java L347-L395`](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/LogicalPlanner.java#L347-L395)
 
 ```java
-public PlanNode planStatement(Analysis analysis, Statement statement)
-{
-    // ... (中略: CTAS の no-op 判定) ...
-    return createOutputPlan(planStatementWithoutOutput(analysis, statement), analysis);
-}
+    public PlanNode planStatement(Analysis analysis, Statement statement)
+    {
+        // ... (中略: CTAS の no-op 判定) ...
+        return createOutputPlan(planStatementWithoutOutput(analysis, statement), analysis);
+    }
 
-private RelationPlan planStatementWithoutOutput(Analysis analysis, Statement statement)
-{
-    if (statement instanceof CreateTableAsSelect createTableAsSelect) {
-        // ...
+    private RelationPlan planStatementWithoutOutput(Analysis analysis, Statement statement)
+    {
+        if (statement instanceof CreateTableAsSelect createTableAsSelect) {
+            // ...
+        }
+        // ... (中略) ...
+        if (statement instanceof Query query) {
+            return createRelationPlan(analysis, query);
+        }
+        // ... (中略) ...
+        throw new TrinoException(NOT_SUPPORTED, "Unsupported statement type " + statement.getClass().getSimpleName());
     }
-    // ... (中略) ...
-    if (statement instanceof Query query) {
-        return createRelationPlan(analysis, query);
-    }
-    // ... (中略) ...
-    throw new TrinoException(NOT_SUPPORTED, "Unsupported statement type " + statement.getClass().getSimpleName());
-}
 ```
 
 SELECT 文の場合、`planStatementWithoutOutput()` は `createRelationPlan()` を呼び、それが `RelationPlanner` を生成してクエリ本体をプランニングする。
@@ -110,7 +110,7 @@ INSERT、DELETE、UPDATE、MERGE などの DML 文にはそれぞれ専用のプ
 
 `RelationPlanner` は `AstVisitor<RelationPlan, Void>` を継承し、AST の Visitor パターンで FROM 句の各要素を PlanNode へ変換する。
 
-[`RelationPlanner.java L224-L265`](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/RelationPlanner.java#L224-L265)
+[`RelationPlanner.java L224-L265`](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/RelationPlanner.java#L224-L2149)
 
 ```java
 class RelationPlanner
@@ -132,36 +132,40 @@ class RelationPlanner
 
 テーブル参照のプランニングを具体的に見る。
 
-[`RelationPlanner.java L292-L365`](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/RelationPlanner.java#L292-L365)
+[`RelationPlanner.java L291-L365`](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/RelationPlanner.java#L291-L365)
 
 ```java
-@Override
-protected RelationPlan visitTable(Table node, Void context)
-{
-    // ... (中略: 再帰 CTE / Named Query の処理) ...
-    TableHandle handle = analysis.getTableHandle(node);
+    @Override
+    protected RelationPlan visitTable(Table node, Void context)
+    {
+        // ... (中略: 再帰 CTE / Named Query の処理) ...
+            TableHandle handle = analysis.getTableHandle(node);
 
-    ImmutableList.Builder<Symbol> outputSymbolsBuilder = ImmutableList.builder();
-    ImmutableMap.Builder<Symbol, ColumnHandle> columns = ImmutableMap.builder();
+            ImmutableList.Builder<Symbol> outputSymbolsBuilder = ImmutableList.builder();
+            ImmutableMap.Builder<Symbol, ColumnHandle> columns = ImmutableMap.builder();
 
-    // ... (中略) ...
-    for (Field field : fields) {
-        Symbol symbol = symbolAllocator.newSymbol(field);
-        outputSymbolsBuilder.add(symbol);
-        columns.put(symbol, analysis.getColumn(field));
+            // ... (中略) ...
+            for (Field field : fields) {
+                Symbol symbol = symbolAllocator.newSymbol(field);
+
+                outputSymbolsBuilder.add(symbol);
+                columns.put(symbol, analysis.getColumn(field));
+            }
+
+            List<Symbol> outputSymbols = outputSymbolsBuilder.build();
+            // ... (中略) ...
+            PlanNode root = new TableScanNode(idAllocator.getNextId(), handle, outputSymbols, columns.buildOrThrow(), TupleDomain.all(), Optional.empty(), updateTarget, Optional.empty());
+
+            plan = new RelationPlan(root, scope, outputSymbols, outerContext);
+
+            // ... (中略) ...
+        }
+
+        plan = addRowFilters(node, plan);
+        plan = addColumnMasks(node, plan);
+
+        return plan;
     }
-
-    List<Symbol> outputSymbols = outputSymbolsBuilder.build();
-    // ... (中略) ...
-    PlanNode root = new TableScanNode(idAllocator.getNextId(), handle, outputSymbols, columns.buildOrThrow(), TupleDomain.all(), Optional.empty(), updateTarget, Optional.empty());
-
-    plan = new RelationPlan(root, scope, outputSymbols, outerContext);
-
-    plan = addRowFilters(node, plan);
-    plan = addColumnMasks(node, plan);
-
-    return plan;
-}
 ```
 
 `visitTable()` は `Analysis` からテーブルの `TableHandle` と各列の `ColumnHandle` を取得し、`SymbolAllocator` で新しい `Symbol` を割り当てて `TableScanNode` を生成する。
@@ -216,18 +220,18 @@ public RelationPlan plan(QuerySpecification node)
 [`QueryPlanner.java L1134-L1145`](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/QueryPlanner.java#L1134-L1145)
 
 ```java
-private PlanBuilder planFrom(QuerySpecification node)
-{
-    if (node.getFrom().isPresent()) {
-        RelationPlan relationPlan = new RelationPlanner(analysis, symbolAllocator, idAllocator, lambdaDeclarationToSymbolMap, plannerContext, outerContext, session, recursiveSubqueries)
-                .process(node.getFrom().get(), null);
-        return newPlanBuilder(relationPlan, analysis, lambdaDeclarationToSymbolMap, session, plannerContext, symbolAllocator);
-    }
+    private PlanBuilder planFrom(QuerySpecification node)
+    {
+        if (node.getFrom().isPresent()) {
+            RelationPlan relationPlan = new RelationPlanner(analysis, symbolAllocator, idAllocator, lambdaDeclarationToSymbolMap, plannerContext, outerContext, session, recursiveSubqueries)
+                    .process(node.getFrom().get(), null);
+            return newPlanBuilder(relationPlan, analysis, lambdaDeclarationToSymbolMap, session, plannerContext, symbolAllocator);
+        }
 
-    return new PlanBuilder(
-            new TranslationMap(outerContext, analysis.getImplicitFromScope(node), analysis, lambdaDeclarationToSymbolMap, ImmutableList.of(), session, plannerContext, symbolAllocator),
-            new ValuesNode(idAllocator.getNextId(), 1));
-}
+        return new PlanBuilder(
+                new TranslationMap(outerContext, analysis.getImplicitFromScope(node), analysis, lambdaDeclarationToSymbolMap, ImmutableList.of(), session, plannerContext, symbolAllocator),
+                new ValuesNode(idAllocator.getNextId(), 1));
+    }
 ```
 
 両クラスの協調関係をまとめると、RelationPlanner がテーブルや JOIN の構造を PlanNode に変換し、QueryPlanner がそのうえに WHERE、GROUP BY、SELECT などの演算ノードを積み重ねる。
@@ -278,25 +282,25 @@ public abstract class PlanNode
 
 ### TableScanNode: テーブル読み取りの葉ノード
 
-[`TableScanNode.java L100-L121`](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/plan/TableScanNode.java#L100-L121)
+[`TableScanNode.java L100-L121`](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/plan/TableScanNode.java#L100-L79)
 
 ```java
-public TableScanNode(
-        PlanNodeId id,
-        TableHandle table,
-        List<Symbol> outputs,
-        Map<Symbol, ColumnHandle> assignments,
-        TupleDomain<ColumnHandle> enforcedConstraint,
-        Optional<PlanNodeStatsEstimate> statistics,
-        boolean updateTarget,
-        Optional<Boolean> useConnectorNodePartitioning)
-{
-    super(id);
-    this.table = requireNonNull(table, "table is null");
-    this.outputSymbols = ImmutableList.copyOf(requireNonNull(outputs, "outputs is null"));
-    this.assignments = ImmutableMap.copyOf(requireNonNull(assignments, "assignments is null"));
+    public TableScanNode(
+            PlanNodeId id,
+            TableHandle table,
+            List<Symbol> outputs,
+            Map<Symbol, ColumnHandle> assignments,
+            TupleDomain<ColumnHandle> enforcedConstraint,
+            Optional<PlanNodeStatsEstimate> statistics,
+            boolean updateTarget,
+            Optional<Boolean> useConnectorNodePartitioning)
+    {
+        super(id);
+        this.table = requireNonNull(table, "table is null");
+        this.outputSymbols = ImmutableList.copyOf(requireNonNull(outputs, "outputs is null"));
+        this.assignments = ImmutableMap.copyOf(requireNonNull(assignments, "assignments is null"));
     // ... (中略) ...
-}
+    }
 ```
 
 `TableScanNode` はツリーの葉に位置し、子ノードを持たない。
@@ -305,7 +309,7 @@ public TableScanNode(
 
 ### FilterNode: 述語によるフィルタリング
 
-[`FilterNode.java L29-L83`](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/plan/FilterNode.java#L29-L83)
+[`FilterNode.java L29-L58`](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/plan/FilterNode.java#L29-L58)
 
 ```java
 public class FilterNode
@@ -321,7 +325,6 @@ public class FilterNode
     {
         return source.getOutputSymbols();
     }
-}
 ```
 
 `FilterNode` は子ノード(`source`)と述語(`predicate`)だけを持つ単純なノードである。
@@ -347,10 +350,14 @@ public class ProjectNode
         return ImmutableList.copyOf(assignments.outputs());
     }
 
+    // ... (中略) ...
+
     public boolean isIdentity()
     {
         return assignments.isIdentity();
     }
+
+    // ... (中略) ...
 }
 ```
 
@@ -360,7 +367,7 @@ public class ProjectNode
 
 ### JoinNode: 結合
 
-[`JoinNode.java L48-L146`](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/plan/JoinNode.java#L48-L146)
+[`JoinNode.java L48-L146`](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/plan/JoinNode.java#L48-L376)
 
 ```java
 public class JoinNode
@@ -378,7 +385,7 @@ public class JoinNode
     private final Optional<DistributionType> distributionType;
     private final Optional<Boolean> spillable;
     private final Map<DynamicFilterId, Symbol> dynamicFilters;
-    private final Optional<PlanNodeStatsAndCostSummary> reorderJoinStatsAndCost;
+
     // ... (中略) ...
 }
 ```
@@ -390,7 +397,7 @@ public class JoinNode
 
 ### AggregationNode: 集約
 
-[`AggregationNode.java L46-L123`](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/plan/AggregationNode.java#L46-L123)
+[`AggregationNode.java L46-L123`](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/plan/AggregationNode.java#L46-L608)
 
 ```java
 public class AggregationNode
@@ -413,7 +420,7 @@ public class AggregationNode
 
 ### ExchangeNode: データの再分配
 
-[`ExchangeNode.java L44-L118`](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/plan/ExchangeNode.java#L44-L118)
+[`ExchangeNode.java L45-L66`](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/plan/ExchangeNode.java#L45-L66)
 
 ```java
 public class ExchangeNode
@@ -434,10 +441,11 @@ public class ExchangeNode
 
     private final Type type;
     private final Scope scope;
+
     private final List<PlanNode> sources;
+
     private final PartitioningScheme partitioningScheme;
     // ... (中略) ...
-}
 ```
 
 `ExchangeNode` は初期の論理プランには現れない。
@@ -525,6 +533,7 @@ public record Call(ResolvedFunction function, List<Expression> arguments)
     public Call
     {
         arguments = ImmutableList.copyOf(arguments);
+
         checkArgument(function.signature().getArgumentTypes().size() == arguments.size(), "Expected %s arguments, found: %s", function.signature().getArgumentTypes().size(), arguments.size());
         for (int i = 0; i < arguments.size(); i++) {
             validateType(function.signature().getArgumentType(i), arguments.get(i));
@@ -561,7 +570,7 @@ public record Cast(Expression expression, Type type)
 `TranslationMap` が AST の式を IR の式に変換する。
 このクラスは、現在のスコープにおけるフィールドからシンボルへのマッピング(`fieldSymbols`)と、式からシンボルへのマッピング(`astToSymbols`)を保持する。
 
-[`TranslationMap.java L198-L280`](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/TranslationMap.java#L198-L280)
+[`TranslationMap.java L198-L280`](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/TranslationMap.java#L198-L1609)
 
 ```java
 /**
@@ -596,11 +605,11 @@ public class TranslationMap
 [`TranslationMap.java L367-L371`](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/TranslationMap.java#L367-L371)
 
 ```java
-public io.trino.sql.ir.Expression rewrite(Expression root)
-{
-    verify(analysis.isAnalyzed(root), "Expression is not analyzed (%s): %s", root.getClass().getName(), root);
-    return translate(root, true);
-}
+    public io.trino.sql.ir.Expression rewrite(Expression root)
+    {
+        verify(analysis.isAnalyzed(root), "Expression is not analyzed (%s): %s", root.getClass().getName(), root);
+
+        return translate(root, true);
 ```
 
 `translate()` メソッドは、まず `tryGetMapping()` で式がすでにシンボルに対応付けられていないか確認し、対応がなければ AST ノードの型に応じた変換メソッドを呼ぶ。
@@ -608,30 +617,30 @@ public io.trino.sql.ir.Expression rewrite(Expression root)
 [`TranslationMap.java L379-L448`](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/TranslationMap.java#L379-L448)
 
 ```java
-private io.trino.sql.ir.Expression translate(Expression expr, boolean isRoot)
-{
-    Optional<Reference> mapped = tryGetMapping(expr);
+    private io.trino.sql.ir.Expression translate(Expression expr, boolean isRoot)
+    {
+        Optional<Reference> mapped = tryGetMapping(expr);
 
-    io.trino.sql.ir.Expression result;
-    if (mapped.isPresent()) {
-        result = mapped.get();
-    }
-    else {
-        result = switch (expr) {
-            case io.trino.sql.tree.FieldReference expression -> translate(expression);
-            case Identifier expression -> translate(expression);
-            case FunctionCall expression -> translate(expression);
-            // ... (中略: 約30種類の AST ノード型) ...
-            case Cast expression -> translate(expression);
-            // ... (中略) ...
-            default -> throw new IllegalArgumentException("Unsupported expression (%s): %s".formatted(expr.getClass().getName(), expr));
-        };
-    }
+        io.trino.sql.ir.Expression result;
+        if (mapped.isPresent()) {
+            result = mapped.get();
+        }
+        else {
+            result = switch (expr) {
+                case io.trino.sql.tree.FieldReference expression -> translate(expression);
+                case Identifier expression -> translate(expression);
+                case FunctionCall expression -> translate(expression);
+                // ... (中略: 約30種類の AST ノード型) ...
+                case Cast expression -> translate(expression);
+                // ... (中略) ...
+                default -> throw new IllegalArgumentException("Unsupported expression (%s): %s".formatted(expr.getClass().getName(), expr));
+            };
+        }
 
-    // Don't add a coercion for the top-level expression. That depends on the context
-    // the expression is used and it's the responsibility of the caller.
-    return isRoot ? result : QueryPlanner.coerceIfNecessary(analysis, expr, result);
-}
+        // Don't add a coercion for the top-level expression. That depends on the context
+        // the expression is used and it's the responsibility of the caller.
+        return isRoot ? result : QueryPlanner.coerceIfNecessary(analysis, expr, result);
+    }
 ```
 
 ルートでない(部分式の)場合、アナライザが記録した暗黙的な型変換(coercion)を適用する。
@@ -642,29 +651,29 @@ private io.trino.sql.ir.Expression translate(Expression expr, boolean isRoot)
 [`TranslationMap.java L857-L887`](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/TranslationMap.java#L857-L887)
 
 ```java
-private io.trino.sql.ir.Expression translate(FunctionCall expression)
-{
-    if (analysis.isPatternNavigationFunction(expression)) {
-        return translate(expression.getArguments().getFirst().getValue(), false);
-    }
+    private io.trino.sql.ir.Expression translate(FunctionCall expression)
+    {
+        if (analysis.isPatternNavigationFunction(expression)) {
+            return translate(expression.getArguments().getFirst().getValue(), false);
+        }
 
-    Optional<ResolvedFunction> resolvedFunction = analysis.getResolvedFunction(expression);
-    checkArgument(resolvedFunction.isPresent(), "Function has not been analyzed: %s", expression);
+        Optional<ResolvedFunction> resolvedFunction = analysis.getResolvedFunction(expression);
+        checkArgument(resolvedFunction.isPresent(), "Function has not been analyzed: %s", expression);
 
-    // Emit arguments in resolved signature order: for positional calls the binding
-    // is the identity; for named calls it reorders so values land at their
-    // declared positions.
-    List<CallArgument> arguments = expression.getArguments();
-    List<io.trino.sql.ir.Expression> translated = analysis.getArgumentBinding(expression).stream()
-            .map(arguments::get)
-            .map(CallArgument::getValue)
-            .map(this::translateExpression)
-            .collect(toImmutableList());
+        // Emit arguments in resolved signature order: for positional calls the binding
+        // is the identity; for named calls it reorders so values land at their
+        // declared positions.
+        List<CallArgument> arguments = expression.getArguments();
+        List<io.trino.sql.ir.Expression> translated = analysis.getArgumentBinding(expression).stream()
+                .map(arguments::get)
+                .map(CallArgument::getValue)
+                .map(this::translateExpression)
+                .collect(toImmutableList());
 
     // ... (中略) ...
 
-    return new Call(resolvedFunction.get(), translated);
-}
+        return new Call(resolvedFunction.get(), translated);
+    }
 ```
 
 `Analysis` から解決済みの `ResolvedFunction` を取得し、引数をシグネチャの順序に並べ替えたうえで IR の `Call` を生成している。
@@ -693,16 +702,15 @@ IR を sealed にして16種類に絞り込んだことで2つの利点が生ま
 [`QueryPlanner.java L1147-L1155`](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/QueryPlanner.java#L1147-L1155)
 
 ```java
-private PlanBuilder filter(PlanBuilder subPlan, io.trino.sql.tree.Expression predicate, Node node)
-{
-    if (predicate == null) {
-        return subPlan;
-    }
+    private PlanBuilder filter(PlanBuilder subPlan, io.trino.sql.tree.Expression predicate, Node node)
+    {
+        if (predicate == null) {
+            return subPlan;
+        }
 
-    subPlan = subqueryPlanner.handleSubqueries(subPlan, predicate, analysis.getSubqueries(node));
+        subPlan = subqueryPlanner.handleSubqueries(subPlan, predicate, analysis.getSubqueries(node));
 
-    return subPlan.withNewRoot(new FilterNode(idAllocator.getNextId(), subPlan.getRoot(), coerceIfNecessary(analysis, predicate, subPlan.rewrite(predicate))));
-}
+        return subPlan.withNewRoot(new FilterNode(idAllocator.getNextId(), subPlan.getRoot(), coerceIfNecessary(analysis, predicate, subPlan.rewrite(predicate))));
 ```
 
 まず `SubqueryPlanner` が述語中のサブクエリ(EXISTS、IN サブクエリなど)を別のプランノードとして展開する。

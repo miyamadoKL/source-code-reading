@@ -104,6 +104,13 @@ public interface OperatorFactory
 {
     Operator createOperator(DriverContext driverContext);
 
+    /**
+     * Declare that createOperator will not be called any more and release
+     * any resources associated with this factory.
+     * <p>
+     * This method will be called only once.
+     * Implementation doesn't need to worry about duplicate invocations.
+     */
     void noMoreOperators();
 
     OperatorFactory duplicate();
@@ -161,17 +168,17 @@ PlanNode ツリーのルートに対して `plan.accept(new Visitor(session), co
 [`core/trino-main/src/main/java/io/trino/sql/planner/LocalExecutionPlanner.java` L877-L887](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/LocalExecutionPlanner.java#L877-L887)
 
 ```java
-private class Visitor
-        extends PlanVisitor<PhysicalOperation, LocalExecutionPlanContext>
-{
-    private final Session session;
-    private final IrExpressionEvaluator evaluator;
-
-    private Visitor(Session session)
+    private class Visitor
+            extends PlanVisitor<PhysicalOperation, LocalExecutionPlanContext>
     {
-        this.session = session;
-        evaluator = plannerContext.getExpressionEvaluator();
-    }
+        private final Session session;
+        private final IrExpressionEvaluator evaluator;
+
+        private Visitor(Session session)
+        {
+            this.session = session;
+            evaluator = plannerContext.getExpressionEvaluator();
+        }
 ```
 
 PlanNode の種類ごとに `visitTableScan`, `visitFilter`, `visitProject`, `visitExchange` などが定義され、それぞれが OperatorFactory の生成と Pipeline の分割を担う。
@@ -183,10 +190,10 @@ OperatorFactory のリストは `addDriverFactory()` で `DriverFactory` に包�
 [`core/trino-main/src/main/java/io/trino/sql/planner/LocalExecutionPlanner.java` L748-L751](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/LocalExecutionPlanner.java#L748-L751)
 
 ```java
-private void addDriverFactory(boolean inputDriver, boolean outputDriver, List<OperatorFactory> operatorFactories, OptionalInt driverInstances)
-{
-    driverFactories.add(new DriverFactory(getNextPipelineId(), inputDriver, outputDriver, operatorFactories, driverInstances));
-}
+        private void addDriverFactory(boolean inputDriver, boolean outputDriver, List<OperatorFactory> operatorFactories, OptionalInt driverInstances)
+        {
+            driverFactories.add(new DriverFactory(getNextPipelineId(), inputDriver, outputDriver, operatorFactories, driverInstances));
+        }
 ```
 
 ここで `inputDriver` フラグは Split を受け取るパイプラインを、`outputDriver` フラグは最終出力を担うパイプラインを示す。
@@ -198,27 +205,27 @@ private void addDriverFactory(boolean inputDriver, boolean outputDriver, List<Op
 [`core/trino-main/src/main/java/io/trino/sql/planner/LocalExecutionPlanner.java` L855-L875](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/LocalExecutionPlanner.java#L855-L875)
 
 ```java
-public static class LocalExecutionPlan
-{
-    private final List<DriverFactory> driverFactories;
-    private final List<PlanNodeId> partitionedSourceOrder;
-
-    public LocalExecutionPlan(List<DriverFactory> driverFactories, List<PlanNodeId> partitionedSourceOrder)
+    public static class LocalExecutionPlan
     {
-        this.driverFactories = ImmutableList.copyOf(requireNonNull(driverFactories, "driverFactories is null"));
-        this.partitionedSourceOrder = ImmutableList.copyOf(requireNonNull(partitionedSourceOrder, "partitionedSourceOrder is null"));
-    }
+        private final List<DriverFactory> driverFactories;
+        private final List<PlanNodeId> partitionedSourceOrder;
 
-    public List<DriverFactory> getDriverFactories()
-    {
-        return driverFactories;
-    }
+        public LocalExecutionPlan(List<DriverFactory> driverFactories, List<PlanNodeId> partitionedSourceOrder)
+        {
+            this.driverFactories = ImmutableList.copyOf(requireNonNull(driverFactories, "driverFactories is null"));
+            this.partitionedSourceOrder = ImmutableList.copyOf(requireNonNull(partitionedSourceOrder, "partitionedSourceOrder is null"));
+        }
 
-    public List<PlanNodeId> getPartitionedSourceOrder()
-    {
-        return partitionedSourceOrder;
+        public List<DriverFactory> getDriverFactories()
+        {
+            return driverFactories;
+        }
+
+        public List<PlanNodeId> getPartitionedSourceOrder()
+        {
+            return partitionedSourceOrder;
+        }
     }
-}
 ```
 
 「LocalExecutionPlan」は DriverFactory のリストと、パーティション化されたソースの処理順序を保持する。
@@ -232,23 +239,23 @@ Split が到着するたびに `createDriver()` が呼ばれ、各 OperatorFacto
 [`core/trino-main/src/main/java/io/trino/operator/DriverFactory.java` L44-L60](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/operator/DriverFactory.java#L44-L60)
 
 ```java
-public DriverFactory(int pipelineId, boolean inputDriver, boolean outputDriver, List<OperatorFactory> operatorFactories, OptionalInt driverInstances)
-{
-    this.pipelineId = pipelineId;
-    this.inputDriver = inputDriver;
-    this.outputDriver = outputDriver;
-    this.operatorFactories = ImmutableList.copyOf(requireNonNull(operatorFactories, "operatorFactories is null"));
-    checkArgument(!operatorFactories.isEmpty(), "There must be at least one operator");
-    this.driverInstances = requireNonNull(driverInstances, "driverInstances is null");
+    public DriverFactory(int pipelineId, boolean inputDriver, boolean outputDriver, List<OperatorFactory> operatorFactories, OptionalInt driverInstances)
+    {
+        this.pipelineId = pipelineId;
+        this.inputDriver = inputDriver;
+        this.outputDriver = outputDriver;
+        this.operatorFactories = ImmutableList.copyOf(requireNonNull(operatorFactories, "operatorFactories is null"));
+        checkArgument(!operatorFactories.isEmpty(), "There must be at least one operator");
+        this.driverInstances = requireNonNull(driverInstances, "driverInstances is null");
 
-    List<PlanNodeId> sourceIds = operatorFactories.stream()
-            .filter(SourceOperatorFactory.class::isInstance)
-            .map(SourceOperatorFactory.class::cast)
-            .map(SourceOperatorFactory::getSourceId)
-            .collect(toImmutableList());
-    checkArgument(sourceIds.size() <= 1, "Expected at most one source operator in driver factory, but found %s", sourceIds);
-    this.sourceId = sourceIds.isEmpty() ? Optional.empty() : Optional.of(sourceIds.get(0));
-}
+        List<PlanNodeId> sourceIds = operatorFactories.stream()
+                .filter(SourceOperatorFactory.class::isInstance)
+                .map(SourceOperatorFactory.class::cast)
+                .map(SourceOperatorFactory::getSourceId)
+                .collect(toImmutableList());
+        checkArgument(sourceIds.size() <= 1, "Expected at most one source operator in driver factory, but found %s", sourceIds);
+        this.sourceId = sourceIds.isEmpty() ? Optional.empty() : Optional.of(sourceIds.get(0));
+    }
 ```
 
 コンストラクタで OperatorFactory リストから SourceOperatorFactory を検出し、`sourceId` を記録する。
@@ -292,17 +299,18 @@ public Driver createDriver(DriverContext driverContext)
 [`core/trino-main/src/main/java/io/trino/operator/DriverFactory.java` L140-L151](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/operator/DriverFactory.java#L140-L151)
 
 ```java
-public synchronized void noMoreDrivers()
-{
-    if (noMoreDrivers) {
-        return;
+    public synchronized void noMoreDrivers()
+    {
+        if (noMoreDrivers) {
+            return;
+        }
+        for (OperatorFactory operatorFactory : operatorFactories) {
+            operatorFactory.noMoreOperators();
+        }
+        operatorFactories = null;
+        noMoreDrivers = true;
     }
-    for (OperatorFactory operatorFactory : operatorFactories) {
-        operatorFactory.noMoreOperators();
-    }
-    operatorFactories = null;
-    noMoreDrivers = true;
-}
+
 ```
 
 ## Driver の構造と処理ループ
@@ -315,28 +323,29 @@ public synchronized void noMoreDrivers()
 [`core/trino-main/src/main/java/io/trino/operator/Driver.java` L124-L146](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/operator/Driver.java#L124-L146)
 
 ```java
-private Driver(DriverContext driverContext, List<Operator> operators)
-{
-    this.driverContext = requireNonNull(driverContext, "driverContext is null");
-    this.allOperators = ImmutableList.copyOf(requireNonNull(operators, "operators is null"));
-    checkArgument(allOperators.size() > 1, "At least two operators are required");
-    this.activeOperators = new ArrayList<>(operators);
+    private Driver(DriverContext driverContext, List<Operator> operators)
+    {
+        this.driverContext = requireNonNull(driverContext, "driverContext is null");
+        this.allOperators = ImmutableList.copyOf(requireNonNull(operators, "operators is null"));
+        checkArgument(allOperators.size() > 1, "At least two operators are required");
+        this.activeOperators = new ArrayList<>(operators);
+        checkArgument(!operators.isEmpty(), "There must be at least one operator");
 
-    Optional<SourceOperator> sourceOperator = Optional.empty();
-    for (Operator operator : operators) {
-        if (operator instanceof SourceOperator value) {
-            checkArgument(sourceOperator.isEmpty(), "There must be at most one SourceOperator");
-            sourceOperator = Optional.of(value);
+        Optional<SourceOperator> sourceOperator = Optional.empty();
+        for (Operator operator : operators) {
+            if (operator instanceof SourceOperator value) {
+                checkArgument(sourceOperator.isEmpty(), "There must be at most one SourceOperator");
+                sourceOperator = Optional.of(value);
+            }
         }
-    }
-    this.sourceOperator = sourceOperator;
+        this.sourceOperator = sourceOperator;
 
-    currentSplitAssignment = sourceOperator.map(operator -> new SplitAssignment(operator.getSourceId(), ImmutableSet.of(), false)).orElse(null);
-    // initially the driverBlockedFuture is not blocked (it is completed)
-    SettableFuture<Void> future = SettableFuture.create();
-    future.set(null);
-    driverBlockedFuture.set(future);
-}
+        currentSplitAssignment = sourceOperator.map(operator -> new SplitAssignment(operator.getSourceId(), ImmutableSet.of(), false)).orElse(null);
+        // initially the driverBlockedFuture is not blocked (it is completed)
+        SettableFuture<Void> future = SettableFuture.create();
+        future.set(null);
+        driverBlockedFuture.set(future);
+    }
 ```
 
 Driver は最低2つの Operator を必要とする(ソースと出力)。
@@ -503,26 +512,27 @@ Operator が非同期 I/O やメモリ待ちでブロックする場合、Driver
 [`core/trino-main/src/main/java/io/trino/operator/Driver.java` L602-L622](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/operator/Driver.java#L602-L622)
 
 ```java
-private Optional<ListenableFuture<Void>> getBlockedFuture(Operator operator)
-{
-    ListenableFuture<Void> blocked = revokingOperators.get(operator);
-    if (blocked != null) {
-        return Optional.of(blocked);
+    private Optional<ListenableFuture<Void>> getBlockedFuture(Operator operator)
+    {
+        ListenableFuture<Void> blocked = revokingOperators.get(operator);
+        if (blocked != null) {
+            // We mark operator as blocked regardless of blocked.isDone(), because finishMemoryRevoke has not been called yet.
+            return Optional.of(blocked);
+        }
+        blocked = operator.isBlocked();
+        if (!blocked.isDone()) {
+            return Optional.of(blocked);
+        }
+        blocked = operator.getOperatorContext().isWaitingForMemory();
+        if (!blocked.isDone()) {
+            return Optional.of(blocked);
+        }
+        blocked = operator.getOperatorContext().isWaitingForRevocableMemory();
+        if (!blocked.isDone()) {
+            return Optional.of(blocked);
+        }
+        return Optional.empty();
     }
-    blocked = operator.isBlocked();
-    if (!blocked.isDone()) {
-        return Optional.of(blocked);
-    }
-    blocked = operator.getOperatorContext().isWaitingForMemory();
-    if (!blocked.isDone()) {
-        return Optional.of(blocked);
-    }
-    blocked = operator.getOperatorContext().isWaitingForRevocableMemory();
-    if (!blocked.isDone()) {
-        return Optional.of(blocked);
-    }
-    return Optional.empty();
-}
 ```
 
 4つのブロック要因を順に確認する。
@@ -558,7 +568,7 @@ flowchart LR
 
 `SqlTaskExecution` のコンストラクタで、DriverFactory のリストを Split のライフサイクルによって分類する。
 
-[`core/trino-main/src/main/java/io/trino/execution/SqlTaskExecution.java` L137-L165](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/SqlTaskExecution.java#L137-L165)
+[`core/trino-main/src/main/java/io/trino/execution/SqlTaskExecution.java` L137-L186](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/SqlTaskExecution.java#L137-L186)
 
 ```java
 try (SetThreadName _ = new SetThreadName("Task-" + taskId)) {
@@ -594,28 +604,30 @@ Split ライフサイクルの Driver は、Split が到着するたびに `Driv
 [`core/trino-main/src/main/java/io/trino/execution/SqlTaskExecution.java` L830-L853](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/execution/SqlTaskExecution.java#L830-L853)
 
 ```java
-@Override
-public ListenableFuture<Void> processFor(Duration duration)
-{
-    Driver driver;
-    synchronized (this) {
-        if (closed) {
-            return immediateVoidFuture();
-        }
+        @Override
+        public ListenableFuture<Void> processFor(Duration duration)
+        {
+            Driver driver;
+            synchronized (this) {
+                // if close() was called before we get here, there's not point in even creating the driver
+                if (closed) {
+                    return immediateVoidFuture();
+                }
 
-        if (this.driver == null) {
-            this.driver = driverSplitRunnerFactory.createDriver(driverContext, partitionedSplit);
-            if (this.driver == null) {
-                closed = true;
-                return immediateVoidFuture();
+                if (this.driver == null) {
+                    this.driver = driverSplitRunnerFactory.createDriver(driverContext, partitionedSplit);
+                    // Termination has begun, mark the runner as closed and return
+                    if (this.driver == null) {
+                        closed = true;
+                        return immediateVoidFuture();
+                    }
+                }
+
+                driver = this.driver;
             }
+
+            return driver.processForDuration(duration);
         }
-
-        driver = this.driver;
-    }
-
-    return driver.processForDuration(duration);
-}
 ```
 
 `DriverSplitRunner.processFor()` は TaskExecutor から呼び出される。
@@ -629,32 +641,33 @@ Split から `ConnectorPageSource` を生成し、Page を読み出す。
 [`core/trino-main/src/main/java/io/trino/operator/TableScanOperator.java` L172-L198](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/operator/TableScanOperator.java#L172-L198)
 
 ```java
-@Override
-public void addSplit(Split split)
-{
-    requireNonNull(split, "split is null");
-    checkState(this.split == null, "Table scan split already set");
+    @Override
+    public void addSplit(Split split)
+    {
+        requireNonNull(split, "split is null");
+        checkState(this.split == null, "Table scan split already set");
 
-    if (finished) {
-        return;
+        if (finished) {
+            return;
+        }
+
+        this.split = split;
+        blocked.set(null);
+
+        if (split.getConnectorSplit() instanceof EmptySplit) {
+            source = new EmptyPageSource();
+        }
     }
 
-    this.split = split;
-    blocked.set(null);
-
-    if (split.getConnectorSplit() instanceof EmptySplit) {
-        source = new EmptyPageSource();
+    @Override
+    public void noMoreSplits()
+    {
+        if (split == null) {
+            finished = true;
+        }
+        blocked.set(null);
     }
-}
 
-@Override
-public void noMoreSplits()
-{
-    if (split == null) {
-        finished = true;
-    }
-    blocked.set(null);
-}
 ```
 
 `addSplit()` で Split を受け取り、`blocked` Future を完了させて Driver に処理再開を促す。
@@ -663,41 +676,40 @@ Split が1つも来ないまま `noMoreSplits()` が呼ばれた場合は即座�
 [`core/trino-main/src/main/java/io/trino/operator/TableScanOperator.java` L268-L301](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/operator/TableScanOperator.java#L268-L301)
 
 ```java
-@Override
-public Page getOutput()
-{
-    if (split == null) {
-        return null;
-    }
-    if (source == null) {
-        source = pageSourceProvider.createPageSource(operatorContext.getSession(), split, table, tableCredentials, columns, DynamicFilter.EMPTY, pageSourceMemoryContext::setBytes);
-    }
+    {
+        if (split == null) {
+            return null;
+        }
+        if (source == null) {
+            source = pageSourceProvider.createPageSource(operatorContext.getSession(), split, table, tableCredentials, columns, DynamicFilter.EMPTY, pageSourceMemoryContext::setBytes);
+        }
 
-    SourcePage sourcePage = source.getNextSourcePage();
-    Page page = null;
-    if (sourcePage != null) {
-        page = sourcePage.getPage();
+        SourcePage sourcePage = source.getNextSourcePage();
+        Page page = null;
+        if (sourcePage != null) {
+            page = sourcePage.getPage();
+        }
+
+        // update operator stats
+        long endCompletedBytes = source.getCompletedBytes();
+        long endReadTimeNanos = source.getReadTimeNanos();
+        long positionCount = page == null ? 0 : page.getPositionCount();
+        long sizeInBytes = page == null ? 0 : page.getSizeInBytes();
+        long endCompletedPositions = source.getCompletedPositions().orElse(completedPositions + positionCount);
+        operatorContext.recordPhysicalInputWithTiming(
+                endCompletedBytes - completedBytes,
+                endCompletedPositions - completedPositions,
+                endReadTimeNanos - readTimeNanos);
+        operatorContext.recordProcessedInput(sizeInBytes, positionCount);
+        completedBytes = endCompletedBytes;
+        completedPositions = endCompletedPositions;
+        readTimeNanos = endReadTimeNanos;
+
+        // updating memory usage should happen after page is loaded.
+        pageSourceProviderMemoryContext.setBytes(pageSourceProvider.getMemoryUsage());
+        operatorContext.setLatestConnectorMetrics(source.getMetrics());
+        return page;
     }
-
-    // update operator stats
-    long endCompletedBytes = source.getCompletedBytes();
-    long endReadTimeNanos = source.getReadTimeNanos();
-    long positionCount = page == null ? 0 : page.getPositionCount();
-    long sizeInBytes = page == null ? 0 : page.getSizeInBytes();
-    long endCompletedPositions = source.getCompletedPositions().orElse(completedPositions + positionCount);
-    operatorContext.recordPhysicalInputWithTiming(
-            endCompletedBytes - completedBytes,
-            endCompletedPositions - completedPositions,
-            endReadTimeNanos - readTimeNanos);
-    operatorContext.recordProcessedInput(sizeInBytes, positionCount);
-    completedBytes = endCompletedBytes;
-    completedPositions = endCompletedPositions;
-    readTimeNanos = endReadTimeNanos;
-
-    pageSourceProviderMemoryContext.setBytes(pageSourceProvider.getMemoryUsage());
-    operatorContext.setLatestConnectorMetrics(source.getMetrics());
-    return page;
-}
 ```
 
 `getOutput()` は遅延的に `ConnectorPageSource` を生成する。
@@ -711,11 +723,11 @@ public Page getOutput()
 [`core/trino-main/src/main/java/io/trino/sql/planner/LocalExecutionPlanner.java` L2003-L2007](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/LocalExecutionPlanner.java#L2003-L2007)
 
 ```java
-public PhysicalOperation visitFilter(FilterNode node, LocalExecutionPlanContext context)
-{
-    List<Symbol> outputSymbols = node.getOutputSymbols();
-    return visitScanFilterAndProject(context, node.getId(), node.getSource(), Optional.of(node.getPredicate()), Assignments.identity(outputSymbols), outputSymbols);
-}
+        public PhysicalOperation visitFilter(FilterNode node, LocalExecutionPlanContext context)
+        {
+            List<Symbol> outputSymbols = node.getOutputSymbols();
+            return visitScanFilterAndProject(context, node.getId(), node.getSource(), Optional.of(node.getPredicate()), Assignments.identity(outputSymbols), outputSymbols);
+        }
 ```
 
 `visitFilter()` と `visitProject()` はどちらも内部で `visitScanFilterAndProject()` を呼ぶ。
@@ -723,22 +735,23 @@ public PhysicalOperation visitFilter(FilterNode node, LocalExecutionPlanContext 
 [`core/trino-main/src/main/java/io/trino/sql/planner/LocalExecutionPlanner.java` L2009-L2025](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/LocalExecutionPlanner.java#L2009-L2025)
 
 ```java
-public PhysicalOperation visitProject(ProjectNode node, LocalExecutionPlanContext context)
-{
-    PlanNode sourceNode;
-    Optional<Expression> filterExpression = Optional.empty();
-    if (node.getSource() instanceof FilterNode filterNode) {
-        sourceNode = filterNode.getSource();
-        filterExpression = Optional.of(filterNode.getPredicate());
-    }
-    else {
-        sourceNode = node.getSource();
-    }
+        @Override
+        public PhysicalOperation visitProject(ProjectNode node, LocalExecutionPlanContext context)
+        {
+            PlanNode sourceNode;
+            Optional<Expression> filterExpression = Optional.empty();
+            if (node.getSource() instanceof FilterNode filterNode) {
+                sourceNode = filterNode.getSource();
+                filterExpression = Optional.of(filterNode.getPredicate());
+            }
+            else {
+                sourceNode = node.getSource();
+            }
 
-    List<Symbol> outputSymbols = node.getOutputSymbols();
+            List<Symbol> outputSymbols = node.getOutputSymbols();
 
-    return visitScanFilterAndProject(context, node.getId(), sourceNode, filterExpression, node.getAssignments(), outputSymbols);
-}
+            return visitScanFilterAndProject(context, node.getId(), sourceNode, filterExpression, node.getAssignments(), outputSymbols);
+        }
 ```
 
 `visitProject()` は、ソースが FilterNode であれば FilterNode をさらにスキップしてその下のノードを直接参照する。
@@ -747,15 +760,15 @@ public PhysicalOperation visitProject(ProjectNode node, LocalExecutionPlanContex
 [`core/trino-main/src/main/java/io/trino/sql/planner/LocalExecutionPlanner.java` L2036-L2044](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/LocalExecutionPlanner.java#L2036-L2044)
 
 ```java
-// if source is a table scan we fold it directly into the filter and project
-// otherwise we plan it as a normal operator
-Map<Symbol, Integer> sourceLayout;
-TableHandle table = null;
-Optional<ConnectorTableCredentials> tableCredentials = Optional.empty();
-List<ColumnHandle> columns = null;
-PhysicalOperation source = null;
-if (sourceNode instanceof TableScanNode tableScanNode) {
-    table = tableScanNode.getTable();
+            // if source is a table scan we fold it directly into the filter and project
+            // otherwise we plan it as a normal operator
+            Map<Symbol, Integer> sourceLayout;
+            TableHandle table = null;
+            Optional<ConnectorTableCredentials> tableCredentials = Optional.empty();
+            List<ColumnHandle> columns = null;
+            PhysicalOperation source = null;
+            if (sourceNode instanceof TableScanNode tableScanNode) {
+                table = tableScanNode.getTable();
 ```
 
 ソースが TableScanNode であれば `ScanFilterAndProjectOperator` を生成し、テーブルスキャンとフィルタと射影を1つの Operator に融合する。
@@ -763,33 +776,33 @@ if (sourceNode instanceof TableScanNode tableScanNode) {
 [`core/trino-main/src/main/java/io/trino/sql/planner/LocalExecutionPlanner.java` L2118-L2144](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/LocalExecutionPlanner.java#L2118-L2144)
 
 ```java
-if (columns != null) {
-    SourceOperatorFactory operatorFactory = new ScanFilterAndProjectOperatorFactory(
-            context.getNextOperatorId(),
-            planNodeId,
-            sourceNode.getId(),
-            pageSourceManager,
-            pageProcessor,
-            table,
-            tableCredentials,
-            columns,
-            dynamicFilter,
-            getTypes(projections),
-            getFilterAndProjectMinOutputPageSize(session),
-            getFilterAndProjectMinOutputPageRowCount(session));
+                if (columns != null) {
+                    SourceOperatorFactory operatorFactory = new ScanFilterAndProjectOperatorFactory(
+                            context.getNextOperatorId(),
+                            planNodeId,
+                            sourceNode.getId(),
+                            pageSourceManager,
+                            pageProcessor,
+                            table,
+                            tableCredentials,
+                            columns,
+                            dynamicFilter,
+                            getTypes(projections),
+                            getFilterAndProjectMinOutputPageSize(session),
+                            getFilterAndProjectMinOutputPageRowCount(session));
 
-    return new PhysicalOperation(operatorFactory, outputMappings);
-}
+                    return new PhysicalOperation(operatorFactory, outputMappings);
+                }
 
-OperatorFactory operatorFactory = FilterAndProjectOperator.createOperatorFactory(
-        context.getNextOperatorId(),
-        planNodeId,
-        () -> pageProcessor.apply(dynamicFilter),
-        getTypes(projections),
-        getFilterAndProjectMinOutputPageSize(session),
-        getFilterAndProjectMinOutputPageRowCount(session));
+                OperatorFactory operatorFactory = FilterAndProjectOperator.createOperatorFactory(
+                        context.getNextOperatorId(),
+                        planNodeId,
+                        () -> pageProcessor.apply(dynamicFilter),
+                        getTypes(projections),
+                        getFilterAndProjectMinOutputPageSize(session),
+                        getFilterAndProjectMinOutputPageRowCount(session));
 
-return new PhysicalOperation(operatorFactory, outputMappings, source);
+                return new PhysicalOperation(operatorFactory, outputMappings, source);
 ```
 
 分岐は明確である。
@@ -844,13 +857,13 @@ public class FilterAndProjectOperator
 [`core/trino-main/src/main/java/io/trino/operator/WorkProcessorOperatorAdapter.java` L94-L100](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/operator/WorkProcessorOperatorAdapter.java#L94-L100)
 
 ```java
-public WorkProcessorOperatorAdapter(OperatorContext operatorContext, WorkProcessorOperatorFactory workProcessorOperatorFactory)
-{
-    this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
-    this.workProcessorOperator = workProcessorOperatorFactory.create(operatorContext, pageBuffer.pages());
-    this.pages = workProcessorOperator.getOutputPages();
-    operatorContext.setInfoSupplier(createInfoSupplier(workProcessorOperator));
-}
+    public WorkProcessorOperatorAdapter(OperatorContext operatorContext, WorkProcessorOperatorFactory workProcessorOperatorFactory)
+    {
+        this.operatorContext = requireNonNull(operatorContext, "operatorContext is null");
+        this.workProcessorOperator = workProcessorOperatorFactory.create(operatorContext, pageBuffer.pages());
+        this.pages = workProcessorOperator.getOutputPages();
+        operatorContext.setInfoSupplier(createInfoSupplier(workProcessorOperator));
+    }
 ```
 
 `pageBuffer.pages()` が入力側の `WorkProcessor<Page>` を提供する。
@@ -890,14 +903,14 @@ OperatorContext はユーザーメモリと revocable メモリの2種類を追�
 [`core/trino-main/src/main/java/io/trino/operator/OperatorContext.java` L172-L179](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/operator/OperatorContext.java#L172-L179)
 
 ```java
-void recordAddInput(OperationTimer operationTimer, Page page)
-{
-    operationTimer.recordOperationComplete(addInputTiming);
-    if (page != null) {
-        inputDataSize.update(page.getSizeInBytes());
-        inputPositions.update(page.getPositionCount());
+    void recordAddInput(OperationTimer operationTimer, Page page)
+    {
+        operationTimer.recordOperationComplete(addInputTiming);
+        if (page != null) {
+            inputDataSize.update(page.getSizeInBytes());
+            inputPositions.update(page.getPositionCount());
+        }
     }
-}
 ```
 
 これらの統計は `getOperatorStats()` で集約され、`EXPLAIN ANALYZE` やクエリ進行状況の監視に使われる。
@@ -915,24 +928,24 @@ void recordAddInput(OperationTimer operationTimer, Page page)
 [`core/trino-main/src/main/java/io/trino/operator/ScanFilterAndProjectOperator.java` L261-L278](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/operator/ScanFilterAndProjectOperator.java#L261-L278)
 
 ```java
-WorkProcessor<Page> processPageSource()
-{
-    ConnectorSession connectorSession = session.toConnectorSession();
-    return WorkProcessor
-            .create(new ConnectorPageSourceToPages(pageSourceProviderMemoryContext))
-            .yielding(yieldSignal::isSet)
-            .flatMap(page -> {
-                WorkProcessor<Page> workProcessor = pageProcessor.createWorkProcessor(
-                        connectorSession,
-                        yieldSignal,
-                        outputMemoryContext,
-                        pageProcessorMetrics,
-                        page);
-                return workProcessor.withProcessStateMonitor(new ProcessedBytesMonitor(page, bytes -> processedBytes += bytes));
-            })
-            .transformProcessor(processor -> mergePages(types, minOutputPageSize.toBytes(), minOutputPageRowCount, processor, localAggregatedMemoryContext))
-            .blocking(() -> memoryContext.setBytes(localAggregatedMemoryContext.getBytes()));
-}
+        WorkProcessor<Page> processPageSource()
+        {
+            ConnectorSession connectorSession = session.toConnectorSession();
+            return WorkProcessor
+                    .create(new ConnectorPageSourceToPages(pageSourceProviderMemoryContext))
+                    .yielding(yieldSignal::isSet)
+                    .flatMap(page -> {
+                        WorkProcessor<Page> workProcessor = pageProcessor.createWorkProcessor(
+                                connectorSession,
+                                yieldSignal,
+                                outputMemoryContext,
+                                pageProcessorMetrics,
+                                page);
+                        // Note this is monitoring the original source page not the result page
+                        return workProcessor.withProcessStateMonitor(new ProcessedBytesMonitor(page, bytes -> processedBytes += bytes));
+                    })
+                    .transformProcessor(processor -> mergePages(types, minOutputPageSize.toBytes(), minOutputPageRowCount, processor, localAggregatedMemoryContext))
+                    .blocking(() -> memoryContext.setBytes(localAggregatedMemoryContext.getBytes()));
 ```
 
 `ConnectorPageSourceToPages` が Connector から `SourcePage` を読み、`flatMap` でフィルタと射影を適用し、`mergePages` で出力 Page をマージする。
@@ -945,24 +958,24 @@ Driver の `process()` はタイムスライスの先頭で `DriverYieldSignal` 
 [`core/trino-main/src/main/java/io/trino/operator/DriverYieldSignal.java` L55-L72](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/operator/DriverYieldSignal.java#L55-L72)
 
 ```java
-public synchronized void setWithDelay(long maxRunNanos, ScheduledExecutorService executor)
-{
-    checkState(yieldFuture == null, "there is an ongoing yield");
-    checkState(!isSet(), "yield while driver was not running");
-    if (terminationStarted) {
-        return;
-    }
-
-    this.runningSequence++;
-    long expectedRunningSequence = this.runningSequence;
-    yieldFuture = executor.schedule(() -> {
-        synchronized (this) {
-            if (expectedRunningSequence == runningSequence && yieldFuture != null) {
-                yield.set(true);
-            }
+    public synchronized void setWithDelay(long maxRunNanos, ScheduledExecutorService executor)
+    {
+        checkState(yieldFuture == null, "there is an ongoing yield");
+        checkState(!isSet(), "yield while driver was not running");
+        if (terminationStarted) {
+            return;
         }
-    }, maxRunNanos, NANOSECONDS);
-}
+
+        this.runningSequence++;
+        long expectedRunningSequence = this.runningSequence;
+        yieldFuture = executor.schedule(() -> {
+            synchronized (this) {
+                if (expectedRunningSequence == runningSequence && yieldFuture != null) {
+                    yield.set(true);
+                }
+            }
+        }, maxRunNanos, NANOSECONDS);
+    }
 ```
 
 `setWithDelay()` は `ScheduledExecutorService` に遅延タスクを登録し、指定時間後に `yield` フラグを `true` にする。
