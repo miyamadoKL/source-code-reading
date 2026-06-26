@@ -52,7 +52,8 @@ APIServiceMode = "API Service"
 **APIServiceMode** は、PD が API サーバーとしてのみ動作し、TSO 発行やスケジューリングの処理を外部のマイクロサービスへ委譲するモードである。
 
 「APIServiceMode」では、TiDB や TiKV からの TSO リクエストや Region ハートビートを PD が受け取り、該当するマイクロサービスへ gRPC ストリーム経由で転送する。
-マイクロサービスが見つからない場合は PD 内部にフォールバックする仕組みも備える。
+Region ハートビートについては、Scheduling マイクロサービスが見つからない場合に PD 内部へフォールバックする仕組みを備える。
+一方、TSO リクエストは TSO マイクロサービスのアドレスが取得できなければ `ErrNotFoundTSOAddr` を返し、PD 内部では処理しない。
 
 ## pkg/mcs/ の構成
 

@@ -454,8 +454,8 @@ func (gta *GlobalTSOAllocator) SyncMaxTS(
 		allocatorLeaders := make(map[string]*pdpb.Member)
 ```
 
-リトライループ内で各 DC の Local TSO リーダーに MaxTS を送り、全リーダーの TSO がこの値以上になるよう書き換える。
-失敗したリーダーがあればリトライし、最終的に全 DC の TSO が Global TSO 以下であることを保証する。
+リトライループ内で各 DC の Local TSO リーダーに MaxTS を送り、後続の Local TSO がこの値より大きくなるよう書き換える。
+Global TSO 発行時にまず各 Local TSO を収集して MaxTS を推定し、その MaxTS を全 Local TSO リーダーへ書き戻すことで、後続の Local TSO が Global TSO 以降の値から開始されることを保証する。
 
 ```mermaid
 flowchart TB
