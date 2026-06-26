@@ -1,4 +1,4 @@
-# 第18章 MergeChecker と分割・結合
+# 第18章 MergeChecker と分割と結合
 
 > **本章で読むソース**
 >

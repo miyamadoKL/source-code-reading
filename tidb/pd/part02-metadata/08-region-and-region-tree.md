@@ -707,11 +707,11 @@ type RegionSetInformer interface {
 `RandLeaderRegions` や `RandFollowerRegions` は Store 単位のサブツリーに対して `RandomRegions` を呼ぶ。
 スケジューラはこのインタフェースを通じて `RegionsInfo` にアクセスするため、内部のロック戦略やツリー構造には依存しない。
 
-## 最適化の工夫：B-tree インデックスによる O(1) ランダムアクセスとインクリメンタル統計
+## 最適化の工夫：B-tree インデックスによる高速ランダムアクセスとインクリメンタル統計
 
 本章で読んだコードには、2つの最適化が組み込まれている。
 
-**B-tree のインデックスアクセスによる O(1) ランダム選択**が第1の最適化である。
+**B-tree のインデックスアクセスによる高速ランダム選択**が第1の最適化である。
 `RandomRegions` はスケジューラが Region をランダムに選択する際に呼ばれる。
 
 [`pkg/core/region_tree.go L363-466`](https://github.com/tikv/pd/blob/v8.5.6/pkg/core/region_tree.go#L363-L466)
