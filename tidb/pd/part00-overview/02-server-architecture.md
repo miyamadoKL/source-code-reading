@@ -1,6 +1,7 @@
 # 第2章 サーバーアーキテクチャ
 
 > **本章で読むソース**
+>
 > - [`server/server.go`](https://github.com/tikv/pd/blob/v8.5.6/server/server.go)
 > - [`server/grpc_service.go`](https://github.com/tikv/pd/blob/v8.5.6/server/grpc_service.go)
 > - [`server/api/router.go`](https://github.com/tikv/pd/blob/v8.5.6/server/api/router.go)
@@ -240,7 +241,7 @@ type GrpcServer struct {
 
 `GrpcServer` が実装する主要な RPC を役割ごとに整理する。
 
-**TSO 関連**
+#### TSO 関連
 
 | RPC | 種別 | 行 | 役割 |
 |-----|------|------|------|
@@ -248,7 +249,7 @@ type GrpcServer struct {
 | `GetMinTS` | 単項 | L296 | 全 TSO サーバーから最小タイムスタンプを取得 |
 | `SyncMaxTS` | 単項 | L2554 | DC 間の最大タイムスタンプ同期 |
 
-**クラスタメタデータ関連**
+#### クラスタメタデータ関連
 
 | RPC | 種別 | 行 | 役割 |
 |-----|------|------|------|
@@ -261,7 +262,7 @@ type GrpcServer struct {
 | `GetRegionByID` | 単項 | L1579 | ID で Region を検索 |
 | `ScanRegions` | 単項 | L1641 | Region の範囲スキャン |
 
-**ハートビート関連**
+#### ハートビート関連
 
 | RPC | 種別 | 行 | 役割 |
 |-----|------|------|------|
@@ -269,7 +270,7 @@ type GrpcServer struct {
 | `RegionHeartbeat` | 双方向ストリーミング | L1233 | Region の統計を受信し、スケジューリング指示を返す |
 | `ReportBuckets` | クライアントストリーミング | L1123 | Region 内のバケット情報を受信 |
 
-**スケジューリング関連**
+#### スケジューリング関連
 
 | RPC | 種別 | 行 | 役割 |
 |-----|------|------|------|
@@ -346,7 +347,7 @@ func createRouter(prefix string, svr *server.Server) *mux.Router {
 
 ルーターは階層構造を持つ。
 
-```
+```text
 rootRouter (/pd)
  └── apiRouter (/pd/api/v1)
       ├── clusterRouter（クラスタ初期化済みを要求するミドルウェア付き）
