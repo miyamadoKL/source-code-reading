@@ -389,7 +389,7 @@ func (am *AllocatorManager) HandleRequest(ctx context.Context, dcLocation string
 ## Global TSO と Local TSO の同期
 
 各 DC の「LocalTSOAllocator」は独立に採番するため、DC 間で TSO の大小関係にずれが生じうる。
-DC をまたぐトランザクションが正しい順序を得るには、Global TSO が全 DC の Local TSO より大きい値を返す必要がある。
+DC をまたぐトランザクションが正しい順序を得るには、Global 側が観測または推定した MaxTS を全 Local 側へ同期し、順序が逆転しないようにする必要がある。
 「GlobalTSOAllocator」の `GenerateTSO` がこの同期を担う。
 
 [`pkg/tso/global_allocator.go L220-L230`](https://github.com/tikv/pd/blob/v8.5.6/pkg/tso/global_allocator.go#L220-L230)
