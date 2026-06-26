@@ -52,16 +52,16 @@ public interface Plugin
 
     // ... (中略) ...
 
-    default Set<Class<?>> getFunctions()
-    {
-        return emptySet();
-    }
-
-    default Iterable<SystemAccessControlFactory> getSystemAccessControlFactories()
-    {
-        return emptyList();
-    }
-
+import io.trino.spi.block.BlockEncoding;
+import io.trino.spi.catalog.CatalogStoreFactory;
+import io.trino.spi.connector.ConnectorFactory;
+import io.trino.spi.eventlistener.EventListenerFactory;
+import io.trino.spi.exchange.ExchangeManagerFactory;
+import io.trino.spi.function.LanguageFunctionEngine;
+import io.trino.spi.resourcegroups.ResourceGroupConfigurationManagerFactory;
+import io.trino.spi.security.CertificateAuthenticatorFactory;
+import io.trino.spi.security.GroupProviderFactory;
+import io.trino.spi.security.HeaderAuthenticatorFactory;
     // ... (中略) ...
 
     default Iterable<EventListenerFactory> getEventListenerFactories()
@@ -155,21 +155,21 @@ public interface ConnectorContext
 
     // ... (中略) ...
 
-    default TypeManager getTypeManager()
-    {
-        throw new UnsupportedOperationException();
-    }
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.trace.Tracer;
+import io.trino.spi.BlocksHashFactory;
+import io.trino.spi.Node;
+import io.trino.spi.NodeManager;
+import io.trino.spi.PageIndexerFactory;
+import io.trino.spi.PageSorter;
+import io.trino.spi.Unstable;
+import io.trino.spi.VersionEmbedder;
+import io.trino.spi.function.FunctionBundleFactory;
+import io.trino.spi.type.TypeManager;
 
-    default PageSorter getPageSorter()
-    {
-        throw new UnsupportedOperationException();
-    }
-
-    default PageIndexerFactory getPageIndexerFactory()
-    {
-        throw new UnsupportedOperationException();
-    }
-
+public interface ConnectorContext
+{
+    default OpenTelemetry getOpenTelemetry()
     // ... (中略) ...
 }
 ```
@@ -205,14 +205,14 @@ public interface Connector
     }
 
     // ... (中略) ...
-
+     */
     default ConnectorPageSinkProvider getPageSinkProvider()
     {
         throw new UnsupportedOperationException();
     }
 
     // ... (中略) ...
-
+     */
     void shutdown();
 
     default Set<ConnectorCapabilities> getCapabilities()
@@ -253,7 +253,6 @@ Connector はメタデータや読み書きの他にも、以下を任意で提�
 [`core/trino-spi/src/main/java/io/trino/spi/connector/ConnectorMetadata.java` L108-L119](https://github.com/trinodb/trino/blob/482/core/trino-spi/src/main/java/io/trino/spi/connector/ConnectorMetadata.java#L108-L119)
 
 ```java
-    @Nullable
     default ConnectorTableHandle getTableHandle(
             ConnectorSession session,
             SchemaTableName tableName,
@@ -261,6 +260,7 @@ Connector はメタデータや読み書きの他にも、以下を任意で提�
             Optional<ConnectorTableVersion> endVersion)
     {
         if (listTables(session, Optional.of(tableName.getSchemaName())).isEmpty()) {
+            // This is a correct default implementation meant primarily for connectors that do not have any tables.
             return null;
         }
         throw new TrinoException(GENERIC_INTERNAL_ERROR, "ConnectorMetadata listTables() is implemented without getTableHandle()");
@@ -297,6 +297,8 @@ Connector はこの Handle にパーティション情報やプッシュダウ�
             throw new IllegalArgumentException("constraint summary is NONE");
         }
         if (FALSE.equals(constraint.getExpression())) {
+            // DomainTranslator translates FALSE expressions into TupleDomain.none() (via Visitor#visitBooleanLiteral)
+            // so the remaining expression shouldn't be FALSE and therefore the translated connectorExpression shouldn't be FALSE either.
             throw new IllegalArgumentException("constraint expression is FALSE");
         }
         return Optional.empty();
@@ -316,6 +318,14 @@ Connector が条件を処理できる場合は、条件を織り込んだ新し�
 ```java
 public interface ConnectorSplitManager
 {
+    /**
+     * Returns splits for a table scan.
+     * <p>
+     * {@code dynamicFilterColumns} is the static set of columns the dynamic filter will cover.
+     * Connectors may use this to make planning-time decisions (e.g. which column statistics to
+     * read). The per-batch resolved predicate arrives separately via
+     * {@link ConnectorSplitSource#getNextBatch(int, DynamicFilterSnapshot)}.
+     */
     ConnectorSplitSource getSplits(
             ConnectorTransactionHandle transaction,
             ConnectorSession session,
@@ -352,20 +362,20 @@ public interface ConnectorPageSourceProvider
 {
     // ... (中略) ...
 
-    default ConnectorPageSource createPageSource(
-            ConnectorTransactionHandle transaction,
-            ConnectorSession session,
-            ConnectorSplit split,
-            ConnectorTableHandle table,
-            Optional<ConnectorTableCredentials> tableCredentials,
-            List<ColumnHandle> columns,
-            DynamicFilter dynamicFilter,
-            MemoryContext memoryContext)
-    {
-        ConnectorPageSource delegate = createPageSource(transaction, session, split, table, tableCredentials, columns, dynamicFilter);
-        return new MemoryUsageReportingPageSource(delegate, memoryContext);
-    }
+import java.util.List;
+import java.util.Optional;
 
+public interface ConnectorPageSourceProvider
+{
+    /**
+     * Creates a {@link ConnectorPageSource} for reading data from the specified split.
+     *
+     * @param transaction the transaction handle for this operation
+     * @param session the session in which the read is being performed
+     * @param split the split to read data from
+     * @param table the table handle identifying the table being read
+     * @param tableCredentials credentials for accessing the table data
+     * @param columns columns that should show up in the output page, in this order
     // ... (中略) ...
 }
 ```
@@ -421,7 +431,7 @@ Trino 起動時の Plugin ロードは、`ServerPluginsProvider`、`PluginManage
 
 `ServerPluginsProvider` は `plugin.dir`（デフォルトは `plugin/`）配下のサブディレクトリを並列に走査する。
 
-[`core/trino-main/src/main/java/io/trino/server/ServerPluginsProvider.java` L36-L64](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/server/ServerPluginsProvider.java#L36-L64)
+[`core/trino-main/src/main/java/io/trino/server/ServerPluginsProvider.java` L36-L64](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/server/ServerPluginsProvider.java#L36-L96)
 
 ```java
 public class ServerPluginsProvider
@@ -486,7 +496,7 @@ Java 標準の ServiceLoader メカニズムにより、Plugin の JAR を `plug
 
 発見された Plugin は `installPluginInternal()` で各ファクトリを登録する。
 
-[`core/trino-main/src/main/java/io/trino/server/PluginManager.java` L212-L239](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/server/PluginManager.java#L212-L239)
+[`core/trino-main/src/main/java/io/trino/server/PluginManager.java` L212-L239](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/server/PluginManager.java#L212-L160)
 
 ```java
     private void installPluginInternal(Plugin plugin)
@@ -524,7 +534,7 @@ Java 標準の ServiceLoader メカニズムにより、Plugin の JAR を `plug
 
 Plugin のロード時に生成される `PluginClassLoader` は、エンジンと Plugin の依存ライブラリを隔離する仕組みである。
 
-[`core/trino-main/src/main/java/io/trino/server/PluginClassLoader.java` L29-L76](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/server/PluginClassLoader.java#L29-L76)
+[`core/trino-main/src/main/java/io/trino/server/PluginClassLoader.java` L29-L76](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/server/PluginClassLoader.java#L29-L187)
 
 ```java
 public class PluginClassLoader
@@ -581,7 +591,7 @@ public class PluginClassLoader
 
 SPI クラスの解決は `loadClass()` で明示的に制御される。
 
-[`core/trino-main/src/main/java/io/trino/server/PluginClassLoader.java` L100-L127](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/server/PluginClassLoader.java#L100-L127)
+[`core/trino-main/src/main/java/io/trino/server/PluginClassLoader.java` L100-L127](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/server/PluginClassLoader.java#L99-L127)
 
 ```java
     @Override
@@ -662,9 +672,9 @@ Catalog の設定ファイル（例：`etc/catalog/hive.properties`）を読み�
                 evaluator);
 
         try (ThreadContextClassLoader _ = new ThreadContextClassLoader(connectorFactory.getClass().getClassLoader())) {
+            // TODO: connector factory should take CatalogName
             return connectorFactory.create(catalogName.toString(), properties, context);
         }
-    }
 ```
 
 `ThreadContextClassLoader` でスレッドのコンテキスト ClassLoader を Plugin のものに切り替えてから `create()` を呼ぶ。

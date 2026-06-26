@@ -61,20 +61,20 @@ public class PredicatePushDown
 
 **ProjectNode** では、述語に含まれるシンボルが ProjectNode の決定的な代入式にすべて依存しているかを確認し、依存していれば代入式をインライン展開して子ノードへ押し下げる。
 
-[`core/trino-main/src/main/java/io/trino/sql/planner/optimizations/PredicatePushDown.java` L277-L315](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/optimizations/PredicatePushDown.java#L277-L315)
+[`core/trino-main/src/main/java/io/trino/sql/planner/optimizations/PredicatePushDown.java` L277-L315](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/optimizations/PredicatePushDown.java#L276-L312)
 
 ```java
-@Override
-public PlanNode visitProject(ProjectNode node, RewriteContext<Expression> context)
-{
-    Set<Symbol> deterministicSymbols = node.getAssignments().entrySet().stream()
-            .filter(entry -> isDeterministic(entry.getValue()))
-            .map(Map.Entry::getKey)
-            .collect(Collectors.toSet());
+        @Override
+        public PlanNode visitProject(ProjectNode node, RewriteContext<Expression> context)
+        {
+            Set<Symbol> deterministicSymbols = node.getAssignments().entrySet().stream()
+                    .filter(entry -> isDeterministic(entry.getValue()))
+                    .map(Map.Entry::getKey)
+                    .collect(Collectors.toSet());
 
-    Predicate<Expression> deterministic = conjunct -> deterministicSymbols.containsAll(extractUnique(conjunct));
+            Predicate<Expression> deterministic = conjunct -> deterministicSymbols.containsAll(extractUnique(conjunct));
 
-    Map<Boolean, List<Expression>> conjuncts = extractConjuncts(context.get()).stream().collect(Collectors.partitioningBy(deterministic));
+            Map<Boolean, List<Expression>> conjuncts = extractConjuncts(context.get()).stream().collect(Collectors.partitioningBy(deterministic));
 
     // ... (中略) ...
 
@@ -86,7 +86,7 @@ public PlanNode visitProject(ProjectNode node, RewriteContext<Expression> contex
 
     PlanNode rewrittenNode = context.defaultRewrite(node, combineConjuncts(inlinedDeterministicConjuncts));
     // ... (中略) ...
-}
+            }
 ```
 
 インライン展開の際に `canonicalizeExpression` と `unwrapCasts` を適用している点がポイントである。
@@ -107,22 +107,22 @@ public PlanNode visitProject(ProjectNode node, RewriteContext<Expression> contex
 
 `visitJoin()` はまず `tryNormalizeToOuterToInnerJoin()` を呼び、外部結合を内部結合に書き換えられるか試みる。
 
-[`core/trino-main/src/main/java/io/trino/sql/planner/optimizations/PredicatePushDown.java` L1121-L1185](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/optimizations/PredicatePushDown.java#L1121-L1185)
+[`core/trino-main/src/main/java/io/trino/sql/planner/optimizations/PredicatePushDown.java` L1121-L1185](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/optimizations/PredicatePushDown.java#L1121-L1138)
 
 ```java
-private JoinNode tryNormalizeToOuterToInnerJoin(JoinNode node, Expression inheritedPredicate)
-{
+        private JoinNode tryNormalizeToOuterToInnerJoin(JoinNode node, Expression inheritedPredicate)
+        {
     // ... (中略) ...
-    if (node.getType() == JoinType.FULL) {
-        boolean canConvertToLeftJoin = canConvertOuterToInner(node.getLeft().getOutputSymbols(), inheritedPredicate);
-        boolean canConvertToRightJoin = canConvertOuterToInner(node.getRight().getOutputSymbols(), inheritedPredicate);
-        if (!canConvertToLeftJoin && !canConvertToRightJoin) {
-            return node;
-        }
-        if (canConvertToLeftJoin && canConvertToRightJoin) {
-            return new JoinNode(
-                    node.getId(),
-                    INNER,
+            if (node.getType() == JoinType.FULL) {
+                boolean canConvertToLeftJoin = canConvertOuterToInner(node.getLeft().getOutputSymbols(), inheritedPredicate);
+                boolean canConvertToRightJoin = canConvertOuterToInner(node.getRight().getOutputSymbols(), inheritedPredicate);
+                if (!canConvertToLeftJoin && !canConvertToRightJoin) {
+                    return node;
+                }
+                if (canConvertToLeftJoin && canConvertToRightJoin) {
+                    return new JoinNode(
+                            node.getId(),
+                            INNER,
                     // ... (中略) ...
 ```
 
@@ -174,25 +174,25 @@ private InnerJoinPushDownResult processInnerJoin(
 
 `visitJoin()` は述語の分配後に `createDynamicFilters()` を呼び、DynamicFilter を生成する。
 
-[`core/trino-main/src/main/java/io/trino/sql/planner/optimizations/PredicatePushDown.java` L596-L664](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/optimizations/PredicatePushDown.java#L596-L664)
+[`core/trino-main/src/main/java/io/trino/sql/planner/optimizations/PredicatePushDown.java` L596-L664](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/optimizations/PredicatePushDown.java#L596-L611)
 
 ```java
-private DynamicFiltersResult createDynamicFilters(
-        JoinNode node,
-        List<JoinNode.EquiJoinClause> equiJoinClauses,
-        List<Expression> joinFilterClauses,
-        Session session,
-        PlanNodeIdAllocator idAllocator)
-{
-    if ((node.getType() != INNER && node.getType() != RIGHT) || !isEnableDynamicFiltering(session) || !dynamicFiltering) {
-        return new DynamicFiltersResult(ImmutableMap.of(), ImmutableList.of());
-    }
+        private DynamicFiltersResult createDynamicFilters(
+                JoinNode node,
+                List<JoinNode.EquiJoinClause> equiJoinClauses,
+                List<Expression> joinFilterClauses,
+                Session session,
+                PlanNodeIdAllocator idAllocator)
+        {
+            if ((node.getType() != INNER && node.getType() != RIGHT) || !isEnableDynamicFiltering(session) || !dynamicFiltering) {
+                return new DynamicFiltersResult(ImmutableMap.of(), ImmutableList.of());
+            }
 
-    List<DynamicFilterExpression> clauses = Streams.concat(
-                    equiJoinClauses
-                            .stream()
-                            .map(clause -> new DynamicFilterExpression(
-                                    EQUAL, clause.getLeft().toSymbolReference(), clause.getRight().toSymbolReference())),
+            List<DynamicFilterExpression> clauses = Streams.concat(
+                            equiJoinClauses
+                                    .stream()
+                                    .map(clause -> new DynamicFilterExpression(
+                                            EQUAL, clause.getLeft().toSymbolReference(), clause.getRight().toSymbolReference())),
                     // ... (中略) ...
 ```
 
@@ -204,7 +204,7 @@ DynamicFilter は INNER JOIN と RIGHT JOIN でのみ生成される。
 
 **EqualityInference** は、等値比較式の集合から推移的な等値関係を構築し、式をスコープに合わせて書き換える機構である。
 
-[`core/trino-main/src/main/java/io/trino/sql/planner/EqualityInference.java` L59-L146](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/EqualityInference.java#L59-L146)
+[`core/trino-main/src/main/java/io/trino/sql/planner/EqualityInference.java` L59-L146](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/EqualityInference.java#L59-L74)
 
 ```java
 public class EqualityInference
@@ -238,14 +238,15 @@ public class EqualityInference
 [`core/trino-main/src/main/java/io/trino/sql/planner/EqualityInference.java` L268-L276](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/EqualityInference.java#L268-L276)
 
 ```java
-public static boolean isInferenceCandidate(PlannerContext plannerContext, Expression expression)
-{
-    return matchComparison(expression) instanceof Comparison comparison
-            && comparison.operator() == ComparisonOperator.EQUAL
-            && isDeterministic(expression)
-            && !mayReturnNullOnNonNullInput(plannerContext, expression)
-            && !comparison.left().equals(comparison.right());
-}
+    public static boolean isInferenceCandidate(PlannerContext plannerContext, Expression expression)
+    {
+        return matchComparison(expression) instanceof Comparison comparison
+                && comparison.operator() == ComparisonOperator.EQUAL
+                && isDeterministic(expression)
+                && !mayReturnNullOnNonNullInput(plannerContext, expression)
+                // We should only consider equalities that have distinct left and right components
+                && !comparison.left().equals(comparison.right());
+    }
 ```
 
 等号比較であること、決定的であること、非 NULL 入力で NULL を返さないこと、左右が異なることの四条件を満たす式だけが推論候補となる。
@@ -258,10 +259,10 @@ public static boolean isInferenceCandidate(PlannerContext plannerContext, Expres
 [`core/trino-main/src/main/java/io/trino/sql/planner/EqualityInference.java` L152-L155](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/EqualityInference.java#L152-L155)
 
 ```java
-public Expression rewrite(Expression expression, Set<Symbol> scope)
-{
-    return rewrite(expression, scope::contains, true);
-}
+    public Expression rewrite(Expression expression, Set<Symbol> scope)
+    {
+        return rewrite(expression, scope::contains, true);
+    }
 ```
 
 内部では、式の部分式を等価クラスの中からスコープに含まれる正規形(canonical)に置換する。
@@ -295,10 +296,11 @@ public EqualityPartition generateEqualitiesPartitionedBy(Set<Symbol> scope)
 [`core/trino-main/src/main/java/io/trino/sql/planner/DomainTranslator.java` L313-L317](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/DomainTranslator.java#L313-L317)
 
 ```java
-public static ExtractionResult getExtractionResult(PlannerContext plannerContext, Session session, Expression predicate)
-{
-    return new Visitor(plannerContext, session).process(predicate, false);
-}
+    public static ExtractionResult getExtractionResult(PlannerContext plannerContext, Session session, Expression predicate)
+    {
+        // This is a limited type analyzer for the simple expressions used in this method
+        return new Visitor(plannerContext, session).process(predicate, false);
+    }
 ```
 
 変換結果は `ExtractionResult` として返り、二つの要素を持つ。
@@ -328,7 +330,7 @@ public static class ExtractionResult
 AND はドメインの交差(`TupleDomain.intersect`)、OR は列ごとの和(`TupleDomain.columnWiseUnion`)で処理される。
 OR の場合、列ごとの和は厳密な和の上位集合になりうるため、元の式も `remainingExpression` に残して実行時に再検証する。
 
-[`core/trino-main/src/main/java/io/trino/sql/planner/DomainTranslator.java` L383-L424](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/DomainTranslator.java#L383-L424)
+[`core/trino-main/src/main/java/io/trino/sql/planner/DomainTranslator.java` L381-L424](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/DomainTranslator.java#L381-L424)
 
 ```java
 @Override
@@ -489,21 +491,21 @@ private JoinEnumerationResult chooseJoinOrder(LinkedHashSet<PlanNode> sources, S
 [`core/trino-main/src/main/java/io/trino/sql/planner/iterative/rule/ReorderJoins.java` L437-L451](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/iterative/rule/ReorderJoins.java#L437-L451)
 
 ```java
-private JoinEnumerationResult setJoinNodeProperties(JoinNode joinNode)
-{
-    if (isAtMostScalar(joinNode.getRight(), lookup)) {
-        return createJoinEnumerationResult(joinNode.withDistributionType(REPLICATED));
-    }
-    if (isAtMostScalar(joinNode.getLeft(), lookup)) {
-        return createJoinEnumerationResult(joinNode.flipChildren().withDistributionType(REPLICATED));
-    }
-    List<JoinEnumerationResult> possibleJoinNodes = getPossibleJoinNodes(joinNode, getJoinDistributionType(session));
-    verify(!possibleJoinNodes.isEmpty(), "possibleJoinNodes is empty");
-    if (possibleJoinNodes.stream().anyMatch(UNKNOWN_COST_RESULT::equals)) {
-        return UNKNOWN_COST_RESULT;
-    }
-    return resultComparator.min(possibleJoinNodes);
-}
+        private JoinEnumerationResult setJoinNodeProperties(JoinNode joinNode)
+        {
+            if (isAtMostScalar(joinNode.getRight(), lookup)) {
+                return createJoinEnumerationResult(joinNode.withDistributionType(REPLICATED));
+            }
+            if (isAtMostScalar(joinNode.getLeft(), lookup)) {
+                return createJoinEnumerationResult(joinNode.flipChildren().withDistributionType(REPLICATED));
+            }
+            List<JoinEnumerationResult> possibleJoinNodes = getPossibleJoinNodes(joinNode, getJoinDistributionType(session));
+            verify(!possibleJoinNodes.isEmpty(), "possibleJoinNodes is empty");
+            if (possibleJoinNodes.stream().anyMatch(UNKNOWN_COST_RESULT::equals)) {
+                return UNKNOWN_COST_RESULT;
+            }
+            return resultComparator.min(possibleJoinNodes);
+        }
 ```
 
 右側がスカラー(最大1行)であれば無条件に REPLICATED を選択し、左側がスカラーであれば左右を入れ替えてから REPLICATED にする。
@@ -517,21 +519,21 @@ private JoinEnumerationResult setJoinNodeProperties(JoinNode joinNode)
 [`core/trino-main/src/main/java/io/trino/sql/planner/iterative/rule/DetermineJoinDistributionType.java` L82-L96](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/iterative/rule/DetermineJoinDistributionType.java#L82-L96)
 
 ```java
-public static boolean canReplicate(JoinNode joinNode, Context context)
-{
-    JoinDistributionType joinDistributionType = getJoinDistributionType(context.getSession());
-    if (!joinDistributionType.canReplicate()) {
-        return false;
+    public static boolean canReplicate(JoinNode joinNode, Context context)
+    {
+        JoinDistributionType joinDistributionType = getJoinDistributionType(context.getSession());
+        if (!joinDistributionType.canReplicate()) {
+            return false;
+        }
+
+        DataSize joinMaxBroadcastTableSize = getJoinMaxBroadcastTableSize(context.getSession());
+
+        PlanNode buildSide = joinNode.getRight();
+        PlanNodeStatsEstimate buildSideStatsEstimate = context.getStatsProvider().getStats(buildSide);
+        double buildSideSizeInBytes = buildSideStatsEstimate.getOutputSizeInBytes(buildSide.getOutputSymbols());
+        return buildSideSizeInBytes <= joinMaxBroadcastTableSize.toBytes()
+                || getSourceTablesSizeInBytes(buildSide, context.getLookup(), context.getStatsProvider()) <= joinMaxBroadcastTableSize.toBytes();
     }
-
-    DataSize joinMaxBroadcastTableSize = getJoinMaxBroadcastTableSize(context.getSession());
-
-    PlanNode buildSide = joinNode.getRight();
-    PlanNodeStatsEstimate buildSideStatsEstimate = context.getStatsProvider().getStats(buildSide);
-    double buildSideSizeInBytes = buildSideStatsEstimate.getOutputSizeInBytes(buildSide.getOutputSymbols());
-    return buildSideSizeInBytes <= joinMaxBroadcastTableSize.toBytes()
-            || getSourceTablesSizeInBytes(buildSide, context.getLookup(), context.getStatsProvider()) <= joinMaxBroadcastTableSize.toBytes();
-}
 ```
 
 REPLICATED(ブロードキャスト結合)を選択できる条件は、ビルド側のサイズが `join_max_broadcast_table_size`(デフォルト 100MB)以下であることである。
@@ -544,12 +546,12 @@ RIGHT JOIN と FULL JOIN は、ビルド側が複製されると未マッチ行�
 [`core/trino-main/src/main/java/io/trino/sql/planner/iterative/rule/DetermineJoinDistributionType.java` L185-L190](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/iterative/rule/DetermineJoinDistributionType.java#L185-L190)
 
 ```java
-private static boolean mustPartition(JoinNode joinNode)
-{
-    JoinType type = joinNode.getType();
-    // With REPLICATED, the unmatched rows from right-side would be duplicated.
-    return type == RIGHT || type == FULL;
-}
+    private static boolean mustPartition(JoinNode joinNode)
+    {
+        JoinType type = joinNode.getType();
+        // With REPLICATED, the unmatched rows from right-side would be duplicated.
+        return type == RIGHT || type == FULL;
+    }
 ```
 
 ## PushJoinIntoTableScan による結合の Connector 委譲
@@ -589,7 +591,7 @@ Connector が `Optional.empty()` を返せば、Trino は通常のハッシュ�
 
 ### DynamicFilterSourceConsumer インターフェース
 
-[`core/trino-main/src/main/java/io/trino/sql/planner/DynamicFilterSourceConsumer.java` L17-L26](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/DynamicFilterSourceConsumer.java#L17-L26)
+[`core/trino-main/src/main/java/io/trino/sql/planner/DynamicFilterSourceConsumer.java` L17-L26](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/sql/planner/DynamicFilterSourceConsumer.java#L19-L26)
 
 ```java
 public interface DynamicFilterSourceConsumer
@@ -612,24 +614,25 @@ public interface DynamicFilterSourceConsumer
 [`core/trino-main/src/main/java/io/trino/server/DynamicFilterService.java` L119-L137](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/server/DynamicFilterService.java#L119-L137)
 
 ```java
-public void registerQuery(Session session, PlanNode queryPlan, SubPlan fragmentedPlan)
-{
-    Set<DynamicFilterId> dynamicFilters = getProducedDynamicFilters(queryPlan);
-    Set<DynamicFilterId> replicatedDynamicFilters = getReplicatedDynamicFilters(queryPlan);
+    public void registerQuery(Session session, PlanNode queryPlan, SubPlan fragmentedPlan)
+    {
+        Set<DynamicFilterId> dynamicFilters = getProducedDynamicFilters(queryPlan);
+        Set<DynamicFilterId> replicatedDynamicFilters = getReplicatedDynamicFilters(queryPlan);
 
-    Set<DynamicFilterId> lazyDynamicFilters = fragmentedPlan.getAllFragments().stream()
-            .flatMap(plan -> getLazyDynamicFilters(plan).stream())
-            .collect(toImmutableSet());
+        Set<DynamicFilterId> lazyDynamicFilters = fragmentedPlan.getAllFragments().stream()
+                .flatMap(plan -> getLazyDynamicFilters(plan).stream())
+                .collect(toImmutableSet());
 
-    if (!dynamicFilters.isEmpty()) {
-        registerQuery(
-                session.getQueryId(),
-                session,
-                dynamicFilters,
-                lazyDynamicFilters,
-                replicatedDynamicFilters);
+        // register query only if it contains dynamic filters
+        if (!dynamicFilters.isEmpty()) {
+            registerQuery(
+                    session.getQueryId(),
+                    session,
+                    dynamicFilters,
+                    lazyDynamicFilters,
+                    replicatedDynamicFilters);
+        }
     }
-}
 ```
 
 `registerQuery()` はクエリ内の全 DynamicFilter を三種類に分類する。
@@ -643,26 +646,26 @@ public void registerQuery(Session session, PlanNode queryPlan, SubPlan fragmente
 [`core/trino-main/src/main/java/io/trino/server/DynamicFilterService.java` L700-L719](https://github.com/trinodb/trino/blob/482/core/trino-main/src/main/java/io/trino/server/DynamicFilterService.java#L700-L719)
 
 ```java
-private void collectReplicated(Domain domain)
-{
-    if (domain.getRetainedSizeInBytes() > domainSizeLimitInBytes) {
-        domain = domain.simplify(1);
-    }
-    if (domain.getRetainedSizeInBytes() > domainSizeLimitInBytes) {
-        domain = Domain.all(domain.getType());
-    }
-    Domain result;
-    synchronized (this) {
-        if (collected) {
-            return;
+        private void collectReplicated(Domain domain)
+        {
+            if (domain.getRetainedSizeInBytes() > domainSizeLimitInBytes) {
+                domain = domain.simplify(1);
+            }
+            if (domain.getRetainedSizeInBytes() > domainSizeLimitInBytes) {
+                domain = Domain.all(domain.getType());
+            }
+            Domain result;
+            synchronized (this) {
+                if (collected) {
+                    return;
+                }
+                collectedTaskCount++;
+                collected = true;
+                result = domain;
+            }
+            collectionDuration.set(Duration.succinctNanos(System.nanoTime() - start));
+            collectedDomainsFuture.set(result);
         }
-        collectedTaskCount++;
-        collected = true;
-        result = domain;
-    }
-    collectionDuration.set(Duration.succinctNanos(System.nanoTime() - start));
-    collectedDomainsFuture.set(result);
-}
 ```
 
 REPLICATED の場合、最初の Task が報告した Domain だけでフィルタが完成する。
