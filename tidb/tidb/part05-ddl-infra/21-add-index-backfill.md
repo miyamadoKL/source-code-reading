@@ -61,7 +61,7 @@
 
 `doReorgWorkForCreateIndex` が `done` を返さないあいだ、owner は同じ `StateWriteReorganization` のままこの関数を繰り返し呼ぶ。
 バックフィルが途中で落ちても、次に呼ばれたときに途中から再開できる構造になっている。
-再開の鍵となるチェックポイントは後段で読む。
+再開を支えるチェックポイントは後段で読む。
 
 ## 経路の選択：txn と ingest
 
