@@ -74,7 +74,7 @@ pub enum ReadPool {
 TiKV のデフォルトはこの統合プール（unified read pool）であり、KV 読みとコプロセッサを同じ `yatp` プールに集約してスレッドを使い回す。
 
 `ReadPool` から、読み取りを投入する側が持つ軽量な写しが `ReadPoolHandle` である。
-`Storage` はこのハンドルを `read_pool` フィールドに保持し、すべての読みをここへ投げる。
+`Storage` はこのハンドルを `read_pool` フィールドに保持し、多くの読みをここへ投げる。
 
 [`src/storage/mod.rs` L203-L204](https://github.com/tikv/tikv/blob/v8.5.6/src/storage/mod.rs#L203-L204)
 
