@@ -571,7 +571,8 @@ func NewOpenAPIV1(c server.Server) OpenAPIV1 {
 ```
 
 v1 固有のリクエスト形式を持つ `createChangefeed` と `updateChangefeed` だけが独自のハンドラを持ち、リクエストボディを v2 形式に変換してから v2 ハンドラへ処理を渡す。
-すべての v1 リクエストには `from-ticdc-api-v1: true` ヘッダーが付与される。
+v2 ハンドラへ委譲する多くの v1 互換ルートには `setV1Header` ミドルウェアによって `from-ticdc-api-v1: true` ヘッダーが付与される。
+ただし `/status` と `/log` は v2 ハンドラへ直接ルーティングされるため、このヘッダーは付かない。
 
 [`api/v1/api.go` L36-L38](https://github.com/pingcap/ticdc/blob/v8.5.6/api/v1/api.go#L36-L38)
 

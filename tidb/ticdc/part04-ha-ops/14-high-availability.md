@@ -207,7 +207,6 @@ Coordinator が終了すると、5秒のタイムアウト付きで `resign` を
 [`server/module_election.go` L274-L283](https://github.com/pingcap/ticdc/blob/v8.5.6/server/module_election.go#L274-L283)
 
 ```go
-// resign lets the coordinator start a new election.
 func (e *elector) resign(ctx context.Context) error {
 	if e.election == nil {
 		return nil

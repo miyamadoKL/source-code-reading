@@ -13,7 +13,8 @@
 受信したイベントは一時的にメモリ上を流れるだけでは済まない。
 EventService が Dispatcher へイベントを配信するとき、対象の時間範囲を指定してスキャンする必要があるからである。
 
-**EventStore** は、LogPuller が取得した変更イベントを Pebble DB に永続化し、時間範囲を指定したイテレータで読み出す層である。
+**EventStore** は、LogPuller が取得した変更イベントを Pebble DB にローカルキャッシュし、時間範囲を指定したイテレータで読み出す層である。
+データは TiKV から再取得可能であるため、起動時に既存 DB を削除して再構築する一時ストアとして動作する。
 
 ## 前提
 
@@ -781,7 +782,7 @@ flowchart TB
 
 ## まとめ
 
-EventStore は LogPuller と EventService の間に位置する永続化層であり、4つの Pebble DB インスタンスに変更イベントを書き込み、時間範囲を指定したイテレータで読み出す。
+EventStore は LogPuller と EventService の間に位置するディスクバッファであり、4つの Pebble DB インスタンスに変更イベントを書き込み、時間範囲を指定したイテレータで読み出す。
 
 キーフォーマットは `[uniqueID | tableID | CRTs | startTs | DMLOrder+CompressionType | Key]` で、ビッグエンディアンの固定長フィールドにより Pebble のバイト列比較がそのまま時刻順スキャンになる。
 書き込みは `HashTableSpan` によるテーブル単位の DB 分割と、DB あたり2本のワーカーで並列化される。

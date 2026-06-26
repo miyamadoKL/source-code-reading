@@ -943,5 +943,5 @@ EncoderGroup の `future` ベースのパイプラインがエンコードと送
 
 ## 関連する章
 
-- 第9章: Dispatcher と Sink のインタフェース(Sink に DML/DDL が渡されるまでの流れ)
-- 第11章: MySQL Sink(リレーショナル DB への書き込み経路との比較)
+- [第8章 Dispatcher と EventCollector](08-dispatcher-and-eventcollector.md): Sink に DML/DDL が渡されるまでの流れ
+- [第9章 MySQL Sink](09-mysql-sink.md): リレーショナル DB への書き込み経路との比較

@@ -509,7 +509,6 @@ func (d *BasicDispatcher) DealWithBlockEvent(event commonEvent.BlockEvent) {
 			if noNeedAddAndDrop {
 				return
 			}
-			// テーブル追加・削除を Maintainer に報告
 			message := &heartbeatpb.TableSpanBlockStatus{
 				// ... (中略) ...
 			}
@@ -840,6 +839,7 @@ TableProgress は未フラッシュイベントをリストとマップで追跡
 
 ## 関連する章
 
-- 第7章 EventService とイベント配信: EventCollector へイベントを送出する上流の仕組み
-- 第9章(予定) Sink: Dispatcher から受け取ったイベントを下流 MySQL や Kafka に書き込む
-- 第3章 MessageCenter: ノード間メッセージングの基盤
+- [第7章 EventService とイベント配信](../part01-logservice/07-eventservice.md): EventCollector へイベントを送出する上流の仕組み
+- [第9章 MySQL Sink](09-mysql-sink.md): Dispatcher から受け取ったイベントを MySQL に書き込む
+- [第10章 Kafka Sink とコーデック](10-kafka-sink-and-codec.md): Kafka への書き込み経路
+- [第3章 メッセージングとノード間通信](../part00-overview/03-messaging.md): ノード間メッセージングの基盤
