@@ -328,7 +328,7 @@ where
 `RaftMessage` なら `on_raft_message` で Raft プロトコルのメッセージを Raft グループに渡し、`RaftCommand` なら書き込み提案を `propose_raft_command` などに回す。
 `Tick` は定期処理、`ApplyRes` は適用結果の取り込みになる。
 
-ここで重要なのは、`handle_msgs` の中では `Ready` をまだ書き込まないことである。
+`handle_msgs` の中では、`Ready` をまだ書き込まない。
 `RaftMessage` を渡しても `RaftCommand` を提案しても、Raft グループの内部状態が進むだけで、ディスクへの永続化やネットワーク送信はこの時点では行わない。
 書き込むべき内容は、次の `collect_ready` でまとめて取り出される。
 

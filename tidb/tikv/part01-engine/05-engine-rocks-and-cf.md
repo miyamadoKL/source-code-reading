@@ -263,7 +263,7 @@ pub struct RocksWriteBatchVec {
 
 複数本に分けるのは、RocksDB の `MultiBatchWrite` という書き込みモードのためである。
 原文のコメントが述べるとおり、1つの大きな `WriteBatch` を多数の小さな `WriteBatch` に分割し、コミット時に他のスレッドが分担して書き込めるようにする。
-TiKV が非常に大きなデータを RocksDB へ書くとき、この方式は従来の `pipelined_write` より性能が出る。
+TiKV が大きなデータを RocksDB へ書くとき、この方式は従来の `pipelined_write` より性能が出る。
 
 分割は書き込みのたびに `check_switch_batch` が判定する。
 
