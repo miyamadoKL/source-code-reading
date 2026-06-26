@@ -8,7 +8,8 @@
     "postgresql/**/*.md",
     "mysql/**/*.md",
     "tidb/**/*.md",
-    "trino/**/*.md"
+    "trino/**/*.md",
+    "starrocks/**/*.md"
   ],
   "config": {
     "default": true,
