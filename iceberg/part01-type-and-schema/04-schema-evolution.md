@@ -560,7 +560,7 @@ flowchart LR
         A --> D[field: email]
     end
 
-    subgraph パートナー（既存スキーマ）
+    subgraph パートナー - 既存スキーマ
         E[struct] --> F[field: id]
         E --> G[field: name]
         E --> H["(存在しない)"]
