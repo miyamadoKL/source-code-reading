@@ -299,7 +299,7 @@ graph TD
     }
 ```
 
-テーブル作成時の `ops.commit(null, metadata)` で、第一引数の `base` が `null` であることが鍵となる。
+テーブル作成時の `ops.commit(null, metadata)` で、第一引数の `base` が `null` である点に注目する。
 `base` が `null` であることは「このコミットはテーブルの新規作成である」ことを示す。
 もし別のプロセスが同時に同じテーブルを作成して `CommitFailedException` が発生した場合、`AlreadyExistsException` に変換される。
 

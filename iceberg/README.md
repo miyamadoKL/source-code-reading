@@ -8,6 +8,7 @@ Apache Iceberg（[apache/iceberg](https://github.com/apache/iceberg)）のソー
 
 コード引用は、`apache-iceberg-1.11.0` タグに固定した GitHub リンクと、実ソースから取ったコードブロックの2点セットで示す。
 Apache Iceberg は単独動作するソフトウェアではなく、大規模データ向けの Open Table Format の仕様とその参照実装であり、`api/` が公開インタフェース、`core/` が実装、`format/` が仕様書を担う。
+本書は `format/`、`api/`、`core/` と主要な入出力実装（`parquet/`、`orc/`、`hive-metastore/`）を対象とし、Spark/Flink 連携（`spark/`、`flink/`）や各クラウドストレージ実装（`aws/`、`gcp/`、`azure/` 等）は対象外とする。
 
 ## 第0部　全体像
 

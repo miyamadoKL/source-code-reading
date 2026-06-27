@@ -4,7 +4,7 @@
 >
 > - [`core/src/main/java/org/apache/iceberg/TableMetadata.java`](https://github.com/apache/iceberg/blob/apache-iceberg-1.11.0/core/src/main/java/org/apache/iceberg/TableMetadata.java)
 > - [`core/src/main/java/org/apache/iceberg/TableMetadataParser.java`](https://github.com/apache/iceberg/blob/apache-iceberg-1.11.0/core/src/main/java/org/apache/iceberg/TableMetadataParser.java)
-> - [`api/src/main/java/org/apache/iceberg/TableProperties.java`](https://github.com/apache/iceberg/blob/apache-iceberg-1.11.0/api/src/main/java/org/apache/iceberg/TableProperties.java)
+> - [`core/src/main/java/org/apache/iceberg/TableProperties.java`](https://github.com/apache/iceberg/blob/apache-iceberg-1.11.0/core/src/main/java/org/apache/iceberg/TableProperties.java)
 
 ## この章の狙い
 
