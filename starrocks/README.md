@@ -32,7 +32,7 @@ StarRocks は Apache Doris をフォークした MPP 分散分析データベー
 10. [Pipeline 実行モデル](part03-execution/10-pipeline-execution-model.md)
 11. [Scan オペレーターとデータアクセス](part03-execution/11-scan-operators.md)
 12. [Join と RuntimeFilter](part03-execution/12-join-and-runtime-filter.md)
-13. [Aggregate・Sort・Exchange](part03-execution/13-aggregate-sort-exchange.md)
+13. [Aggregate、Sort、Exchange](part03-execution/13-aggregate-sort-exchange.md)
 
 ## 第4部　列指向データモデル
 
@@ -41,7 +41,7 @@ StarRocks は Apache Doris をフォークした MPP 分散分析データベー
 
 ## 第5部　ストレージエンジン
 
-16. [Tablet・Rowset とデータモデル](part05-storage/16-tablet-rowset-and-data-models.md)
+16. [Tablet、Rowset とデータモデル](part05-storage/16-tablet-rowset-and-data-models.md)
 17. [Segment ファイルフォーマット](part05-storage/17-segment-file-format.md)
 18. [インデックスサブシステム](part05-storage/18-index-subsystem.md)
 19. [Compaction と Primary Key 更新](part05-storage/19-compaction-and-primary-key.md)
@@ -60,11 +60,11 @@ StarRocks は Apache Doris をフォークした MPP 分散分析データベー
 
 24. [メモリ管理とデータキャッシュ](part08-ops/24-memory-management-and-cache.md)
 25. [Resource Group と Warehouse](part08-ops/25-resource-group-and-warehouse.md)
-27. [Tablet スケジューラとレプリカ管理](part08-ops/27-tablet-scheduler-and-replica.md)
+26. [Tablet スケジューラとレプリカ管理](part08-ops/26-tablet-scheduler-and-replica.md)
 
 ## 第9部　外部連携
 
-26. [Connector と外部カタログ](part09-connector/26-connector-and-external-catalog.md)
+27. [Connector と外部カタログ](part09-connector/27-connector-and-external-catalog.md)
 
 ---
 

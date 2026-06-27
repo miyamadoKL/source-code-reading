@@ -1,4 +1,4 @@
-# 第26章 Connector と外部カタログ
+# 第27章 Connector と外部カタログ
 
 > **本章で読むソース**
 >
@@ -621,7 +621,7 @@ public class CachingRemoteFileIO implements RemoteFileIO {
 ```
 
 クエリレベルのキャッシュから呼ばれた場合、下位のカタログレベルキャッシュも再帰的に無効化する。
-これにより、`REFRESH EXTERNAL TABLE` 実行時にステイルなデータが残らないことを保証する。
+これにより、`REFRESH EXTERNAL TABLE` 実行時にキャッシュ済みパーティションの stale entry を残しにくくしている。
 
 ## Iceberg コネクタ
 

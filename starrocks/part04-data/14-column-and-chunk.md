@@ -812,4 +812,4 @@ Chunk はこれらの Column を束ねてオペレーター間のデータ受け
 
 - 第11章: Scan オペレーターが Chunk を生成してパイプラインに供給する流れ
 - 第13章: Aggregate, Sort, Exchange オペレーターが Chunk を消費する流れ
-- 第15章(予定): ストレージ層が Column にデータを書き込む Segment/Page の構造
+- [第17章](../part05-storage/17-segment-file-format.md): ストレージ層が Column にデータを書き込む Segment/Page の構造
