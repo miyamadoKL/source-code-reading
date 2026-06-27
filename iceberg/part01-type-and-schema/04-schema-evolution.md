@@ -383,20 +383,20 @@ identifier フィールド（主キーに相当するフィールド）の場合
 
 ```mermaid
 flowchart TD
-    A[apply 呼び出し] --> B[TypeUtil.visit で<br/>スキーマツリーを走査]
-    B --> C{フィールド訪問}
+    A["apply 呼び出し"] --> B["TypeUtil.visit で<br/>スキーマツリーを走査"]
+    B --> C{"フィールド訪問"}
     C -->|deletes に含まれる| D["null を返す<br/>(削除)"]
-    C -->|updates に含まれる| E[更新された型を返す]
-    C -->|parentToAddedIds に<br/>子がある| F[子フィールドを追加]
-    C -->|moves がある| G[列順序を変更]
-    C -->|変更なし| H[元のフィールドを返す]
-    D --> I[struct で null を<br/>スキップ = フィールド除去]
+    C -->|updates に含まれる| E["更新された型を返す"]
+    C -->|parentToAddedIds に<br/>子がある| F["子フィールドを追加"]
+    C -->|moves がある| G["列順序を変更"]
+    C -->|変更なし| H["元のフィールドを返す"]
+    D --> I["struct で null を<br/>スキップしフィールド除去"]
     E --> I
     F --> I
     G --> I
     H --> I
-    I --> J[schema 呼び出しで<br/>ルートへの追加を処理]
-    J --> K[新しい Schema を構築]
+    I --> J["schema 呼び出しで<br/>ルートへの追加を処理"]
+    J --> K["新しい Schema を構築"]
 ```
 
 `field` メソッドでは、フィールド ID が `deletes` に含まれていれば null を返して削除を表現する。
