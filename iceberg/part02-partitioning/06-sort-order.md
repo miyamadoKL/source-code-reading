@@ -276,7 +276,7 @@ classDiagram
     UnboundSortOrder ..> SortOrder : bind
     SortOrderParser ..> SortOrder : serialize/deserialize
     SortOrderParser ..> UnboundSortOrder : parse
-    SortOrder +-- Builder
+    SortOrder *-- Builder
     Builder ..|> SortOrderBuilder
 ```
 

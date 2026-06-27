@@ -385,7 +385,7 @@ identifier フィールド（主キーに相当するフィールド）の場合
 flowchart TD
     A[apply 呼び出し] --> B[TypeUtil.visit で<br/>スキーマツリーを走査]
     B --> C{フィールド訪問}
-    C -->|deletes に含まれる| D[null を返す<br/>= 削除]
+    C -->|deletes に含まれる| D["null を返す<br/>(削除)"]
     C -->|updates に含まれる| E[更新された型を返す]
     C -->|parentToAddedIds に<br/>子がある| F[子フィールドを追加]
     C -->|moves がある| G[列順序を変更]
