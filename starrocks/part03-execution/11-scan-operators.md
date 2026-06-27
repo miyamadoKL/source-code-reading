@@ -67,7 +67,6 @@ ScanOperator::ScanOperator(OperatorFactory* factory, int32_t id, int32_t driver_
         _chunk_source_profiles[i] = std::make_shared<RuntimeProfile>(strings::Substitute("ChunkSource$0", i));
     }
 }
-
 ```
 
 サブクラスは次の3つの仮想メソッドを実装する。
@@ -78,10 +77,9 @@ ScanOperator::ScanOperator(OperatorFactory* factory, int32_t id, int32_t driver_
 [`be/src/exec/pipeline/scan/scan_operator.h` L75-L77](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/exec/pipeline/scan/scan_operator.h#L75-L77)
 
 ```cpp
-virtual Status do_prepare(RuntimeState* state) = 0;
-virtual void do_close(RuntimeState* state) = 0;
-virtual ChunkSourcePtr create_chunk_source(MorselPtr morsel, int32_t chunk_source_index) = 0;
-
+    virtual Status do_prepare(RuntimeState* state) = 0;
+    virtual void do_close(RuntimeState* state) = 0;
+    virtual ChunkSourcePtr create_chunk_source(MorselPtr morsel, int32_t chunk_source_index) = 0;
 ```
 
 ### has_output と Unplug アルゴリズム
@@ -94,7 +92,7 @@ StarRocks は Linux のブロック IO スケジューラーの Unplug アルゴ
 
 ```cpp
 bool ScanOperator::has_output() const {
-    // ... (省略: エラーチェック、TopN RuntimeFilter バックプレッシャー) ...
+    // ... (中略: エラーチェック、TopN RuntimeFilter バックプレッシャー) ...
 
     size_t chunk_number = num_buffered_chunks();
     if (_unpluging) {
@@ -148,6 +146,7 @@ StatusOr<ChunkPtr> ScanOperator::pull_chunk(RuntimeState* state) {
     ChunkPtr res = get_chunk_from_buffer();
     if (res != nullptr) {
         begin_pull_chunk(res);
+        // for query cache mechanism, we should emit EOS chunk when we receive the last chunk.
         auto [owner_id, is_eos] = _should_emit_eos(res);
         evaluate_topn_runtime_filters(res.get());
         eval_runtime_bloom_filters(res.get());
@@ -168,7 +167,7 @@ StatusOr<ChunkPtr> ScanOperator::pull_chunk(RuntimeState* state) {
 **ChunkSource** は、Morsel 1つ分のデータを IO スレッド上で読み出すための抽象クラスである。
 サブクラスは `_read_chunk()` を実装してデータソース固有の読み出しロジックを提供する。
 
-[`be/src/exec/pipeline/scan/chunk_source.h` L37-L88](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/exec/pipeline/scan/chunk_source.h#L37-L88)
+[`be/src/exec/pipeline/scan/chunk_source.h` L37-L114](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/exec/pipeline/scan/chunk_source.h#L37-L114)
 
 ```cpp
 class ChunkSource {
@@ -190,7 +189,7 @@ protected:
 `buffer_next_batch_chunks_blocking()` は IO スレッド上で実行され、最大 `batch_size` 個(デフォルト 64)の Chunk をまとめて読み出す。
 読み出した Chunk は `BalancedChunkBuffer` に格納される。
 
-[`be/src/exec/pipeline/scan/chunk_source.cpp` L52-L124](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/exec/pipeline/scan/chunk_source.cpp#L52-L124)
+[`be/src/exec/pipeline/scan/chunk_source.cpp` L52-L125](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/exec/pipeline/scan/chunk_source.cpp#L52-L125)
 
 ```cpp
 Status ChunkSource::buffer_next_batch_chunks_blocking(RuntimeState* state, size_t batch_size,
@@ -200,6 +199,7 @@ Status ChunkSource::buffer_next_batch_chunks_blocking(RuntimeState* state, size_
         {
             SCOPED_RAW_TIMER(&time_spent_ns);
 
+            // TODO: process when buffer full
             if (_chunk_token == nullptr && (_chunk_token = _chunk_buffer.limiter()->pin(1)) == nullptr) {
                 break;
             }
@@ -208,6 +208,7 @@ Status ChunkSource::buffer_next_batch_chunks_blocking(RuntimeState* state, size_
             _status = _read_chunk(state, &chunk);
             // ... (中略: エラー処理、EOS 処理) ...
             _chunk_buffer.put(_scan_operator_seq, std::move(chunk), std::move(_chunk_token));
+            // ... (中略) ...
         }
 
         if (time_spent_ns >= workgroup::WorkGroup::YIELD_MAX_TIME_SPENT) {
@@ -252,17 +253,26 @@ Status ScanOperator::_trigger_next_scan(RuntimeState* state, int chunk_source_in
 
     workgroup::ScanTask task;
     task.workgroup = _workgroup;
+    // TODO: consider more factors, such as scan bytes and i/o time.
     task.priority = OlapScanNode::compute_priority(COUNTER_VALUE(_submit_task_counter));
     // ... (中略) ...
-    task.work_function = [wp = _query_ctx, this, state, chunk_source_index, ...](auto& ctx) {
+    task.work_function = [wp = _query_ctx, this, state, chunk_source_index, query_trace_ctx, driver_id,
+                          io_task_start_nano](auto& ctx) {
         if (auto sp = wp.lock()) {
-            // ... (中略: スレッドローカル設定) ...
+            // ... (中略: スレッドローカル設定、タイマー) ...
             auto chunk_source = _chunk_sources[chunk_source_index];
-            status = chunk_source->buffer_next_batch_chunks_blocking(state, kIOTaskBatchSize, _workgroup.get());
+            // ... (中略: chunk_source の開始処理) ...
+            if (start_status.ok()) {
+                status = chunk_source->buffer_next_batch_chunks_blocking(state, kIOTaskBatchSize, _workgroup.get());
+            }
             // ... (中略: エラーハンドリング) ...
-            _finish_chunk_source_task(state, chunk_source_index, delta_cpu_time, ...);
+            _finish_chunk_source_task(state, chunk_source_index, delta_cpu_time,
+                                      chunk_source->get_scan_rows() - prev_scan_rows,
+                                      chunk_source->get_scan_bytes() - prev_scan_bytes);
+            // ... (中略) ...
         }
     };
+    // ... (中略) ...
 
     bool submit_success;
     {
@@ -282,30 +292,96 @@ IO タスクの投入時にバッファトークンを1つ確保する。
 
 1つの Morsel の読み出しが完了すると、`_pickup_morsel()` が MorselQueue から次の Morsel を取得し、新たな ChunkSource を生成する。
 
-[`be/src/exec/pipeline/scan/scan_operator.cpp` L534-L619](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/exec/pipeline/scan/scan_operator.cpp#L534-L619)
+[`be/src/exec/pipeline/scan/scan_operator.cpp` L534-L620](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/exec/pipeline/scan/scan_operator.cpp#L534-L620)
 
 ```cpp
 Status ScanOperator::_pickup_morsel(RuntimeState* state, int chunk_source_index) {
     DCHECK(_morsel_queue != nullptr);
     _close_chunk_source(state, chunk_source_index);
 
+    // NOTE: attach an active source before really creating it, to avoid the race condition
+    bool need_detach = true;
     attach_chunk_source(chunk_source_index);
-    // ... (中略: Query Cache のレーンアービトレーション) ...
+    DeferOp defer([&]() {
+        if (need_detach) {
+            detach_chunk_source(chunk_source_index);
+        }
+    });
+
+    // if current morsel not ready for get next. we should wait current bucket finish. just return directly
+    ASSIGN_OR_RETURN(auto ready, _morsel_queue->ready_for_next());
+    RETURN_IF(!ready, Status::OK());
 
     ASSIGN_OR_RETURN(auto morsel, _morsel_queue->try_get());
+
+    if (_lane_arbiter != nullptr) {
+        while (morsel != nullptr) {
+            auto [lane_owner, version] = morsel->get_lane_owner_and_version();
+            auto acquire_result = _lane_arbiter->try_acquire_lane(lane_owner);
+            if (acquire_result == query_cache::AR_BUSY) {
+                _morsel_queue->unget(std::move(morsel));
+                return Status::OK();
+            } else if (acquire_result == query_cache::AR_PROBE) {
+                auto hit = _cache_operator->probe_cache(lane_owner, version);
+                RETURN_IF_ERROR(_cache_operator->reset_lane(state, lane_owner));
+                if (!hit) {
+                    break;
+                }
+                auto [delta_version, delta_rowsets] = _cache_operator->delta_version_and_rowsets(lane_owner);
+                if (!delta_rowsets.empty()) {
+                    // We must reset rowsets of Morsel to captured delta rowsets, because TabletReader now
+                    // created from rowsets passed in to itself instead of capturing it from TabletManager again.
+                    morsel->set_from_version(delta_version);
+
+                    std::vector<BaseRowsetSharedPtr> drs;
+                    for (auto& rs : delta_rowsets) {
+                        drs.emplace_back(rs);
+                    }
+                    morsel->set_delta_rowsets(std::move(drs));
+                    break;
+                } else {
+                    ASSIGN_OR_RETURN(morsel, _morsel_queue->try_get());
+                }
+            } else if (acquire_result == query_cache::AR_SKIP) {
+                ASSIGN_OR_RETURN(morsel, _morsel_queue->try_get());
+            } else if (acquire_result == query_cache::AR_IO) {
+                // When both intra-tablet parallelism and multi-version cache mechanisms take effects, we must
+                // use delta rowsets instead of the ensemble of rowsets to fetch rows from disk for all of the
+                // morsels originated from the identical tablet.
+                auto [delta_verrsion, delta_rowsets] = _cache_operator->delta_version_and_rowsets(lane_owner);
+                if (!delta_rowsets.empty()) {
+                    morsel->set_from_version(delta_verrsion);
+                    std::vector<BaseRowsetSharedPtr> drs;
+                    for (auto& rs : delta_rowsets) {
+                        drs.emplace_back(rs);
+                    }
+                    morsel->set_delta_rowsets(std::move(drs));
+                }
+                break;
+            }
+        }
+    }
+
     if (morsel != nullptr) {
         COUNTER_UPDATE(_morsels_counter, 1);
+
         {
             SCOPED_TIMER(_prepare_chunk_source_timer);
             _chunk_sources[chunk_source_index] = create_chunk_source(std::move(morsel), chunk_source_index);
             auto status = _chunk_sources[chunk_source_index]->prepare(state);
-            // ... (中略) ...
+            if (!status.ok()) {
+                _chunk_sources[chunk_source_index] = nullptr;
+                static_cast<void>(set_finishing(state));
+                return status;
+            }
         }
+
+        need_detach = false;
         RETURN_IF_ERROR(_trigger_next_scan(state, chunk_source_index));
     }
+
     return Status::OK();
 }
-
 ```
 
 Morsel を取得して ChunkSource を生成したら、即座に `_trigger_next_scan` で IO タスクを投入する。
@@ -316,7 +392,7 @@ Morsel を取得して ChunkSource を生成したら、即座に `_trigger_next
 **Morsel** はスキャン作業を分割する単位であり、`ScanMorsel` クラスが基本実装を提供する。
 FE が生成した `TScanRange` を内部に保持し、対象 Tablet の ID、バージョン、パーティション ID を抽出する。
 
-[`be/src/exec/pipeline/scan/morsel.h` L136-L199](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/exec/pipeline/scan/morsel.h#L136-L199)
+[`be/src/exec/pipeline/scan/morsel.h` L136-L200](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/exec/pipeline/scan/morsel.h#L136-L200)
 
 ```cpp
 class ScanMorsel : public ScanMorselX {
@@ -342,15 +418,14 @@ public:
 [`be/src/exec/pipeline/scan/morsel.h` L348-L355](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/exec/pipeline/scan/morsel.h#L348-L355)
 
 ```cpp
-enum Type {
-    FIXED,
-    DYNAMIC,
-    SPLIT,
-    LOGICAL_SPLIT,
-    PHYSICAL_SPLIT,
-    BUCKET_SEQUENCE,
-};
-
+    enum Type {
+        FIXED,
+        DYNAMIC,
+        SPLIT,
+        LOGICAL_SPLIT,
+        PHYSICAL_SPLIT,
+        BUCKET_SEQUENCE,
+    };
 ```
 
 - **FixedMorselQueue**: FE が割り当てた Morsel をそのまま順に返す。最も単純な実装
@@ -395,7 +470,6 @@ OperatorPtr OlapScanOperatorFactory::do_create(int32_t dop, int32_t driver_seque
     return std::make_shared<OlapScanOperator>(this, _id, driver_sequence, dop, _scan_node,
                                               _ctx_factory->get_or_create(driver_sequence));
 }
-
 ```
 
 ### ChunkSource の生成
@@ -411,7 +485,6 @@ ChunkSourcePtr OlapScanOperator::create_chunk_source(MorselPtr morsel, int32_t c
     return std::make_shared<OlapChunkSource>(this, _chunk_source_profiles[chunk_source_index].get(), std::move(morsel),
                                              olap_scan_node, _ctx.get());
 }
-
 ```
 
 ### BalancedChunkBuffer
@@ -419,7 +492,7 @@ ChunkSourcePtr OlapScanOperator::create_chunk_source(MorselPtr morsel, int32_t c
 読み出された Chunk は `BalancedChunkBuffer` に格納される。
 このバッファは `kDirect`(直接配送)と `kRoundRobin`(ラウンドロビン配送)の2つの戦略を持つ。
 
-[`be/src/exec/pipeline/scan/balanced_chunk_buffer.h` L26-L42](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/exec/pipeline/scan/balanced_chunk_buffer.h#L26-L42)
+[`be/src/exec/pipeline/scan/balanced_chunk_buffer.h` L26-L77](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/exec/pipeline/scan/balanced_chunk_buffer.h#L26-L77)
 
 ```cpp
 enum BalanceStrategy {
@@ -467,6 +540,7 @@ Status OlapChunkSource::_init_olap_reader(RuntimeState* runtime_state) {
     RETURN_IF_ERROR(_init_reader_params(_scan_ctx->key_ranges()));
     RETURN_IF_ERROR(_init_scanner_columns(scanner_columns, reader_columns));
 
+    // schema is new object, but fields not
     starrocks::Schema child_schema = ChunkHelper::convert_schema(_tablet_schema, reader_columns);
     // ... (中略) ...
 
@@ -475,6 +549,7 @@ Status OlapChunkSource::_init_olap_reader(RuntimeState* runtime_state) {
     // ... (中略) ...
     RETURN_IF_ERROR(_reader->prepare());
     RETURN_IF_ERROR(_reader->open(_params));
+
     return Status::OK();
 }
 
@@ -487,14 +562,13 @@ Status OlapChunkSource::_init_olap_reader(RuntimeState* runtime_state) {
 [`be/src/exec/pipeline/scan/olap_chunk_source.cpp` L306-L312](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/exec/pipeline/scan/olap_chunk_source.cpp#L306-L312)
 
 ```cpp
-PredicateAndNode pushdown_pred_root;
-PredicateAndNode non_pushdown_pred_root;
-pred_tree.root().partition_copy([parser](const auto& node) { return parser->can_pushdown(node); },
-                                &pushdown_pred_root, &non_pushdown_pred_root);
+    PredicateAndNode pushdown_pred_root;
+    PredicateAndNode non_pushdown_pred_root;
+    pred_tree.root().partition_copy([parser](const auto& node) { return parser->can_pushdown(node); },
+                                    &pushdown_pred_root, &non_pushdown_pred_root);
 
-_params.pred_tree = PredicateTree::create(std::move(pushdown_pred_root));
-_non_pushdown_pred_tree = PredicateTree::create(std::move(non_pushdown_pred_root));
-
+    _params.pred_tree = PredicateTree::create(std::move(pushdown_pred_root));
+    _non_pushdown_pred_tree = PredicateTree::create(std::move(non_pushdown_pred_root));
 ```
 
 `OlapPredicateParser::can_pushdown()` がストレージ層のカラム述語として表現できるかどうかを判定する。
@@ -517,6 +591,7 @@ Status OlapChunkSource::_read_chunk_from_storage(RuntimeState* state, Chunk* chu
     do {
         RETURN_IF_ERROR(state->check_mem_limit("read chunk from storage"));
         Status status = _prj_iter->get_next(chunk);
+        // update counter when eof or error
         if (UNLIKELY(!status.ok())) {
             _update_realtime_counter(chunk);
             return status;
@@ -529,6 +604,7 @@ Status OlapChunkSource::_read_chunk_from_storage(RuntimeState* state, Chunk* chu
             _selection.resize(nrows);
             RETURN_IF_ERROR(_non_pushdown_pred_tree.evaluate(chunk, _selection.data(), 0, nrows));
             size_t after_rows = chunk->filter(_selection);
+            DCHECK_CHUNK(chunk);
             COUNTER_UPDATE(_expr_filter_counter, nrows - after_rows);
         }
         // ... (中略) ...
@@ -560,9 +636,13 @@ struct ConnectorScanOperatorMemShareArbitrator {
 
     ConnectorScanOperatorMemShareArbitrator(int64_t query_mem_limit, int connector_scan_node_number);
 
+    int64_t set_scan_mem_ratio(double mem_ratio) {
+        scan_mem_limit = std::max<int64_t>(1, query_mem_limit * mem_ratio);
+        return scan_mem_limit;
+    }
+
     int64_t update_chunk_source_mem_bytes(int64_t old_value, int64_t new_value);
 };
-
 ```
 
 各 ChunkSource が実際に消費したメモリ量を `update_chunk_source_mem_bytes()` で報告し、アービトレーターはその比率に応じて各スキャンノードのメモリ上限を動的に調整する。
@@ -577,7 +657,7 @@ struct ConnectorScanOperatorMemShareArbitrator {
 
 **TabletReader** は `ChunkIterator` インターフェースを実装し、Tablet のデータを Chunk 単位で読み出すストレージ層のエントリポイントである。
 
-[`be/src/storage/tablet_reader.h` L36-L66](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/storage/tablet_reader.h#L36-L66)
+[`be/src/storage/tablet_reader.h` L35-L121](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/storage/tablet_reader.h#L35-L121)
 
 ```cpp
 class TabletReader final : public ChunkIterator {
@@ -653,8 +733,7 @@ IO タスクの優先度は投入回数に基づいて計算される。
 [`be/src/exec/pipeline/scan/scan_operator.cpp` L443](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/exec/pipeline/scan/scan_operator.cpp#L443)
 
 ```cpp
-task.priority = OlapScanNode::compute_priority(COUNTER_VALUE(_submit_task_counter));
-
+    task.priority = OlapScanNode::compute_priority(COUNTER_VALUE(_submit_task_counter));
 ```
 
 投入回数が少ない(まだあまり実行されていない)タスクほど高い優先度を得るため、各 Scan オペレーター間の公平性が維持される。

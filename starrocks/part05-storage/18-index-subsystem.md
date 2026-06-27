@@ -42,20 +42,24 @@ Segment 内部では、各 Column のデータが複数のデータページに�
 ```cpp
 class ZoneMapDetail {
 public:
+    // ctors
     ZoneMapDetail() = default;
     ZoneMapDetail(const Datum& min_or_null_value, Datum max_value)
             : _has_null(min_or_null_value.is_null()),
               _min_value(min_or_null_value),
               _max_value(std::move(max_value)),
               _num_rows(0) {}
-    // ...
+    // ... (中略) ...
     bool has_null() const { return _has_null; }
+    // ... (中略) ...
     bool has_not_null() const { return !_min_value.is_null() || !_max_value.is_null(); }
+    // ... (中略) ...
     const Datum& min_or_null_value() const {
         if (_has_null) return _null_value;
         return _min_value;
     }
     void set_num_rows(const size_t num_rows) { _num_rows = num_rows; }
+    // ... (中略) ...
 
 private:
     bool _has_null;
@@ -89,7 +93,6 @@ private:
 [`be/src/storage/rowset/zone_map_index.cpp` L256-L282](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/storage/rowset/zone_map_index.cpp#L256-L282)
 
 ```cpp
-template <LogicalType type>
 void ZoneMapIndexWriterImpl<type>::add_values(const void* values, size_t count) {
     if (count > 0) {
         const auto* vals = reinterpret_cast<const CppType*>(values);
@@ -107,9 +110,9 @@ void ZoneMapIndexWriterImpl<type>::add_values(const void* values, size_t count) 
                 _truncate_string_minmax_if_needed(&_page_zone_map);
             }
         } else {
-            // 初回: min/max を直接コピー
             _page_zone_map.min_value.resize_container_for_fit(_type_info, pmin);
             _type_info->direct_copy(&_page_zone_map.min_value.value, pmin);
+
             _page_zone_map.max_value.resize_container_for_fit(_type_info, pmax);
             _type_info->direct_copy(&_page_zone_map.max_value.value, pmax);
             _truncate_string_minmax_if_needed(&_page_zone_map);
@@ -117,14 +120,13 @@ void ZoneMapIndexWriterImpl<type>::add_values(const void* values, size_t count) 
         _page_zone_map.has_not_null = true;
     }
 }
-
 ```
 
 構造化バインディング `auto [pmin, pmax]` で最小値と最大値のポインタを同時に取得し、ページ ZoneMap の既存値と比較して更新するか初回設定するかを `has_not_null` で分岐している。
 
 `flush()` ではページ ZoneMap をセグメント ZoneMap にマージし、Protobuf にシリアライズしてから `_values` ベクタに蓄積する。
 
-[`be/src/storage/rowset/zone_map_index.cpp` L285-L326](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/storage/rowset/zone_map_index.cpp#L285-L326)
+[`be/src/storage/rowset/zone_map_index.cpp` L284-L327](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/storage/rowset/zone_map_index.cpp#L284-L327)
 
 ```cpp
 template <LogicalType type>
@@ -133,17 +135,17 @@ Status ZoneMapIndexWriterImpl<type>::flush() {
     if (_page_zone_map.has_not_null) {
         if (_segment_zone_map.has_not_null) {
             if (_page_zone_map.min_value.value < _segment_zone_map.min_value.value) {
-                // ... ページ min がセグメント min より小さければ更新
+                // ... (中略) ...
             }
             if (_page_zone_map.max_value.value > _segment_zone_map.max_value.value) {
-                // ... ページ max がセグメント max より大きければ更新
+                // ... (中略) ...
             }
         } else {
-            // セグメント ZoneMap の初回設定
-            // ...
+            // ... (中略) ...
         }
         _segment_zone_map.has_not_null = true;
     }
+
     if (_page_zone_map.has_null) {
         _segment_zone_map.has_null = true;
     }
@@ -154,7 +156,7 @@ Status ZoneMapIndexWriterImpl<type>::flush() {
 
     std::string serialized_zone_map;
     bool ret = zone_map_pb.SerializeToString(&serialized_zone_map);
-    // ...
+    // ... (中略) ...
     _values.push_back(std::move(serialized_zone_map));
     return Status::OK();
 }
@@ -164,7 +166,7 @@ Status ZoneMapIndexWriterImpl<type>::flush() {
 `finish()` ではセグメント ZoneMap をインデックスメタに書き込み、蓄積した全ページ ZoneMap を IndexedColumnWriter で永続化する。
 セグメント ZoneMap はメタデータに直接格納されるため、ページを一切読まずに Segment 全体のスキップ判定ができる。
 
-[`be/src/storage/rowset/zone_map_index.cpp` L352-L374](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/storage/rowset/zone_map_index.cpp#L352-L374)
+[`be/src/storage/rowset/zone_map_index.cpp` L351-L375](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/storage/rowset/zone_map_index.cpp#L351-L375)
 
 ```cpp
 template <LogicalType type>
@@ -226,17 +228,35 @@ Status ZoneMapIndexReader::_do_load(const IndexReadOptions& opts, const ZoneMapI
 
     _page_zone_maps.resize(reader.num_values());
 
+    MutableColumnPtr column = ChunkHelper::column_from_field_type(TYPE_VARCHAR, false);
     // read and cache all page zone maps
     for (int i = 0; i < reader.num_values(); ++i) {
         RETURN_IF_ERROR(iter->seek_to_ordinal(i));
         size_t num_to_read = 1;
         size_t num_read = num_to_read;
         RETURN_IF_ERROR(iter->next_batch(&num_read, column.get()));
-        // ... ParseFromArray でデシリアライズ
+        DCHECK(num_to_read == num_read);
+
+        ColumnViewer<TYPE_VARCHAR> viewer(column);
+        auto value = viewer.value(0);
+        if (!_page_zone_maps[i].ParseFromArray(value.data, value.size)) {
+            return Status::Corruption("Failed to parse zone map");
+        }
+
+        // Currently if the column type is varchar(length) and the values is all null,
+        // a zonemap string of length will be written to the segment file,
+        // causing the loaded metadata to occupy a large amount of memory.
+        //
+        // The main purpose of this code is to optimize the reading of segment files
+        // generated by the old version.
+        if (_page_zone_maps[i].has_has_not_null() && !_page_zone_maps[i].has_not_null()) {
+            delete _page_zone_maps[i].release_min();
+            delete _page_zone_maps[i].release_max();
+        }
+        column->resize(0);
     }
     return Status::OK();
 }
-
 ```
 
 `load()` は `OnceFlag` で保護されており、複数スレッドが同時に呼び出しても最初の1回だけが実際にロードを行い、残りは完了を待つ。
@@ -252,7 +272,6 @@ Reader はこの問題に対処するため、`has_not_null` が false のペー
             delete _page_zone_maps[i].release_min();
             delete _page_zone_maps[i].release_max();
         }
-
 ```
 
 ### 文字列の接頭辞切り詰め最適化
@@ -263,7 +282,6 @@ Reader はこの問題に対処するため、`has_not_null` が false のペー
 [`be/src/storage/rowset/zone_map_index.cpp` L236-L253](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/storage/rowset/zone_map_index.cpp#L236-L253)
 
 ```cpp
-template <LogicalType LT>
 void ZoneMapIndexWriterImpl<LT>::_truncate_string_minmax_if_needed(ZoneMap<LT>* zm) {
     if (!_truncate_string) {
         return;
@@ -276,12 +294,12 @@ void ZoneMapIndexWriterImpl<LT>::_truncate_string_minmax_if_needed(ZoneMap<LT>* 
             min_slice.size = kPrefixLen;
         }
         if (max_slice.size > kPrefixLen) {
+            // Safe, original buffer has length > kPrefixLen, ensure buffer has room for 0xFF
             max_slice.data[kPrefixLen] = static_cast<char>(0xFF);
             max_slice.size = kPrefixLen + 1;
         }
     }
 }
-
 ```
 
 切り詰めの接頭辞長は `max(8, config::string_prefix_zonemap_prefix_len)` で決まる。
@@ -295,7 +313,7 @@ min 値は単純に接頭辞で切ればよい。
 文字列列の ZoneMap はデータの分布次第で効果が薄いことがある。
 **ZoneMapIndexQualityJudger** は、サンプリングしたページ ZoneMap 間の重複率を計算し、インデックス作成の価値を判定する。
 
-[`be/src/storage/rowset/zone_map_index.cpp` L504-L530](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/storage/rowset/zone_map_index.cpp#L504-L530)
+[`be/src/storage/rowset/zone_map_index.cpp` L475-L531](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/storage/rowset/zone_map_index.cpp#L475-L531)
 
 ```cpp
 template <LogicalType type>
@@ -337,11 +355,14 @@ NULL を含むページは他のすべてのページと重複するとみなさ
 
 ```cpp
 constexpr uint8_t KEY_MINIMAL_MARKER = 0x00;
+// Used to represent a null field, which value is seemed as minimal than other values
 constexpr uint8_t KEY_NULL_FIRST_MARKER = 0x01;
+// Used to represent a normal field, which content is encoded after this marker
 constexpr uint8_t KEY_NORMAL_MARKER = 0x02;
+// Used to represent
 constexpr uint8_t KEY_NULL_LAST_MARKER = 0xFE;
+// Used to represent maximal value for that field
 constexpr uint8_t KEY_MAXIMAL_MARKER = 0xFF;
-
 ```
 
 - `KEY_MINIMAL_MARKER` (0x00)：そのフィールドの最小値を表す。`a >= 1` のような条件で接頭辞キーの終端に付加すると、1 以上のすべてのキーにマッチする
@@ -367,17 +388,19 @@ public:
             : _segment_id(segment_id), _num_rows_per_block(num_rows_per_block) {}
 
     Status add_item(const Slice& key);
+
     uint64_t size() { return _key_buf.size() + _offset_buf.size(); }
+
     Status finalize(uint32_t num_rows, std::vector<Slice>* body, PageFooterPB* footer);
 
 private:
     uint32_t _segment_id;
     uint32_t _num_rows_per_block;
     uint32_t _num_items{0};
+
     faststring _key_buf;
     faststring _offset_buf;
 };
-
 ```
 
 **ShortKeyIndexDecoder** は読み出し側である。
@@ -395,7 +418,6 @@ private:
             return std::upper_bound(begin(), end(), key, comparator);
         }
     }
-
 ```
 
 `ShortKeyIndexIterator` はランダムアクセスイテレーターとして実装されている。
@@ -406,7 +428,7 @@ private:
 `SegmentIterator::_lookup_ordinal()` は Short Key インデックスを使って、指定されたキーに対応する行番号を特定する。
 処理は2段階に分かれている。
 
-[`be/src/storage/rowset/segment_iterator.cpp` L1766-L1822](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/storage/rowset/segment_iterator.cpp#L1766-L1822)
+[`be/src/storage/rowset/segment_iterator.cpp` L1766-L1823](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/storage/rowset/segment_iterator.cpp#L1766-L1823)
 
 ```cpp
 Status SegmentIterator::_lookup_ordinal(const SeekTuple& key, bool lower, rowid_t end, rowid_t* rowid) {
@@ -469,13 +491,26 @@ Short Key インデックスによる粗い絞り込みがなければ、Segment
 ```cpp
 class BloomFilter {
 public:
+    // Default seed for the hash function. It comes from date +%s.
     static const uint32_t DEFAULT_SEED = 1575457558;
+
+    // Minimum Bloom filter size, set to the size of a tiny Bloom filter block
     static const uint32_t MINIMUM_BYTES = 32;
+
+    // Maximum Bloom filter size, set it to half of max segment file size
     static const uint32_t MAXIMUM_BYTES = 128 * 1024 * 1024;
 
+    // Factory function for BloomFilter
+    static Status create(BloomFilterAlgorithmPB algorithm, std::unique_ptr<BloomFilter>* bf);
+
+    BloomFilter() = default;
+
+    virtual ~BloomFilter() { delete[] _data; }
     Status init(uint64_t n, double fpp, Hasher::HashStrategy strategy, int seed) {
         _hasher = HasherFactory::create(strategy, seed);
+        DCHECK(_hasher);
         _num_bytes = _optimal_bit_num(n, fpp) / 8;
+        // make sure _num_bytes is power of 2
         DCHECK((_num_bytes & (_num_bytes - 1)) == 0);
         _size = _num_bytes + 1;
         // reserve last byte for null flag
@@ -485,7 +520,6 @@ public:
         *_has_null = false;
         return Status::OK();
     }
-
 ```
 
 ビット数は `m = -n * ln(fpp) / (ln 2)^2` で計算され、結果は2のべき乗に切り上げられる。
@@ -511,7 +545,6 @@ NULL 値の追加は `add_bytes(nullptr, ...)` として扱われ、`_has_null` 
         uint64_t code = hash(buf, size);
         return test_hash(code);
     }
-
 ```
 
 ハッシュ戦略はデフォルトで MurmurHash3 (64-bit) が使われる。
@@ -525,11 +558,15 @@ NULL 値の追加は `add_bytes(nullptr, ...)` として扱われ、`_has_null` 
 [`be/src/storage/rowset/bloom_filter_index_writer.cpp` L110-L144](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/storage/rowset/bloom_filter_index_writer.cpp#L110-L144)
 
 ```cpp
-template <LogicalType field_type>
 class OriginalBloomFilterIndexWriterImpl : public BloomFilterIndexWriter {
 public:
     using CppType = typename CppTypeTraits<field_type>::CppType;
     using ValueDict = typename BloomFilterTraits<CppType>::ValueDict;
+
+    explicit OriginalBloomFilterIndexWriterImpl(const BloomFilterOptions& bf_options, TypeInfoPtr typeinfo)
+            : _bf_options(bf_options), _typeinfo(std::move(typeinfo)) {}
+
+    ~OriginalBloomFilterIndexWriterImpl() override = default;
 
     void add_values(const void* values, size_t count) override {
         const auto* v = (const CppType*)values;
@@ -540,6 +577,8 @@ public:
             ++v;
         }
     }
+
+    void add_nulls(uint32_t count) override { _has_null |= (count > 0); }
 
     Status flush() override {
         std::unique_ptr<BloomFilter> bf;
@@ -554,7 +593,6 @@ public:
         _values.clear();
         return Status::OK();
     }
-
 ```
 
 `flush()` 時に `_values.size()` を BloomFilter の `init()` に渡すことで、そのページの実際の distinct 数に基づいた最適なビット数が計算される。
@@ -562,7 +600,7 @@ distinct 数が少ないページでは Bloom filter のサイズが小さくな
 
 `finish()` では蓄積した全 Bloom filter を IndexedColumnWriter で書き出す。
 
-[`be/src/storage/rowset/bloom_filter_index_writer.cpp` L145-L168](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/storage/rowset/bloom_filter_index_writer.cpp#L145-L168)
+[`be/src/storage/rowset/bloom_filter_index_writer.cpp` L145-L169](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/storage/rowset/bloom_filter_index_writer.cpp#L145-L169)
 
 ```cpp
     Status finish(WritableFile* wfile, ColumnIndexMetaPB* index_meta) override {
@@ -604,7 +642,6 @@ Status BloomFilterIndexReader::_do_load(const IndexReadOptions& opts, const Bloo
     RETURN_IF_ERROR(_bloom_filter_reader->load(opts));
     return Status::OK();
 }
-
 ```
 
 「BloomFilterIndexIterator」の `read_bloom_filter()` は、指定された Ordinal の Bloom filter をファイルから読み出して BloomFilter オブジェクトを構築する。
@@ -618,14 +655,16 @@ Status BloomFilterIndexIterator::read_bloom_filter(rowid_t ordinal, std::unique_
     size_t num_to_read = 1;
     size_t num_read = num_to_read;
     RETURN_IF_ERROR(_bloom_filter_iter->next_batch(&num_read, column.get()));
+    DCHECK(num_to_read == num_read);
 
     ColumnViewer<TYPE_VARCHAR> viewer(std::move(column));
     auto value = viewer.value(0);
+    // construct bloom filter
     RETURN_IF_ERROR(BloomFilter::create(_reader->_algorithm, bf));
+
     RETURN_IF_ERROR((*bf)->init(value.data, value.size, _reader->_hash_strategy));
     return Status::OK();
 }
-
 ```
 
 `SegmentIterator` は `_get_row_ranges_by_bloom_filter()` で述語ツリーを走査し、各ページの Bloom filter に問い合わせて該当しないページをスキャン範囲から除外する。
@@ -647,25 +686,27 @@ Status BloomFilterIndexIterator::read_bloom_filter(rowid_t ordinal, std::unique_
 
             size_t j;
             for (j = 0; j + gram_num <= slice_gram_num; j++) {
-                size_t cur_ngram_length = j + gram_num < slice_gram_num
-                    ? index[j + gram_num] - index[j]
-                    : cur_slice->get_size() - index[j];
+                // find next ngram
+                size_t cur_ngram_length = j + gram_num < slice_gram_num ? index[j + gram_num] - index[j]
+                                                                        : cur_slice->get_size() - index[j];
                 Slice cur_ngram = Slice(cur_slice->data + index[j], cur_ngram_length);
+
                 // add this ngram into set
                 if (_values.find(unaligned_load<CppType>(&cur_ngram)) == _values.end()) {
                     if (this->_bf_options.case_sensitive) {
                         _values.insert(get_value<field_type>(&cur_ngram, this->_typeinfo, &this->_pool));
                     } else {
+                        // todo::exist two copy of ngram, need to optimize
                         std::string lower_ngram;
                         Slice lower_ngram_slice = cur_ngram.tolower(lower_ngram);
                         _values.insert(get_value<field_type>(&lower_ngram_slice, this->_typeinfo, &this->_pool));
                     }
                 }
             }
+            // move to next row
             ++cur_slice;
         }
     }
-
 ```
 
 `get_utf8_index()` で UTF-8 の文字境界を取得し、文字単位で N-gram を切り出す。
@@ -690,7 +731,6 @@ Status BloomFilterIndexIterator::read_bloom_filter(rowid_t ordinal, std::unique_
     std::unique_ptr<IndexedColumnReader> _ngram_dict_column_reader;
     std::unique_ptr<IndexedColumnReader> _ngram_bitmap_column_reader;
     bool _has_null = false;
-
 ```
 
 `_dict_column_reader` はソート済みの値辞書を保持し、`_bitmap_column_reader` は辞書内の各値に対応する Roaring Bitmap を保持する。
@@ -704,7 +744,6 @@ N-gram 対応のフィールド(`_ngram_dict_column_reader`, `_ngram_bitmap_colu
 
 protected:
     CompressionTypePB _dictionary_compression = LZ4;
-
 ```
 
 以下の図は Bitmap インデックスの論理構造を示す。
@@ -737,23 +776,33 @@ NULL ビットマップは常にビットマップ配列の末尾に格納され
 [`be/src/storage/rowset/bitmap_index_reader.h` L162-L188](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/storage/rowset/bitmap_index_reader.h#L162-L188)
 
 ```cpp
-    // 辞書を二分探索して、指定値以上の最初のエントリを見つける
+    //
+    // Returns OK when such value exists. The seeked position can be retrieved
+    // by `current_ordinal()`, *exact_match is set to indicate whether the
+    // seeked value exactly matches `value` or not
+    //
+    // Returns NotFound when no such value exists (all values in dictionary < `value`).
+    // Returns other error status otherwise.
     Status seek_dictionary(const void* value, bool* exact_match);
 
-    // 指定 ordinal のビットマップを読み出す
+    StatusOr<Buffer<rowid_t>> seek_dictionary_by_predicate(const DictPredicate& predicate, const Slice& from_value,
+                                                           size_t search_size);
+
+    Status next_batch_dictionary(size_t* n, Column* column);
+
+    // Read bitmap at the given ordinal into `result`.
     Status read_bitmap(rowid_t ordinal, Roaring* result);
 
-    // NULL ビットマップを読み出す(常に末尾に格納)
     Status read_null_bitmap(Roaring* result) {
         if (has_null_bitmap()) {
+            // null bitmap is always stored at last
             return read_bitmap(bitmap_nums() - 1, result);
         }
-        return Status::OK();
+        return Status::OK(); // keep result empty
     }
 
-    // 範囲 [from, to) のビットマップを和集合として読み出す
+    // Read and union all bitmaps in range [from, to) into `result`
     Status read_union_bitmap(rowid_t from, rowid_t to, Roaring* result);
-
 ```
 
 等値述語(`column = 'red'`)の評価では、まず `seek_dictionary()` で辞書を二分探索し、値が見つかればその ordinal で `read_bitmap()` を呼んで該当行の集合を取得する。
@@ -769,13 +818,38 @@ NULL ビットマップは常にビットマップ配列の末尾に格納され
 Status SegmentIterator::_apply_bitmap_index() {
     RETURN_IF(!config::enable_index_bitmap_filter, Status::OK());
     RETURN_IF(_scan_range.empty(), Status::OK());
+    DCHECK_EQ(_predicate_columns, _opts.pred_tree.num_columns());
 
     {
         SCOPED_RAW_TIMER(&_opts.stats->bitmap_index_iterator_init_ns);
-        RETURN_IF_ERROR(_bitmap_index_evaluator.init([&cid_2_ucid, this](ColumnId cid)
-            -> StatusOr<BitmapIndexIterator*> {
-            // ... BitmapIndexIterator の初期化
+
+        std::unordered_map<ColumnId, ColumnUID> cid_2_ucid;
+        for (auto& field : _schema.fields()) {
+            cid_2_ucid[field->id()] = field->uid();
+        }
+
+        RETURN_IF_ERROR(_bitmap_index_evaluator.init([&cid_2_ucid,
+                                                      this](ColumnId cid) -> StatusOr<BitmapIndexIterator*> {
+            const ColumnUID ucid = cid_2_ucid[cid];
+            // the column's index in this segment file
+            ASSIGN_OR_RETURN(std::shared_ptr<Segment> segment_ptr, _get_dcg_segment(ucid));
+            if (segment_ptr == nullptr) {
+                // find segment from delta column group failed, using main segment
+                segment_ptr = _segment;
+            }
+
+            IndexReadOptions opts;
+            opts.use_page_cache = !_opts.temporary_data && _opts.use_page_cache &&
+                                  !config::disable_storage_page_cache && config::enable_bitmap_index_memory_page_cache;
+            opts.lake_io_opts = _opts.lake_io_opts;
+            opts.read_file = _column_files[cid].get();
+            opts.stats = _opts.stats;
+
+            BitmapIndexIterator* bitmap_iter = nullptr;
+            RETURN_IF_ERROR(segment_ptr->new_bitmap_index_iterator(ucid, opts, &bitmap_iter));
+            return bitmap_iter;
         }));
+
         RETURN_IF(!_bitmap_index_evaluator.has_bitmap_index(), Status::OK());
     }
 
@@ -785,9 +859,9 @@ Status SegmentIterator::_apply_bitmap_index() {
         RETURN_IF_ERROR(_bitmap_index_evaluator.evaluate(_scan_range, _opts.pred_tree));
         _opts.stats->rows_bitmap_index_filtered += input_rows - _scan_range.span_size();
     }
+
     return Status::OK();
 }
-
 ```
 
 初期化フェーズでは各 Column に対して `BitmapIndexIterator` を生成し、評価フェーズでは `_bitmap_index_evaluator.evaluate()` がスキャン範囲を直接書き換える。
@@ -811,7 +885,6 @@ void OrdinalIndexWriter::append_entry(ordinal_t ordinal, const PagePointer& data
     _page_builder->add(key, data_pp);
     _last_pp = data_pp;
 }
-
 ```
 
 `OrdinalIndexReader` は読み出し時に全エントリをメモリ上の配列(`_ordinals[]` と `_pages[]`)に展開する。
@@ -825,6 +898,7 @@ OrdinalPageIndexIterator OrdinalIndexReader::seek_at_or_before(ordinal_t ordinal
     int32_t right = _num_pages - 1;
     while (left < right) {
         int32_t mid = (left + right + 1) / 2;
+
         if (_ordinals[mid] < ordinal) {
             left = mid;
         } else if (_ordinals[mid] > ordinal) {
@@ -839,7 +913,6 @@ OrdinalPageIndexIterator OrdinalIndexReader::seek_at_or_before(ordinal_t ordinal
     }
     return {this, left};
 }
-
 ```
 
 ### 単一ページの最適化
@@ -854,6 +927,7 @@ Status OrdinalIndexWriter::finish(WritableFile* wfile, ColumnIndexMetaPB* meta) 
     meta->set_type(ORDINAL_INDEX);
     BTreeMetaPB* root_page_meta = meta->mutable_ordinal_index()->mutable_root_page();
 
+    // NOTE: It is possible that the count is zero.
     if (_page_builder->count() <= 1) {
         // only one data page, no need to write index page
         root_page_meta->set_is_root_data_page(true);
@@ -863,6 +937,7 @@ Status OrdinalIndexWriter::finish(WritableFile* wfile, ColumnIndexMetaPB* meta) 
         PageFooterPB page_footer;
         _page_builder->finish(&page_body, &page_footer);
 
+        // write index page (currently it's not compressed)
         PagePointer pp;
         RETURN_IF_ERROR(PageIO::write_page(wfile, {page_body.slice()}, page_footer, &pp));
 
@@ -871,7 +946,6 @@ Status OrdinalIndexWriter::finish(WritableFile* wfile, ColumnIndexMetaPB* meta) 
     }
     return Status::OK();
 }
-
 ```
 
 読み出し側の `_do_load()` でも `is_root_data_page()` をチェックし、単一ページの場合はインデックスページの読み込みをスキップしてメタデータから直接ページ位置を取得する。
@@ -883,16 +957,16 @@ Status OrdinalIndexReader::_do_load(const IndexReadOptions& opts, const OrdinalI
     if (meta.root_page().is_root_data_page()) {
         // only one data page, no index page
         _num_pages = 1;
+
         _ordinals = std::make_unique<ordinal_t[]>(2);
         _ordinals[0] = 0;
         _ordinals[1] = num_values;
+
         _pages = std::make_unique<uint64_t[]>(2);
         _pages[0] = meta.root_page().root_page().offset();
         _pages[1] = meta.root_page().root_page().offset() + meta.root_page().root_page().size();
         return Status::OK();
     }
-    // ... 通常のインデックスページ読み込み
-
 ```
 
 小さな Column(数百行程度の Segment など)ではデータが1ページに収まることが多く、この最適化によりインデックスページの I/O が完全に不要になる。
@@ -902,7 +976,7 @@ Status OrdinalIndexReader::_do_load(const IndexReadOptions& opts, const OrdinalI
 `SegmentIterator::_init_internal()` はインデックスによるフィルタリングを固定の順序で適用する。
 各ステップの結果は `_scan_range`(SparseRange)の積集合として蓄積され、後段に進むほどスキャン範囲が狭くなる。
 
-[`be/src/storage/rowset/segment_iterator.cpp` L882-L893](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/storage/rowset/segment_iterator.cpp#L882-L893)
+[`be/src/storage/rowset/segment_iterator.cpp` L880-L899](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/storage/rowset/segment_iterator.cpp#L880-L899)
 
 ```cpp
     // filter by index stage
@@ -955,10 +1029,10 @@ AND ノードでは子の結果の積集合を取り、OR ノードでは和集�
         zm_range &= hit_row_ranges.value();
     }
 
+    StarRocksMetrics::instance()->segment_rows_read_by_zone_map.increment(zm_range.span_size());
     size_t prev_size = _scan_range.span_size();
     _scan_range = _scan_range.intersection(zm_range);
     _opts.stats->rows_stats_filtered += (prev_size - _scan_range.span_size());
-
 ```
 
 `_get_row_ranges_by_bloom_filter()` も同様に述語ツリーを走査する。
@@ -982,9 +1056,9 @@ Status SegmentIterator::_get_row_ranges_by_bloom_filter() {
     RETURN_IF_ERROR(
             _opts.pred_tree.visit(BloomFilterEvaluator{_opts.pred_tree, _column_iterators, used_nodes}, _scan_range));
     _opts.stats->rows_bf_filtered += prev_size - _scan_range.span_size();
+
     return Status::OK();
 }
-
 ```
 
 ## 高速化の工夫: 多段フィルタリングによる早期スキップ

@@ -19,7 +19,7 @@
 ## この章の狙い
 
 StarRocks の Cascades ベースオプティマイザーは、論理プランの等価変換と物理実装への変換をすべて「ルール」として表現する。
-本章では、ルールの基底クラスとパターンマッチングの仕組みを読んだうえで、変換ルール(TransformationRule)と実装ルール(ImplementationRule)の代表的な実装を掘り下げる。
+本章では、ルールの基底クラスとパターンマッチングの仕組みを読んだうえで、変換ルール(TransformationRule)と実装ルール(ImplementationRule)の代表的な実装を読む。
 さらに、ルールが適用される2つのフェーズ、すなわち Rewrite フェーズ(ヒューリスティック変換)と Explore フェーズ(コストベース探索)の違いを整理する。
 
 ## 前提
@@ -50,6 +50,8 @@ public abstract class Rule {
         return 1;
     }
 
+    // ... (中略) ...
+
     public boolean check(final OptExpression input, OptimizerContext context) {
         return true;
     }
@@ -59,6 +61,8 @@ public abstract class Rule {
     public boolean exhausted(OptimizerContext context) {
         return false;
     }
+
+    // ... (中略) ...
 }
 
 ```
@@ -92,6 +96,8 @@ public abstract class Pattern {
 
     protected abstract boolean matchWithoutChild(OperatorType op);
 
+    // ... (中略) ...
+
     public static Pattern create(OperatorType type, OperatorType... children) {
         Pattern p;
         if (PATTERN_MAP.containsKey(type)) {
@@ -121,12 +127,10 @@ Pattern には複数のサブクラスがある。
 [`fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/JoinCommutativityRule.java` L54-L57](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/JoinCommutativityRule.java#L54-L57)
 
 ```java
-private JoinCommutativityRule() {
-    super(RuleType.TF_JOIN_COMMUTATIVITY, Pattern.create(OperatorType.LOGICAL_JOIN).
-            addChildren(Pattern.create(OperatorType.PATTERN_LEAF),
-                    Pattern.create(OperatorType.PATTERN_LEAF)));
-}
-
+        super(RuleType.TF_JOIN_COMMUTATIVITY, Pattern.create(OperatorType.LOGICAL_JOIN).
+                addChildren(Pattern.create(OperatorType.PATTERN_LEAF),
+                        Pattern.create(OperatorType.PATTERN_LEAF)));
+    }
 ```
 
 このパターンは「ルートが `LOGICAL_JOIN` で、子が2つの任意のオペレーター」という構造を表す。
@@ -142,21 +146,323 @@ private JoinCommutativityRule() {
 public enum RuleType {
     TRANSFORMATION_RULES,
     TF_JOIN_ASSOCIATIVITY_INNER,
-    // ... TF_ プレフィクスの変換ルール群 ...
+
+    TF_JOIN_ASSOCIATIVITY_OUTER,
+    TF_JOIN_COMMUTATIVITY,
+    TF_JOIN_LEFT_ASSCOM_INNER,
+    TF_JOIN_LEFT_ASSCOM_OUTER,
+    TF_JOIN_COMMUTATIVITY_WITHOUT_INNER,
+    TF_JOIN_SEMI_REORDER,
+    TF_MULTI_JOIN_ORDER,
+    TF_PARTITION_PRUNE,
+    TF_DISTRIBUTION_PRUNE,
+    TF_CBO_TABLE_PRUNE_RULE,
+    TF_LIMIT_TABLETS_PRUNE,
+    TF_SPLIT_AGGREGATE,
+    TF_SPLIT_TWO_PHASE_AGGREGATE,
+    TF_SPLIT_MULTI_PHASE_AGGREGATE,
+    TF_SPLIT_WINDOW_SKEW,
+    TF_SPLIT_TOPN,
+    TF_SPLIT_SCAN_OR,
+    TF_PUSH_DOWN_JOIN_AGG,
+    TF_PARTITION_PREDICATE_PRUNE,
+
+    TF_SPLIT_LIMIT,
+    TF_OFFSET_LIMIT_TO_TOPN,
+    TF_MERGE_LIMIT_DIRECT,
+    TF_MERGE_LIMIT_WITH_SORT,
+    TF_MERGE_LIMIT_WITH_LIMIT,
+    TF_ELIMINATE_LIMIT_ZERO,
+
+    TF_PUSH_DOWN_LIMIT,
+    TF_PUSH_DOWN_PROJECT_LIMIT,
+    TF_PUSH_DOWN_LIMIT_CTE_ANCHOR,
+    TF_PUSH_DOWN_LIMIT_UNION,
+    TF_PUSH_DOWN_LIMIT_JOIN,
+    TF_PUSH_DOWN_LIMIT_RANKING_WINDOW,
+    TF_PUSH_DOWN_PREDICATE_CTE_ANCHOR,
+    TF_PUSH_DOWN_PREDICATE_SCAN,
+    TF_PUSH_DOWN_PREDICATE_AGG,
+    TF_PUSH_DOWN_PREDICATE_WINDOW,
+    TF_ELIMINATE_SORT_COLUMN_WITH_EQUALITY_PREDICATE,
+    TF_PUSH_DOWN_TOPN_OUTER_JOIN,
+    TF_PUSH_DOWN_TOPN_UNION,
+    TF_PUSH_DOWN_TOPN_AGG,
+    TF_PUSH_DOWN_PREDICATE_RANKING_WINDOW,
+    TF_PUSH_DOWN_PREDICATE_JOIN,
+    TF_PUSH_DOWN_JOIN_CLAUSE,
+    TF_PUSH_DOWN_PREDICATE_PROJECT,
+    TF_PUSH_DOWN_PREDICATE_UNION,
+    TF_PUSH_DOWN_PREDICATE_EXCEPT,
+    TF_PUSH_DOWN_PREDICATE_INTERSECT,
+    TF_PUSH_DOWN_PREDICATE_VALUES,
+    TF_PUSH_DOWN_PREDICATE_TABLE_FUNCTION,
+    TF_PUSH_DOWN_PREDICATE_REPEAT,
+    TF_PUSH_DOWN_AGG_TO_META_SCAN,
+    TF_PUSH_DOWN_FLAT_JSON_TO_META_SCAN,
+    TF_PUSH_DOWN_AGG_FUN_PREDICATE,
+    TF_PULL_UP_PREDICATE_SCAN,
+    TF_MERGE_PREDICATE_SCAN,
+    TF_MERGE_TWO_FILTERS,
+    TF_PUSH_DOWN_PREDICATE_CTE_CONSUME,
+    TF_PUSH_DOWN_PREDICATE_TO_EXTERNAL_TABLE_SCAN,
+    TF_PRUNE_TRUE_FILTER,
+    TF_DEFER_PROJECT_AFTER_TOPN,
+
+    TF_CAST_TO_EMPTY,
+    TF_ADD_PROJECT_JOIN,
+
+    TF_PRUNE_OLAP_SCAN_COLUMNS,
+    TF_PRUNE_PROJECT_COLUMNS,
+    TF_PRUNE_FILTER_COLUMNS,
+    TF_PRUNE_AGG_COLUMNS,
+    TF_PRUNE_TOPN_COLUMNS,
+    TF_PRUNE_SORT_COLUMNS,
+    TF_PRUNE_JOIN_COLUMNS,
+    TF_PRUNE_ANALYTIC_COLUMNS,
+    TF_PRUNE_UNION_COLUMNS,
+    TF_PRUNE_EXCEPT_COLUMNS,
+    TF_PRUNE_INTERSECT_COLUMNS,
+    TF_PRUNE_REPEAT_COLUMNS,
+    TF_PRUNE_VALUES_COLUMNS,
+    TF_PRUNE_TABLE_FUNCTION_COLUMNS,
+    TF_PRUNE_CTE_CONSUME_COLUMNS,
+    TF_PRUNE_GROUP_BY_KEYS,
+    TF_PRUNE_SUBFIELD,
+    TF_PRUNE_UKFK_JOIN,
+    TF_PRUNE_UKFK_GROUP_BY_KEYS,
+    TF_SUBFILED_NOCOPY,
+    TF_PARTITION_COLUMN_MINMAX,
+
+    TF_SCALAR_OPERATORS_REUSE,
+    TF_PRUNE_EMPTY_WINDOW,
+
+    TF_PRUNE_PROJECT,
+    TF_MERGE_TWO_PROJECT,
+    TF_PRUNE_PROJECT_EMPTY,
+
+    TF_PUSH_DOWN_APPLY,
+    TF_APPLY_TO_JOIN,
+    TF_QUANTIFIED_APPLY_TO_JOIN,
+    TF_EXISTENTIAL_APPLY_TO_JOIN,
+    TF_SCALAR_APPLY_TO_ANALYTIC,
+    TF_EXTRACT_RANGE_PREDICATE_FROM_SCALAR_APPLY,
+    TF_SCALAR_APPLY_NORMALIZED_COUNT,
+    TF_SCALAR_APPLY_TO_JOIN,
+    TF_QUANTIFIED_APPLY_TO_OUTER_JOIN,
+    TF_EXISTENTIAL_APPLY_TO_OUTER_JOIN,
+    TF_OUTER_JOIN_ELIMINATION,
+    TF_MERGE_APPLY_WITH_TABLE_FUNCTION,
+    TF_APPLY_EXCEPTION,
+
+    TF_PUSH_DOWN_APPLY_PROJECT,
+    TF_PUSH_DOWN_APPLY_FILTER,
+    TF_PUSH_DOWN_APPLY_AGG,
+    TF_PUSH_DOWN_PROJECT_TO_CTE_ANCHOR,
+
+    TF_PUSH_DOWN_ASSERT_ONE_ROW_PROJECT,
+
+    TF_MATERIALIZED_VIEW,
+
+    TF_MERGE_TWO_AGG_RULE,
+
+    TF_REWRITE_MULTI_DISTINCT,
+    TF_REWRITE_MULTI_DISTINCT_BY_CTE,
+    TF_REWRITE_BITMAP_COUNT_DISTINCT,
+    TF_REWRITE_HLL_COUNT_DISTINCT,
+    TF_REWRITE_DUPLICATE_AGGREGATE_FN,
+    TF_REWRITE_GROUP_BY_COUNT_DISTINCT,
+    TF_REMOVE_AGGREGATION_BY_AGG_TABLE,
+    TF_REWRITE_GROUPING_SET,
+    TF_PUSHDOWN_AGG_GROUPING_SET,
+    TF_REWRITE_SIMPLE_AGG,
+    TF_REWRITE_MIN_MAX_COUNT_AGG,
+    TF_REWRITE_PARTITION_COLUMN_ONLY_AGG,
+    TF_REWRITE_SUM_BY_ASSOCIATIVE_RULE,
+    TF_REWRITE_COUNT_IF_RULE,
+    TF_REWRITE_MINMAX_BY_MONOTONIC_FUNCTION,
+    TF_ICEBERG_PARTITIONS_TABLE_REWRITE_RULE,
+    TF_ICEBERG_EQUALITY_REWRITE_RULE,
+    TF_REWRITE_UNNEST_BITMAP_RULE,
+
+    TF_SPLIT_TOPN_AGGREGATE_RULE,
+
+    TF_INTERSECT_REORDER,
+    TF_INTERSECT_DISTINCT,
+
+    TF_MERGE_PROJECT_WITH_CHILD,
+    TF_JSON_PATH_REWRITE,
+
+    TF_PUSH_DOWN_JOIN_ON_EXPRESSION_TO_CHILD_PROJECT,
+    TF_PUSH_DOWN_ASOF_JOIN_TEMPORAL_EXPRESSION_TO_CHILD_PROJECT,
+
+    TF_COLLECT_CTE_PRODUCE,
+    TF_COLLECT_CTE_CONSUME,
+    TF_PUSH_CTE_PRODUCE,
+    TF_INLINE_CTE_CONSUME,
+    TF_ELIMINATE_CONSTANT_CTE_CONSUME,
+    TF_PRUNE_CTE_CONSUME_PLAN,
+    TF_PRUNE_CTE_PRODUCE,
+    TF_COMPUTE_CTE_COSTS,
+    TF_FORCE_CTE_REUSE,
+
+    TF_MV_TEXT_MATCH_REWRITE_RULE,
+    TF_MV_ONLY_SCAN_RULE,
+    TF_MV_ONLY_JOIN_RULE,
+    TF_MV_AGGREGATE_SCAN_RULE,
+    TF_MV_AGGREGATE_JOIN_RULE,
+    TF_MV_CBO_SINGLE_TABLE_REWRITE_RULE,
+    TF_MV_TRANSPARENT_REWRITE_RULE,
+    TF_MV_AGGREGATE_JOIN_PUSH_DOWN_RULE,
+    TF_MV_AGGREGATE_TIME_SERIES_SCAN_RULE,
+    TF_MV_COMPENSATION_PRUNE_UNION,
+
+    TF_GROUP_BY_COUNT_DISTINCT_DATA_SKEW_ELIMINATE_RULE,
+
+    TF_PRUNE_EMPTY_UNION,
+    TF_PRUNE_EMPTY_INTERSECT,
+    TF_PRUNE_EMPTY_EXCEPT,
+
+    TF_PRUNE_EMPTY_SCAN,
+    TF_PRUNE_EMPTY_JOIN,
+    TF_PRUNE_EMPTY_DIRECT,
+    TF_PRUNE_EMPTY_CTE_ANCHOR,
+
+    TF_DERIVE_RANGE_JOIN_PREDICATE,
+    TF_SKEW_JOIN_OPTIMIZE_RULE,
+
+    TF_CONVERT_TO_EQUAL_FOR_NULL_RULE,
+    TF_ARRAY_DISTINCT_AFTER_AGG,
+
+    TF_FINE_GRAINED_RANGE_PREDICATE,
+
+    TF_FINE_GRAINED_RANGE_PREDICATE_WITH_PROJECTION,
+
+    TF_MERGE_CONSTANT_UNION,
+    TF_SCHEMA_TABLE_EVALUATE_RULE,
+
+    TF_ELIMINATE_GROUP_BY_CONSTANT,
+    TF_ELIMINATE_AGG,
+    TF_ELIMINATE_AGG_FUNCTION,
+    TF_ELIMINATE_JOIN_WITH_CONSTANT,
+
+    TF_CTE_ADD_PROJECTION,
+
+    TF_PREDICATE_PROPAGATE,
+
+    TF_VECTOR_REWRITE_RULE,
+    TF_HOIST_HEAVY_COST_UPON_TOPN,
+    TF_OR_TO_UNION_ALL_JOIN,
+
+    TF_INNER_TO_SEMI,
+    TF_LARGE_IN_PREDICATE_TO_JOIN,
+
+    // TVR transform rules
+    TF_TVR_TABLE_SCAN,
+    TF_TVR_AGGREGATE,
+    TF_TVR_PROJECT,
+    TF_TVR_FILTER,
+    TF_TVR_JOIN,
+    TF_TVR_UNION_ALL,
+
+    // IVM delta/version rewrite rules (unified framework)
+    TF_IVM_DELTA_ICEBERG_SCAN,
+    TF_IVM_DELTA_FILTER,
+    TF_IVM_DELTA_PROJECT,
+    TF_IVM_DELTA_JOIN,
+    TF_IVM_DELTA_AGGREGATE,
+    TF_IVM_DELTA_UNION,
+    TF_IVM_VERSION_ICEBERG_SCAN,
+    TF_IVM_VERSION_FILTER,
+    TF_IVM_VERSION_PROJECT,
+    TF_IVM_VERSION_JOIN,
+    TF_IVM_VERSION_AGGREGATE,
+    TF_IVM_VERSION_UNION,
 
     // The following are implementation rules:
     IMPLEMENTATION_RULES,
     IMP_OLAP_LSCAN_TO_PSCAN,
-    // ... IMP_ プレフィクスの実装ルール群 ...
+    IMP_HIVE_LSCAN_TO_PSCAN,
+    IMP_FILE_LSCAN_TO_PSCAN,
+    IMP_ICEBERG_LSCAN_TO_PSCAN,
+    IMP_ICEBERG_EQUALITY_DELETE_LSCAN_TO_PSCAN,
+    IMP_HUDI_LSCAN_TO_PSCAN,
+    IMP_DELTALAKE_LSCAN_TO_PSCAN,
+    IMP_PAIMON_LSCAN_TO_PSCAN,
+    IMP_ODPS_LSCAN_TO_PSCAN,
+    IMP_ICEBERG_METADATA_LSCAN_TO_PSCAN,
+    IMP_KUDU_LSCAN_TO_PSCAN,
+    IMP_SCHEMA_LSCAN_TO_PSCAN,
+    IMP_MYSQL_LSCAN_TO_PSCAN,
+    IMP_ES_LSCAN_TO_PSCAN,
+    IMP_META_LSCAN_TO_PSCAN,
+    IMP_JDBC_LSCAN_TO_PSCAN,
+    IMP_EQ_JOIN_TO_HASH_JOIN,
+    IMP_EQ_JOIN_TO_MERGE_JOIN,
+    IMP_JOIN_TO_NESTLOOP_JOIN,
+    IMP_UNION,
+    IMP_EXCEPT,
+    IMP_INTERSECT,
+    IMP_HASH_AGGREGATE,
+    IMP_PROJECT,
+    IMP_SORT,
+    IMP_TOPN,
+    IMP_ASSERT_ONE_ROW,
+    IMP_ANALYTIC,
+    IMP_VALUES,
+    IMP_RAW_VALUES,
+    IMP_REPEAT,
+    IMP_FILTER,
+    IMP_TABLE_FUNCTION,
+    IMP_TABLE_FUNCTION_TABLE_LSCAN_TO_PSCAN,
+    IMP_LIMIT,
+    IMP_CTE_CONSUME_REUSE,
+    IMP_CTE_CONSUME_INLINE,
+    IMP_CTE_ANCHOR,
+    IMP_CTE_ANCHOR_TO_NO_CTE,
+    IMP_CTE_PRODUCE,
+
+    IMP_STREAM_AGG,
+    IMP_STREAM_JOIN,
+    IMP_BINLOG_SCAN,
+    IMP_CACHE_STATS_LSCAN_TO_PSCAN,
 
     // The following are combination rules:
     GROUP_RULES,
     GP_MERGE_LIMIT,
-    // ... GP_ プレフィクスの組み合わせルール群 ...
+    GP_PRUNE_COLUMNS,
+    GP_PARTITION_PRUNE,
+    GP_PUSH_DOWN_PREDICATE,
+    GP_SUBQUERY_EXTRACT_CORRELATION_PREDICATE,
+    GP_SUBQUERY_REWRITE_TO_WINDOW,
+    GP_SUBQUERY_REWRITE_TO_JOIN,
+    GP_PUSH_DOWN_SUBQUERY,
+    GP_PRUNE_ASSERT_ROW,
+    GP_MULTI_DISTINCT_REWRITE,
+    GP_AGGREGATE_REWRITE,
+    GP_PRUNE_PROJECT,
+    GP_PRUNE_UKFK_JOIN,
+    GP_COLLECT_CTE,
+    GP_INLINE_CTE,
+    GP_INTERSECT_REWRITE,
+    GP_SINGLE_TABLE_MV_REWRITE,
+    GP_MULTI_TABLE_MV_REWRITE,
+    GP_ALL_MV_REWRITE,
+    GP_PRUNE_EMPTY_OPERATOR,
+    GP_SHORT_CIRCUIT_SET,
+    GP_META_SCAN_REWRITE,
+    GP_FINE_GRAINED_RANGE_PREDICATE,
+    GP_ELIMINATE_OP_WITH_CONSTANT,
+    GP_VECTOR_REWRITE,
+    GP_TVR_REWRITE,
+    GP_IVM_DELTA_REWRITE,
 
     NUM_RULES;
-}
 
+    public int id() {
+        return ordinal();
+    }
+}
 ```
 
 | プレフィクス | 種別 | 役割 |
@@ -183,7 +489,6 @@ public abstract class TransformationRule extends Rule {
         super(type, pattern);
     }
 }
-
 ```
 
 `ImplementationRule` は論理から物理への変換を表す。
@@ -203,7 +508,6 @@ public abstract class ImplementationRule extends Rule {
         return 2;
     }
 }
-
 ```
 
 この `promise` の差により、Explore フェーズでは実装ルールが変換ルールより先にスケジュールされる。
@@ -215,7 +519,7 @@ public abstract class ImplementationRule extends Rule {
 
 `PushDownPredicateScanRule` は、Filter オペレーターの述語をその子のスキャンオペレーターに押し込むルールである。
 
-[`fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/PushDownPredicateScanRule.java` L43-L67](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/PushDownPredicateScanRule.java#L43-L67)
+[`fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/PushDownPredicateScanRule.java` L43-L68](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/PushDownPredicateScanRule.java#L43-L68)
 
 ```java
 public class PushDownPredicateScanRule extends TransformationRule {
@@ -239,35 +543,35 @@ public class PushDownPredicateScanRule extends TransformationRule {
 
 `transform` メソッドの処理は次のとおりである。
 
-[`fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/PushDownPredicateScanRule.java` L70-L105](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/PushDownPredicateScanRule.java#L70-L105)
+[`fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/PushDownPredicateScanRule.java` L69-L105](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/PushDownPredicateScanRule.java#L69-L105)
 
 ```java
-@Override
-public List<OptExpression> transform(OptExpression input, OptimizerContext context) {
-    LogicalFilterOperator lfo = (LogicalFilterOperator) input.getOp();
+    @Override
+    public List<OptExpression> transform(OptExpression input, OptimizerContext context) {
+        LogicalFilterOperator lfo = (LogicalFilterOperator) input.getOp();
 
-    OptExpression scan = input.getInputs().get(0);
-    LogicalScanOperator logicalScanOperator = (LogicalScanOperator) scan.getOp();
+        OptExpression scan = input.getInputs().get(0);
+        LogicalScanOperator logicalScanOperator = (LogicalScanOperator) scan.getOp();
 
-    ScalarOperatorRewriter scalarOperatorRewriter = new ScalarOperatorRewriter();
-    ScalarOperator predicates = Utils.compoundAnd(lfo.getPredicate(), logicalScanOperator.getPredicate());
+        ScalarOperatorRewriter scalarOperatorRewriter = new ScalarOperatorRewriter();
+        ScalarOperator predicates = Utils.compoundAnd(lfo.getPredicate(), logicalScanOperator.getPredicate());
 
-    predicates = ScalarOperatorRewriter.simplifyCaseWhen(predicates, true);
+        predicates = ScalarOperatorRewriter.simplifyCaseWhen(predicates, true);
 
-    ScalarRangePredicateExtractor rangeExtractor = new ScalarRangePredicateExtractor();
-    predicates = rangeExtractor.rewriteOnlyColumn(Utils.compoundAnd(Utils.extractConjuncts(predicates)
-            .stream().map(rangeExtractor::rewriteOnlyColumn).collect(Collectors.toList())));
-    // ... (中略) ...
+        ScalarRangePredicateExtractor rangeExtractor = new ScalarRangePredicateExtractor();
+        predicates = rangeExtractor.rewriteOnlyColumn(Utils.compoundAnd(Utils.extractConjuncts(predicates)
+                .stream().map(rangeExtractor::rewriteOnlyColumn).collect(Collectors.toList())));
+        // ... (中略) ...
 
-    // clone a new scan operator and rewrite predicate.
-    Operator.Builder builder = OperatorBuilderFactory.build(logicalScanOperator);
-    LogicalScanOperator newScanOperator = (LogicalScanOperator) builder.withOperator(logicalScanOperator)
-            .setPredicate(predicates)
-            .build();
-    newScanOperator.buildColumnFilters(predicates);
-    // ... (中略) ...
-    return Lists.newArrayList(project);
-}
+        // clone a new scan operator and rewrite predicate.
+        Operator.Builder builder = OperatorBuilderFactory.build(logicalScanOperator);
+        LogicalScanOperator newScanOperator = (LogicalScanOperator) builder.withOperator(logicalScanOperator)
+                .setPredicate(predicates)
+                .build();
+        newScanOperator.buildColumnFilters(predicates);
+        // ... (中略) ...
+        return Lists.newArrayList(project);
+    }
 
 ```
 
@@ -311,12 +615,11 @@ public class JoinCommutativityRule extends TransformationRule {
 [`fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/JoinCommutativityRule.java` L65-L69](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/JoinCommutativityRule.java#L65-L69)
 
 ```java
-public boolean check(final OptExpression input, OptimizerContext context) {
-    LogicalJoinOperator joinOperator = input.getOp().cast();
-    return joinOperator.getJoinHint().isEmpty() &&
-            (joinOperator.getTransformMask() != JoinReorderProperty.COMMUTATIVITY_MASK);
-}
-
+    public boolean check(final OptExpression input, OptimizerContext context) {
+        LogicalJoinOperator joinOperator = input.getOp().cast();
+        return joinOperator.getJoinHint().isEmpty() &&
+                (joinOperator.getTransformMask() != JoinReorderProperty.COMMUTATIVITY_MASK);
+    }
 ```
 
 `transformMask` にビットマスクを設定することで、同じルールの無限再適用を防止している。
@@ -326,23 +629,22 @@ public boolean check(final OptExpression input, OptimizerContext context) {
 [`fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/JoinCommutativityRule.java` L79-L94](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/JoinCommutativityRule.java#L79-L94)
 
 ```java
-public static List<OptExpression> commuteJoin(OptExpression input,
-                                              Map<JoinOperator, JoinOperator> commuteMap) {
-    LogicalJoinOperator oldJoin = (LogicalJoinOperator) input.getOp();
-    if (!commuteMap.containsKey(oldJoin.getJoinType())) {
-        return Collections.emptyList();
+    public static List<OptExpression> commuteJoin(OptExpression input,
+                                                  Map<JoinOperator, JoinOperator> commuteMap) {
+        LogicalJoinOperator oldJoin = (LogicalJoinOperator) input.getOp();
+        if (!commuteMap.containsKey(oldJoin.getJoinType())) {
+            return Collections.emptyList();
+        }
+
+        List<OptExpression> newChildren = Lists.newArrayList(input.inputAt(1), input.inputAt(0));
+
+        LogicalJoinOperator newJoin = new LogicalJoinOperator.Builder().withOperator(oldJoin)
+                .setJoinType(commuteMap.get(oldJoin.getJoinType()))
+                .setTransformMask(oldJoin.getTransformMask() | JoinReorderProperty.COMMUTATIVITY_MASK)
+                .build();
+        OptExpression result = OptExpression.create(newJoin, newChildren);
+        return Lists.newArrayList(result);
     }
-
-    List<OptExpression> newChildren = Lists.newArrayList(input.inputAt(1), input.inputAt(0));
-
-    LogicalJoinOperator newJoin = new LogicalJoinOperator.Builder().withOperator(oldJoin)
-            .setJoinType(commuteMap.get(oldJoin.getJoinType()))
-            .setTransformMask(oldJoin.getTransformMask() | JoinReorderProperty.COMMUTATIVITY_MASK)
-            .build();
-    OptExpression result = OptExpression.create(newJoin, newChildren);
-    return Lists.newArrayList(result);
-}
-
 ```
 
 子の順序を `[1, 0]` に入れ替え、JOIN 型を `commuteMap` で変換し、`COMMUTATIVITY_MASK` を立てる。
@@ -351,7 +653,7 @@ public static List<OptExpression> commuteJoin(OptExpression input,
 
 `MergeLimitDirectRule` は、Limit オペレーターをその子オペレーターの `limit` プロパティに統合するルールである。
 
-[`fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/MergeLimitDirectRule.java` L33-L65](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/MergeLimitDirectRule.java#L33-L65)
+[`fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/MergeLimitDirectRule.java` L33-L66](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/MergeLimitDirectRule.java#L33-L66)
 
 ```java
 public class MergeLimitDirectRule extends TransformationRule {
@@ -375,22 +677,21 @@ public class MergeLimitDirectRule extends TransformationRule {
 [`fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/MergeLimitDirectRule.java` L68-L82](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/MergeLimitDirectRule.java#L68-L82)
 
 ```java
-@Override
-public boolean check(OptExpression input, OptimizerContext context) {
-    LogicalLimitOperator limit = (LogicalLimitOperator) input.getOp();
-    return limit.isLocal();
+    public boolean check(OptExpression input, OptimizerContext context) {
+        LogicalLimitOperator limit = (LogicalLimitOperator) input.getOp();
+        return limit.isLocal();
+    }
+
+    @Override
+    public List<OptExpression> transform(OptExpression input, OptimizerContext context) {
+        LogicalLimitOperator limit = (LogicalLimitOperator) input.getOp();
+        Preconditions.checkState(!limit.hasOffset());
+        LogicalOperator op = (LogicalOperator) input.getInputs().get(0).getOp();
+        op.setLimit(limit.getLimit());
+
+        return Lists.newArrayList(OptExpression.create(op, input.getInputs().get(0).getInputs()));
+    }
 }
-
-@Override
-public List<OptExpression> transform(OptExpression input, OptimizerContext context) {
-    LogicalLimitOperator limit = (LogicalLimitOperator) input.getOp();
-    Preconditions.checkState(!limit.hasOffset());
-    LogicalOperator op = (LogicalOperator) input.getInputs().get(0).getOp();
-    op.setLimit(limit.getLimit());
-
-    return Lists.newArrayList(OptExpression.create(op, input.getInputs().get(0).getInputs()));
-}
-
 ```
 
 `check` で `isLocal()` を確認し、ローカル Limit のみを対象とする。
@@ -422,7 +723,6 @@ public class OlapScanImplementationRule extends ImplementationRule {
         return Lists.newArrayList(result);
     }
 }
-
 ```
 
 パターンは `LOGICAL_OLAP_SCAN` のみを指定し、子パターンはない。
@@ -478,11 +778,9 @@ public class HashJoinImplementationRule extends JoinImplementationRule {
 [`fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/implementation/JoinImplementationRule.java` L47-L49](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/implementation/JoinImplementationRule.java#L47-L49)
 
 ```java
-protected JoinImplementationRule(RuleType type) {
-    super(type, Pattern.create(OperatorType.LOGICAL_JOIN).
-            addChildren(Pattern.create(OperatorType.PATTERN_LEAF), Pattern.create(OperatorType.PATTERN_LEAF)));
-}
-
+    protected JoinImplementationRule(RuleType type) {
+        super(type, Pattern.create(OperatorType.LOGICAL_JOIN).
+                addChildren(Pattern.create(OperatorType.PATTERN_LEAF), Pattern.create(OperatorType.PATTERN_LEAF)));
 ```
 
 パターンは3つの JOIN 実装ルール(`HashJoinImplementationRule`, `MergeJoinImplementationRule`, `NestLoopJoinImplementationRule`)で共通であり、`check` メソッドの条件で適用可否を分岐させる。
@@ -491,7 +789,7 @@ protected JoinImplementationRule(RuleType type) {
 
 `RuleSet` はオプティマイザーが使用するルール群を保持し、フェーズやコンテキストに応じてルールを動的に追加する。
 
-[`fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/RuleSet.java` L198-L240](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/RuleSet.java#L198-L240)
+[`fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/RuleSet.java` L197-L241](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/RuleSet.java#L197-L241)
 
 ```java
 public class RuleSet {
@@ -549,7 +847,6 @@ public class CombinationRule extends TransformationRule {
         return Collections.emptyList();
     }
 }
-
 ```
 
 `CombinationRule` 自体のパターンは `PATTERN_LEAF`(任意のノードにマッチ)である。
@@ -564,20 +861,20 @@ public class CombinationRule extends TransformationRule {
 
 `RuleSet` のメソッドで、最適化フェーズのコンテキストに応じてルールが追加される。
 
-[`fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/RuleSet.java` L482-L538](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/RuleSet.java#L482-L538)
+[`fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/RuleSet.java` L482-L539](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/RuleSet.java#L482-L539)
 
 ```java
-public void addJoinTransformationRules() {
-    transformRules.add(JoinCommutativityRule.getInstance());
-    transformRules.add(JoinAssociativityRule.INNER_JOIN_ASSOCIATIVITY_RULE);
-}
+    public void addJoinTransformationRules() {
+        transformRules.add(JoinCommutativityRule.getInstance());
+        transformRules.add(JoinAssociativityRule.INNER_JOIN_ASSOCIATIVITY_RULE);
+    }
 
 // ... (中略) ...
 
-public void addAutoJoinImplementationRule() {
-    this.implementRules.add(HashJoinImplementationRule.getInstance());
-    this.implementRules.add(NestLoopJoinImplementationRule.getInstance());
-}
+    public void addAutoJoinImplementationRule() {
+        this.implementRules.add(HashJoinImplementationRule.getInstance());
+        this.implementRules.add(NestLoopJoinImplementationRule.getInstance());
+    }
 
 ```
 
@@ -598,24 +895,24 @@ Memo を使わず、`OptExpression` ツリーに対してルールを直接適�
 [`fe/fe-core/src/main/java/com/starrocks/sql/optimizer/task/TaskScheduler.java` L52-L72](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/task/TaskScheduler.java#L52-L72)
 
 ```java
-public void rewriteIterative(OptExpression tree, TaskContext rootTaskContext, Rule rule) {
-    pushTask(new RewriteTreeTask(rootTaskContext, tree, rule, false));
-    executeTasks(rootTaskContext);
-}
+    public void rewriteIterative(OptExpression tree, TaskContext rootTaskContext, Rule rule) {
+        pushTask(new RewriteTreeTask(rootTaskContext, tree, rule, false));
+        executeTasks(rootTaskContext);
+    }
 
-public void rewriteOnce(OptExpression tree, TaskContext rootTaskContext, Rule rule) {
-    RewriteTreeTask rewriteTreeTask = new RewriteTreeTask(rootTaskContext, tree, rule, true);
-    pushTask(rewriteTreeTask);
-    executeTasks(rootTaskContext);
-}
+    public void rewriteOnce(OptExpression tree, TaskContext rootTaskContext, Rule rule) {
+        RewriteTreeTask rewriteTreeTask = new RewriteTreeTask(rootTaskContext, tree, rule, true);
+        pushTask(rewriteTreeTask);
+        executeTasks(rootTaskContext);
+    }
 
-// ... (中略) ...
+    // ... (中略) ...
 
-public void rewriteDownTop(OptExpression tree, TaskContext rootTaskContext, Rule rule) {
-    List<Rule> rules = Collections.singletonList(rule);
-    pushTask(new RewriteDownTopTask(rootTaskContext, tree, rules));
-    executeTasks(rootTaskContext);
-}
+    public void rewriteDownTop(OptExpression tree, TaskContext rootTaskContext, Rule rule) {
+        List<Rule> rules = Collections.singletonList(rule);
+        pushTask(new RewriteDownTopTask(rootTaskContext, tree, rules));
+        executeTasks(rootTaskContext);
+    }
 
 ```
 
@@ -630,42 +927,41 @@ public void rewriteDownTop(OptExpression tree, TaskContext rootTaskContext, Rule
 [`fe/fe-core/src/main/java/com/starrocks/sql/optimizer/task/RewriteTreeTask.java` L90-L96](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/task/RewriteTreeTask.java#L90-L96)
 
 ```java
-protected void rewrite(OptExpression parent, int childIndex, OptExpression root) {
-    root = applyRules(parent, childIndex, root, rules);
-    // prune cte column depend on prune right child first
-    for (int i = root.getInputs().size() - 1; i >= 0; i--) {
-        rewrite(root, i, root.getInputs().get(i));
+    protected void rewrite(OptExpression parent, int childIndex, OptExpression root) {
+        root = applyRules(parent, childIndex, root, rules);
+        // prune cte column depend on prune right child first
+        for (int i = root.getInputs().size() - 1; i >= 0; i--) {
+            rewrite(root, i, root.getInputs().get(i));
+        }
     }
-}
-
 ```
 
 `applyRules` 内では、`match` でパターンマッチングを行い、`check` で追加条件を確認し、条件を満たせば `transform` を呼ぶ。
 
-[`fe/fe-core/src/main/java/com/starrocks/sql/optimizer/task/RewriteTreeTask.java` L98-L138](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/task/RewriteTreeTask.java#L98-L138)
+[`fe/fe-core/src/main/java/com/starrocks/sql/optimizer/task/RewriteTreeTask.java` L98-L139](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/task/RewriteTreeTask.java#L98-L139)
 
 ```java
-protected OptExpression applyRules(OptExpression parent, int childIndex, OptExpression root, List<Rule> rules) {
-    for (Rule rule : rules) {
+    protected OptExpression applyRules(OptExpression parent, int childIndex, OptExpression root, List<Rule> rules) {
+        for (Rule rule : rules) {
         // ... (中略) ...
-        if (!match(rule.getPattern(), root) || !rule.check(root, context.getOptimizerContext())) {
-            continue;
-        }
+            if (!match(rule.getPattern(), root) || !rule.check(root, context.getOptimizerContext())) {
+                continue;
+            }
 
-        if (!rule.predecessorRules().isEmpty()) {
-            root = applyRules(parent, childIndex, root, rule.predecessorRules());
-        }
+            if (!rule.predecessorRules().isEmpty()) {
+                root = applyRules(parent, childIndex, root, rule.predecessorRules());
+            }
 
         // ... (中略) ...
-        List<OptExpression> result;
-        try (Timer ignore = Tracers.watchScope(Tracers.Module.OPTIMIZER, rule.toString())) {
-            result = rule.transform(root, context.getOptimizerContext());
-        }
-        Preconditions.checkState(result.size() <= 1, "Rewrite rule should provide at most 1 expression");
+            List<OptExpression> result;
+            try (Timer ignore = Tracers.watchScope(Tracers.Module.OPTIMIZER, rule.toString())) {
+                result = rule.transform(root, context.getOptimizerContext());
+            }
+            Preconditions.checkState(result.size() <= 1, "Rewrite rule should provide at most 1 expression");
         // ... (中略) ...
+            }
+        return root;
     }
-    return root;
-}
 
 ```
 
@@ -678,10 +974,9 @@ Rewrite フェーズでは `transform` の結果が最大1つであることが�
 [`fe/fe-core/src/main/java/com/starrocks/sql/optimizer/task/RewriteTreeTask.java` L85-L87](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/task/RewriteTreeTask.java#L85-L87)
 
 ```java
-if (change > 0 && !onlyOnce) {
-    pushTask(new RewriteTreeTask(context, planTree, rules, false));
-}
-
+        if (change > 0 && !onlyOnce) {
+            pushTask(new RewriteTreeTask(context, planTree, rules, false));
+        }
 ```
 
 ### Explore フェーズ(コストベース探索)
@@ -692,9 +987,8 @@ Rewrite 済みの論理プランを Memo に格納した後、`OptimizeGroupTask
 [`fe/fe-core/src/main/java/com/starrocks/sql/optimizer/QueryOptimizer.java` L1012-L1013](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/QueryOptimizer.java#L1012-L1013)
 
 ```java
-scheduler.pushTask(new OptimizeGroupTask(rootTaskContext, memo.getRootGroup()));
-scheduler.executeTasks(rootTaskContext);
-
+        scheduler.pushTask(new OptimizeGroupTask(rootTaskContext, memo.getRootGroup()));
+        scheduler.executeTasks(rootTaskContext);
 ```
 
 `OptimizeExpressionTask` は各 GroupExpression に対して適用可能なルールを収集し、`ApplyRuleTask` を生成する。
@@ -702,20 +996,19 @@ scheduler.executeTasks(rootTaskContext);
 [`fe/fe-core/src/main/java/com/starrocks/sql/optimizer/task/OptimizeExpressionTask.java` L54-L66](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/task/OptimizeExpressionTask.java#L54-L66)
 
 ```java
-private List<Rule> getValidRules() {
-    List<Rule> validRules = Lists.newArrayListWithCapacity(RuleType.NUM_RULES.id());
-    List<Rule> logicalRules = context.getOptimizerContext().getRuleSet().getTransformRules();
-    filterInValidRules(groupExpression, logicalRules, validRules);
+    private List<Rule> getValidRules() {
+        List<Rule> validRules = Lists.newArrayListWithCapacity(RuleType.NUM_RULES.id());
+        List<Rule> logicalRules = context.getOptimizerContext().getRuleSet().getTransformRules();
+        filterInValidRules(groupExpression, logicalRules, validRules);
 
-    if (!isExplore) {
-        List<Rule> physicalRules = context.getOptimizerContext().getRuleSet().getImplementRules();
-        filterInValidRules(groupExpression, physicalRules, validRules);
+        if (!isExplore) {
+            List<Rule> physicalRules = context.getOptimizerContext().getRuleSet().getImplementRules();
+            filterInValidRules(groupExpression, physicalRules, validRules);
+        }
+
+        validRules.sort(Comparator.comparingInt(Rule::promise));
+        return validRules;
     }
-
-    validRules.sort(Comparator.comparingInt(Rule::promise));
-    return validRules;
-}
-
 ```
 
 `isExplore` が `false` のとき、変換ルールと実装ルールの両方が収集される。
@@ -723,41 +1016,47 @@ private List<Rule> getValidRules() {
 
 `ApplyRuleTask` は Memo 上で `Binder` を使ってパターンマッチングを行う。
 
-[`fe/fe-core/src/main/java/com/starrocks/sql/optimizer/task/ApplyRuleTask.java` L66-L141](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/task/ApplyRuleTask.java#L66-L141)
+[`fe/fe-core/src/main/java/com/starrocks/sql/optimizer/task/ApplyRuleTask.java` L66-L140](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/task/ApplyRuleTask.java#L66-L140)
 
 ```java
-public void execute() {
-    if (groupExpression.hasRuleExplored(rule) || groupExpression.isUnused()) {
-        return;
-    }
-    // Apply rule and get all new OptExpressions
-    final Pattern pattern = rule.getPattern();
-    // ... (中略) ...
-    final Binder binder = new Binder(optimizerContext, pattern, groupExpression, ruleStopWatch);
-    // ... (中略) ...
-    OptExpression extractExpr = binder.next();
-    while (extractExpr != null) {
-        // ... (中略) ...
-        List<OptExpression> targetExpressions;
-        try (Timer ignore = Tracers.watchScope(Tracers.Module.OPTIMIZER, rule.getClass().getSimpleName())) {
-            targetExpressions = rule.transform(extractExpr, context.getOptimizerContext());
+    public void execute() {
+        if (groupExpression.hasRuleExplored(rule) || groupExpression.isUnused()) {
+            return;
         }
-        newExpressions.addAll(targetExpressions);
-        extractExpr = binder.next();
-    }
+        // Apply rule and get all new OptExpressions
+        final Pattern pattern = rule.getPattern();
+        // ... (中略) ...
+        final Binder binder = new Binder(optimizerContext, pattern, groupExpression, ruleStopWatch);
+        // ... (中略) ...
+        OptExpression extractExpr = binder.next();
+        while (extractExpr != null) {
+            // ... (中略) ...
+            List<OptExpression> targetExpressions;
+            // ... (中略) ...
+            try (Timer ignore = Tracers.watchScope(Tracers.Module.OPTIMIZER, rule.getClass().getSimpleName())) {
+                targetExpressions = rule.transform(extractExpr, context.getOptimizerContext());
+            } catch (StarRocksPlannerException e) {
+                // ... (中略) ...
+            }
 
-    for (OptExpression expression : newExpressions) {
-        Pair<Boolean, GroupExpression> result = context.getOptimizerContext().getMemo().
-                copyIn(groupExpression.getGroup(), expression);
-        // ... (中略) ...
-        if (newGroupExpression.getOp().isLogical()) {
-            pushTask(new OptimizeExpressionTask(context, newGroupExpression, isExplore));
-        } else {
-            pushTask(new EnforceAndCostTask(context, newGroupExpression));
+            newExpressions.addAll(targetExpressions);
+            // ... (中略) ...
+            extractExpr = binder.next();
         }
+
+        for (OptExpression expression : newExpressions) {
+            Pair<Boolean, GroupExpression> result = context.getOptimizerContext().getMemo().
+                    copyIn(groupExpression.getGroup(), expression);
+            // ... (中略) ...
+            if (newGroupExpression.getOp().isLogical()) {
+                pushTask(new OptimizeExpressionTask(context, newGroupExpression, isExplore));
+            } else {
+                pushTask(new EnforceAndCostTask(context, newGroupExpression));
+            }
+        }
+
+        groupExpression.setRuleExplored(rule);
     }
-    groupExpression.setRuleExplored(rule);
-}
 
 ```
 
@@ -817,11 +1116,9 @@ flowchart TB
 [`fe/fe-core/src/main/java/com/starrocks/sql/optimizer/operator/pattern/OpPattern.java` L43-L45](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/operator/pattern/OpPattern.java#L43-L45)
 
 ```java
-@Override
-protected boolean matchWithoutChild(OperatorType op) {
-    return opType.equals(op);
-}
-
+    protected boolean matchWithoutChild(OperatorType op) {
+        return opType.equals(op);
+    }
 ```
 
 `MultiOpPattern` も `Set.contains` で O(1) に判定する。
@@ -829,11 +1126,9 @@ protected boolean matchWithoutChild(OperatorType op) {
 [`fe/fe-core/src/main/java/com/starrocks/sql/optimizer/operator/pattern/MultiOpPattern.java` L49-L51](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/operator/pattern/MultiOpPattern.java#L49-L51)
 
 ```java
-@Override
-protected boolean matchWithoutChild(OperatorType op) {
-    return ops.contains(op);
-}
-
+    protected boolean matchWithoutChild(OperatorType op) {
+        return ops.contains(op);
+    }
 ```
 
 ルートノードの `OperatorType` が一致しなければ、子の走査に入ることなく即座に `false` を返す。
@@ -847,18 +1142,17 @@ protected boolean matchWithoutChild(OperatorType op) {
 [`fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/CombinationRule.java` L34-L44](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/CombinationRule.java#L34-L44)
 
 ```java
-public CombinationRule(RuleType ruleType, List<Rule> rules) {
-    super(ruleType, Pattern.create(OperatorType.PATTERN_LEAF));
-    this.rules = rules;
+    public CombinationRule(RuleType ruleType, List<Rule> rules) {
+        super(ruleType, Pattern.create(OperatorType.PATTERN_LEAF));
+        this.rules = rules;
 
-    if (rules.stream().allMatch(rule -> rule.getPattern().isFixedPattern())) {
-        for (Rule rule : rules) {
-            OperatorType type = ((OpPattern) rule.getPattern()).getOpType();
-            ops.add(type);
+        if (rules.stream().allMatch(rule -> rule.getPattern().isFixedPattern())) {
+            for (Rule rule : rules) {
+                OperatorType type = ((OpPattern) rule.getPattern()).getOpType();
+                ops.add(type);
+            }
         }
     }
-}
-
 ```
 
 `check` メソッドはノードの型が `ops` に含まれなければ `false` を返す。
@@ -866,11 +1160,9 @@ public CombinationRule(RuleType ruleType, List<Rule> rules) {
 [`fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/CombinationRule.java` L47-L49](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/rule/transformation/CombinationRule.java#L47-L49)
 
 ```java
-@Override
-public boolean check(OptExpression input, OptimizerContext context) {
-    return ops.isEmpty() || ops.contains(input.getOp().getOpType());
-}
-
+    public boolean check(OptExpression input, OptimizerContext context) {
+        return ops.isEmpty() || ops.contains(input.getOp().getOpType());
+    }
 ```
 
 たとえば `PRUNE_COLUMNS_RULES` は 17 個のカラム枝刈りルールを含むが、ノードの型が `LOGICAL_JOIN` でなければ `PruneJoinColumnsRule` も含めて17個すべてを一括でスキップできる。
@@ -883,10 +1175,9 @@ public boolean check(OptExpression input, OptimizerContext context) {
 [`fe/fe-core/src/main/java/com/starrocks/sql/optimizer/task/ApplyRuleTask.java` L67-L69](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/optimizer/task/ApplyRuleTask.java#L67-L69)
 
 ```java
-if (groupExpression.hasRuleExplored(rule) || groupExpression.isUnused()) {
-    return;
-}
-
+        if (groupExpression.hasRuleExplored(rule) || groupExpression.isUnused()) {
+            return;
+        }
 ```
 
 各 GroupExpression はビットセットで適用済みルールを追跡している。

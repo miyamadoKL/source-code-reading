@@ -60,8 +60,13 @@ StarRocks は Apache Doris をフォークした MPP 分散分析データベー
 
 24. [メモリ管理とデータキャッシュ](part08-ops/24-memory-management-and-cache.md)
 25. [Resource Group と Warehouse](part08-ops/25-resource-group-and-warehouse.md)
+27. [Tablet スケジューラとレプリカ管理](part08-ops/27-tablet-scheduler-and-replica.md)
+
+## 第9部　外部連携
+
+26. [Connector と外部カタログ](part09-connector/26-connector-and-external-catalog.md)
 
 ---
 
-> 全8部25章。
+> 全10部27章。
 > コード引用は `4.1.1` タグに固定している。

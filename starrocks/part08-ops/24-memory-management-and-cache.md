@@ -51,8 +51,8 @@ MemTracker のコメントがこの階層を説明している。
 ///
 /// We use a five-level hierarchy of mem trackers: process, pool, query, fragment
 /// instance. Specific parts of the fragment (exec nodes, sinks, etc) will add a
-/// fifth level when they are initialized.
-
+/// fifth level when they are initialized. This function also initializes a user
+/// function mem tracker (in the fifth level).
 ```
 
 ### 型分類
@@ -60,7 +60,7 @@ MemTracker のコメントがこの階層を説明している。
 MemTracker は `MemTrackerType` 列挙で用途別に分類される。
 30 種類以上の型が定義されており、クエリ(`QUERY`)、Compaction(`COMPACTION`)、ページキャッシュ(`PAGE_CACHE`)、データキャッシュ(`DATACACHE`)など、BE プロセスの主要なメモリ消費源ごとに型を持つ。
 
-[`be/src/runtime/mem_tracker.h` L81-L122](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/runtime/mem_tracker.h#L81-L122)
+[`be/src/runtime/mem_tracker.h` L81-L123](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/runtime/mem_tracker.h#L81-L123)
 
 ```cpp
 enum class MemTrackerType {
@@ -83,7 +83,7 @@ enum class MemTrackerType {
 
 実装ファイルではこれらの型からラベル文字列への対応が静的テーブルで保持され、エラーメッセージやメトリクスの表示に使われる。
 
-[`be/src/runtime/mem_tracker.cpp` L48-L82](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/runtime/mem_tracker.cpp#L48-L82)
+[`be/src/runtime/mem_tracker.cpp` L48-L83](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/runtime/mem_tracker.cpp#L48-L83)
 
 ```cpp
 static std::vector<std::pair<MemTrackerType, std::string>> s_mem_types = {
@@ -117,7 +117,6 @@ void MemTracker::Init() {
     DCHECK_GT(_all_trackers.size(), 0);
     DCHECK_EQ(_all_trackers[0], this);
 }
-
 ```
 
 `_all_trackers` は自身(インデックス0)から根(末尾)への順序で格納される。
@@ -131,15 +130,14 @@ void MemTracker::Init() {
 [`be/src/runtime/mem_tracker.h` L211-L218](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/runtime/mem_tracker.h#L211-L218)
 
 ```cpp
-void consume(int64_t bytes) {
-    if (bytes == 0) {
-        return;
+    void consume(int64_t bytes) {
+        if (bytes == 0) {
+            return;
+        }
+        for (auto* tracker : _all_trackers) {
+            tracker->_consumption->add(bytes);
+        }
     }
-    for (auto* tracker : _all_trackers) {
-        tracker->_consumption->add(bytes);
-    }
-}
-
 ```
 
 ### try_consume: 制限チェック付き割り当て
@@ -150,33 +148,31 @@ void consume(int64_t bytes) {
 [`be/src/runtime/mem_tracker.h` L241-L265](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/runtime/mem_tracker.h#L241-L265)
 
 ```cpp
-WARN_UNUSED_RESULT
-MemTracker* try_consume(int64_t bytes) {
-    if (UNLIKELY(bytes <= 0)) return nullptr;
-    int64_t i;
-    // Walk the tracker tree top-down.
-    for (i = _all_trackers.size() - 1; i >= 0; --i) {
-        MemTracker* tracker = _all_trackers[i];
-        const int64_t limit = tracker->limit();
-        if (limit < 0) {
-            tracker->_consumption->add(bytes); // No limit at this tracker.
-        } else {
-            if (LIKELY(tracker->_consumption->try_add(bytes, limit))) {
-                continue;
+    MemTracker* try_consume(int64_t bytes) {
+        if (UNLIKELY(bytes <= 0)) return nullptr;
+        int64_t i;
+        // Walk the tracker tree top-down.
+        for (i = _all_trackers.size() - 1; i >= 0; --i) {
+            MemTracker* tracker = _all_trackers[i];
+            const int64_t limit = tracker->limit();
+            if (limit < 0) {
+                tracker->_consumption->add(bytes); // No limit at this tracker.
             } else {
-                // Failed for this mem tracker. Roll back the ones that succeeded.
-                for (int64_t j = _all_trackers.size() - 1; j > i; --j) {
-                    _all_trackers[j]->_consumption->add(-bytes);
+                if (LIKELY(tracker->_consumption->try_add(bytes, limit))) {
+                    continue;
+                } else {
+                    // Failed for this mem tracker. Roll back the ones that succeeded.
+                    for (int64_t j = _all_trackers.size() - 1; j > i; --j) {
+                        _all_trackers[j]->_consumption->add(-bytes);
+                    }
+                    return tracker;
                 }
-                return tracker;
             }
         }
+        // Everyone succeeded, return.
+        DCHECK_EQ(i, -1);
+        return nullptr;
     }
-    // Everyone succeeded, return.
-    DCHECK_EQ(i, -1);
-    return nullptr;
-}
-
 ```
 
 走査の方向がポイントである。
@@ -188,7 +184,7 @@ MemTracker* try_consume(int64_t bytes) {
 制限超過が検出されると `err_msg()` が型ごとに対処法を含むメッセージを生成する。
 `QUERY` 型なら `query_mem_limit` の変更を案内し、`RESOURCE_GROUP` 型ならその Resource Group の `mem_limit` の変更を案内する。
 
-[`be/src/runtime/mem_tracker.cpp` L250-L300](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/runtime/mem_tracker.cpp#L250-L300)
+[`be/src/runtime/mem_tracker.cpp` L250-L301](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/runtime/mem_tracker.cpp#L250-L301)
 
 ```cpp
 std::string MemTracker::err_msg(const std::string& msg, RuntimeState* state) const {
@@ -253,16 +249,15 @@ graph TD
 [`be/src/runtime/current_thread.h` L93-L101](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/runtime/current_thread.h#L93-L101)
 
 ```cpp
-void consume(int64_t size) {
-    size = _consume_from_reserved(size);
-    _cache_size += size;
-    _allocated_cache_size += size;
-    _total_consumed_bytes += size;
-    if (_cache_size >= BATCH_SIZE) {
-        commit(false);
-    }
-}
-
+        void consume(int64_t size) {
+            size = _consume_from_reserved(size);
+            _cache_size += size;
+            _allocated_cache_size += size;
+            _total_consumed_bytes += size;
+            if (_cache_size >= BATCH_SIZE) {
+                commit(false);
+            }
+        }
 ```
 
 `BATCH_SIZE` は 2 MB である。
@@ -270,8 +265,7 @@ void consume(int64_t size) {
 [`be/src/runtime/current_thread.h` L238](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/runtime/current_thread.h#L238)
 
 ```cpp
-const static int64_t BATCH_SIZE = 2 * 1024 * 1024;
-
+        const static int64_t BATCH_SIZE = 2 * 1024 * 1024;
 ```
 
 `commit()` が呼ばれると、蓄積された差分が `MemTracker::consume()` に渡される。
@@ -280,23 +274,22 @@ const static int64_t BATCH_SIZE = 2 * 1024 * 1024;
 [`be/src/runtime/current_thread.h` L199-L214](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/runtime/current_thread.h#L199-L214)
 
 ```cpp
-void commit(bool is_ctx_shift) {
-    MemTracker* cur_tracker = CurrentThread::mem_tracker();
-    if (cur_tracker != nullptr) {
-        cur_tracker->consume(_cache_size);
-    }
-    _cache_size = 0;
-    if (is_ctx_shift) {
-        // Flush all cached info
-        if (cur_tracker != nullptr) {
-            cur_tracker->update_allocation(_allocated_cache_size);
-            cur_tracker->update_deallocation(_deallocated_cache_size);
+        void commit(bool is_ctx_shift) {
+            MemTracker* cur_tracker = CurrentThread::mem_tracker();
+            if (cur_tracker != nullptr) {
+                cur_tracker->consume(_cache_size);
+            }
+            _cache_size = 0;
+            if (is_ctx_shift) {
+                // Flush all cached info
+                if (cur_tracker != nullptr) {
+                    cur_tracker->update_allocation(_allocated_cache_size);
+                    cur_tracker->update_deallocation(_deallocated_cache_size);
+                }
+                _allocated_cache_size = 0;
+                _deallocated_cache_size = 0;
+            }
         }
-        _allocated_cache_size = 0;
-        _deallocated_cache_size = 0;
-    }
-}
-
 ```
 
 この設計により、個々の `malloc` / `free` ではスレッドローカル変数の加減算だけで済み、アトミック操作は 2 MB ごとに1回に削減される。
@@ -322,7 +315,6 @@ void* valloc(size_t size) __THROW ALIAS(my_valloc);
 void* pvalloc(size_t size) __THROW ALIAS(my_pvalloc);
 int posix_memalign(void** r, size_t a, size_t s) __THROW ALIAS(my_posix_memalign);
 size_t malloc_usable_size(void* ptr) __THROW ALIAS(my_malloc_usebale_size);
-
 ```
 
 ### my_malloc の処理の流れ
@@ -338,7 +330,9 @@ void* my_malloc(size_t size) __THROW {
     int64_t alloc_size = STARROCKS_NALLOX(size, 0);
     SET_DELTA_MEMORY(alloc_size);
     if (IS_BAD_ALLOC_CATCHED()) {
-        // NOTE: do NOT call `tc_malloc_size` here, ...
+        FAIL_POINT_INJECT_MEM_ALLOC_ERROR(nullptr);
+        // NOTE: do NOT call `tc_malloc_size` here, it may call the new operator, which in turn will
+        // call the `my_malloc`, and result in a deadloop.
         TRY_MEM_CONSUME(alloc_size, nullptr);
         void* ptr = STARROCKS_MALLOC(size);
         if (UNLIKELY(ptr == nullptr)) {
@@ -351,7 +345,10 @@ void* my_malloc(size_t size) __THROW {
         if (UNLIKELY(block_large_memory_alloc(size))) {
             return nullptr;
         }
+
         void* ptr = STARROCKS_MALLOC(size);
+        // NOTE: do NOT call `tc_malloc_size` here, it may call the new operator, which in turn will
+        // call the `my_malloc`, and result in a deadloop.
         if (LIKELY(ptr != nullptr)) {
             MEMORY_CONSUME_SIZE(alloc_size);
         } else {
@@ -360,7 +357,6 @@ void* my_malloc(size_t size) __THROW {
         return ptr;
     }
 }
-
 ```
 
 `IS_BAD_ALLOC_CATCHED()` が true のパスでは、メモリを確保する前に `TRY_MEM_CONSUME` で制限チェックを行い、制限超過ならメモリ確保自体を行わず `nullptr` を返す。
@@ -384,15 +380,17 @@ inline void report_large_memory_alloc(size_t size) {
         skip_report = true; // to avoid recursive output log
         try {
             auto qid = starrocks::CurrentThread::current().query_id();
-            // ... (中略) ...
-            LOG(WARNING) << "large memory alloc, query_id:" << print_id(qid)
-                         << " acquire:" << size << " bytes, ...";
+            auto fid = starrocks::CurrentThread::current().fragment_instance_id();
+            LOG(WARNING) << "large memory alloc, query_id:" << print_id(qid) << " instance: " << print_id(fid)
+                         << " acquire:" << size << " bytes, is_bad_alloc_caught: " << IS_BAD_ALLOC_CATCHED()
+                         << ", stack:\n"
+                         << starrocks::get_stack_trace();
         } catch (...) {
+            // do nothing
         }
         skip_report = false;
     }
 }
-
 ```
 
 `skip_report` フラグで、ログ出力自体がメモリ割り当てを引き起こす再帰を防止している。
@@ -409,12 +407,11 @@ inline void report_large_memory_alloc(size_t size) {
 [`be/src/runtime/mem_pool.h` L157-L161](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/runtime/mem_pool.h#L157-L161)
 
 ```cpp
-static const int INITIAL_CHUNK_SIZE = 4 * 1024;
+    static const int INITIAL_CHUNK_SIZE = 4 * 1024;
 
-/// The maximum size of chunk that should be allocated. Allocations larger than this
-/// size will get their own individual chunk.
-static const int MAX_CHUNK_SIZE = 512 * 1024;
-
+    /// The maximum size of chunk that should be allocated. Allocations larger than this
+    /// size will get their own individual chunk.
+    static const int MAX_CHUNK_SIZE = 512 * 1024;
 ```
 
 ### 割り当てのホットパス
@@ -422,28 +419,30 @@ static const int MAX_CHUNK_SIZE = 512 * 1024;
 `allocate()` テンプレート関数は、現在のチャンクに余裕があればアライメントを調整してポインターを返す。
 チャンクが足りない場合に限り `find_chunk()` を呼ぶ。
 
-[`be/src/runtime/mem_pool.h` L196-L214](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/runtime/mem_pool.h#L196-L214)
+[`be/src/runtime/mem_pool.h` L195-L232](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/runtime/mem_pool.h#L195-L232)
 
 ```cpp
-template <bool CHECK_LIMIT_FIRST>
-uint8_t* ALWAYS_INLINE allocate(int64_t size, int alignment, int reserve) {
-    DCHECK_GE(size, 0);
-    if (UNLIKELY(size == 0)) return reinterpret_cast<uint8_t*>(&k_zero_length_region_);
+    template <bool CHECK_LIMIT_FIRST>
+    uint8_t* ALWAYS_INLINE allocate(int64_t size, int alignment, int reserve) {
+        DCHECK_GE(size, 0);
+        if (UNLIKELY(size == 0)) return reinterpret_cast<uint8_t*>(&k_zero_length_region_);
 
-    if (current_chunk_idx_ != -1) {
-        ChunkInfo& info = chunks_[current_chunk_idx_];
-        int64_t aligned_allocated_bytes = BitUtil::RoundUpToPowerOf2(info.allocated_bytes, alignment);
-        if (aligned_allocated_bytes + size + reserve <= info.chunk.size) {
-            int64_t padding = aligned_allocated_bytes - info.allocated_bytes;
-            uint8_t* result = info.chunk.data + aligned_allocated_bytes;
-            // ... (中略) ...
-            info.allocated_bytes += padding + size;
-            total_allocated_bytes_ += padding + size;
-            return result;
+        if (current_chunk_idx_ != -1) {
+            ChunkInfo& info = chunks_[current_chunk_idx_];
+            int64_t aligned_allocated_bytes = BitUtil::RoundUpToPowerOf2(info.allocated_bytes, alignment);
+            if (aligned_allocated_bytes + size + reserve <= info.chunk.size) {
+                // Ensure the requested alignment is respected.
+                int64_t padding = aligned_allocated_bytes - info.allocated_bytes;
+                uint8_t* result = info.chunk.data + aligned_allocated_bytes;
+                // ... (中略) ...
+                info.allocated_bytes += padding + size;
+                total_allocated_bytes_ += padding + size;
+                // ... (中略) ...
+                return result;
+            }
         }
+        // ... (中略: find_chunk 呼び出し) ...
     }
-    // ... find_chunk ...
-}
 
 ```
 
@@ -457,11 +456,10 @@ uint8_t* ALWAYS_INLINE allocate(int64_t size, int alignment, int reserve) {
 [`be/src/runtime/mem_pool.cpp` L150-L153](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/runtime/mem_pool.cpp#L150-L153)
 
 ```cpp
-total_reserved_bytes_ += chunk_size;
-// Don't increment the chunk size until the allocation succeeds: if an attempted
-// large allocation fails we don't want to increase the chunk size further.
-next_chunk_size_ = static_cast<int>(std::min<int64_t>(chunk_size * 2, MAX_CHUNK_SIZE));
-
+    total_reserved_bytes_ += chunk_size;
+    // Don't increment the chunk size until the allocation succeeds: if an attempted
+    // large allocation fails we don't want to increase the chunk size further.
+    next_chunk_size_ = static_cast<int>(std::min<int64_t>(chunk_size * 2, MAX_CHUNK_SIZE));
 ```
 
 この倍増は割り当て成功後にのみ行われる。
@@ -480,15 +478,14 @@ next_chunk_size_ = static_cast<int>(std::min<int64_t>(chunk_size * 2, MAX_CHUNK_
 [`be/src/cache/mem_cache/page_cache.h` L67-L74](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/cache/mem_cache/page_cache.h#L67-L74)
 
 ```cpp
-static StoragePageCache* instance() { return DataCache::GetInstance()->page_cache(); }
+    static StoragePageCache* instance() { return DataCache::GetInstance()->page_cache(); }
 
-StoragePageCache(LocalMemCacheEngine* cache_engine) : _cache(cache_engine), _initialized(true) {}
+    StoragePageCache(LocalMemCacheEngine* cache_engine) : _cache(cache_engine), _initialized(true) {}
 
-void init(LocalMemCacheEngine* cache_engine) {
-    _cache = cache_engine;
-    _initialized.store(true, std::memory_order_relaxed);
-}
-
+    void init(LocalMemCacheEngine* cache_engine) {
+        _cache = cache_engine;
+        _initialized.store(true, std::memory_order_relaxed);
+    }
 ```
 
 ### PageCacheHandle による RAII
@@ -500,13 +497,12 @@ void init(LocalMemCacheEngine* cache_engine) {
 [`be/src/cache/mem_cache/page_cache.h` L140-L145](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/cache/mem_cache/page_cache.h#L140-L145)
 
 ```cpp
-~PageCacheHandle() {
-    if (_handle != nullptr) {
-        StoragePageCacheMetrics::released_page_handle_count++;
-        _cache->release(_handle);
+    ~PageCacheHandle() {
+        if (_handle != nullptr) {
+            StoragePageCacheMetrics::released_page_handle_count++;
+            _cache->release(_handle);
+        }
     }
-}
-
 ```
 
 ## DataCache: 統合2階層キャッシュ
@@ -517,7 +513,7 @@ void init(LocalMemCacheEngine* cache_engine) {
 メモリ層(`LocalMemCacheEngine`)、ディスク層(`LocalDiskCacheEngine`)、リモート層(`RemoteCacheEngine`)の3層を管理する。
 そのうえに、ページキャッシュ(`StoragePageCache`)とブロックキャッシュ(`BlockCache`)の2つの利用者向けインターフェースを提供する。
 
-[`be/src/cache/datacache.h` L34-L88](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/cache/datacache.h#L34-L88)
+[`be/src/cache/datacache.h` L34-L89](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/cache/datacache.h#L34-L89)
 
 ```cpp
 class DataCache {
@@ -553,7 +549,7 @@ private:
 
 `DataCache::init()` は以下の順序でコンポーネントを初期化する。
 
-[`be/src/cache/datacache.cpp` L41-L76](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/cache/datacache.cpp#L41-L76)
+[`be/src/cache/datacache.cpp` L41-L77](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/cache/datacache.cpp#L41-L77)
 
 ```cpp
 Status DataCache::init(const std::vector<StorePath>& store_paths) {
@@ -618,9 +614,11 @@ class LRUCacheEngine final : public LocalMemCacheEngine {
 public:
     // ... (中略) ...
     bool has_mem_cache() const override { return _cache->get_capacity() > 0; }
+    // ... (中略) ...
 
 private:
     bool _check_write(size_t charge, const MemCacheWriteOptions& options) const;
+
     std::atomic<bool> _initialized = false;
     std::unique_ptr<ShardedLRUCache> _cache;
 };
@@ -633,16 +631,19 @@ private:
 [`be/src/cache/mem_cache/local_mem_cache_engine.h` L24-L36](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/cache/mem_cache/local_mem_cache_engine.h#L24-L36)
 
 ```cpp
+struct MemCacheOptions {
+    size_t mem_space_size = 0;
+};
+
 struct MemCacheWriteOptions {
     // The priority of the cache object, only support 0 and 1 now.
     int8_t priority = 0;
 
-    // The probability to evict other items if the cache space is full, ...
-    // It is expressed as a percentage. If evict_probability is 10, it means
-    // the probability to evict other data is 10%.
+    // The probability to evict other items if the cache space is full, which can help avoid frequent cache replacement
+    // and improve cache hit rate sometimes.
+    // It is expressed as a percentage. If evict_probability is 10, it means the probability to evict other data is 10%.
     int32_t evict_probability = 100;
 };
-
 ```
 
 `evict_probability` を 100 未満に設定すると、キャッシュが満杯の場合に確率的に書き込みをスキップする。
@@ -659,18 +660,19 @@ StarRocks 独自のキャッシュライブラリである StarCache(`starcache:
 class StarCacheEngine : public LocalDiskCacheEngine {
 public:
     // ... (中略) ...
-    Status write(const std::string& key, const IOBuffer& buffer,
-                 DiskCacheWriteOptions* options) override;
-    Status read(const std::string& key, size_t off, size_t size,
-                IOBuffer* buffer, DiskCacheReadOptions* options) override;
+    Status write(const std::string& key, const IOBuffer& buffer, DiskCacheWriteOptions* options) override;
+    Status read(const std::string& key, size_t off, size_t size, IOBuffer* buffer,
+                DiskCacheReadOptions* options) override;
     // ... (中略) ...
-    bool has_disk_cache() const override {
-        return _disk_quota.load(std::memory_order_relaxed) > 0;
-    }
+    bool has_disk_cache() const override { return _disk_quota.load(std::memory_order_relaxed) > 0; }
+    // ... (中略) ...
 
 private:
+    // ... (中略) ...
     std::shared_ptr<starcache::StarCache> _cache;
     std::unique_ptr<starcache::TimeBasedCacheAdaptor> _cache_adaptor;
+    std::atomic<bool> _initialized = false;
+
     std::atomic<size_t> _disk_quota = 0;
 };
 
@@ -679,7 +681,7 @@ private:
 `TimeBasedCacheAdaptor` は TTL(有効期限)付きのキャッシュアクセスを提供する。
 `DiskCacheWriteOptions` では優先度、TTL、非同期書き込み(`async`)、ゼロコピー(`allow_zero_copy`)など細かな制御が可能である。
 
-[`be/src/cache/disk_cache/local_disk_cache_engine.h` L47-L70](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/cache/disk_cache/local_disk_cache_engine.h#L47-L70)
+[`be/src/cache/disk_cache/local_disk_cache_engine.h` L47-L71](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/cache/disk_cache/local_disk_cache_engine.h#L47-L71)
 
 ```cpp
 struct DiskCacheWriteOptions {
@@ -707,23 +709,26 @@ struct DiskCacheWriteOptions {
 **BlockCache** はディスク層とリモート層を束ね、固定サイズのブロック単位で読み書きする API を提供する。
 Lake モードでリモートストレージからデータを読み込む際に使われる。
 
-[`be/src/cache/disk_cache/block_cache.h` L29-L91](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/cache/disk_cache/block_cache.h#L29-L91)
+[`be/src/cache/disk_cache/block_cache.h` L29-L92](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/cache/disk_cache/block_cache.h#L29-L92)
 
 ```cpp
 class BlockCache {
 public:
     // ... (中略) ...
-    Status write(const CacheKey& cache_key, off_t offset,
-                 const IOBuffer& buffer, DiskCacheWriteOptions* options = nullptr);
-    Status read(const CacheKey& cache_key, off_t offset, size_t size,
-                IOBuffer* buffer, DiskCacheReadOptions* options = nullptr);
+    Status write(const CacheKey& cache_key, off_t offset, const IOBuffer& buffer,
+                 DiskCacheWriteOptions* options = nullptr);
+    // ... (中略) ...
+    Status read(const CacheKey& cache_key, off_t offset, size_t size, IOBuffer* buffer,
+                DiskCacheReadOptions* options = nullptr);
     // ... (中略) ...
     size_t block_size() const { return _block_size; }
+    // ... (中略) ...
 
 private:
     size_t _block_size = 0;
     std::shared_ptr<LocalDiskCacheEngine> _local_cache;
     std::shared_ptr<RemoteCacheEngine> _remote_cache;
+    std::atomic<bool> _initialized = false;
 };
 
 ```
@@ -765,7 +770,7 @@ StoragePageCache はメモリ層のみを使い、BlockCache はディスク層�
 
 **DiskSpaceMonitor** はバックグラウンドスレッドで定期的にディスク使用量を確認し、キャッシュのディスククォータを動的に調整する。
 
-[`be/src/cache/disk_space_monitor.h` L119-L157](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/cache/disk_space_monitor.h#L119-L157)
+[`be/src/cache/disk_space_monitor.h` L119-L158](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/cache/disk_space_monitor.h#L119-L158)
 
 ```cpp
 class DiskSpaceMonitor {
@@ -794,18 +799,17 @@ private:
 [`be/src/cache/disk_space_monitor.h` L53-L63](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/cache/disk_space_monitor.h#L53-L63)
 
 ```cpp
-struct DiskOptions {
-    int64_t cache_lower_limit = 0;
-    int64_t cache_upper_limit = 0;
+    struct DiskOptions {
+        int64_t cache_lower_limit = 0;
+        int64_t cache_upper_limit = 0;
 
-    int64_t low_level_size = 0;
-    int64_t safe_level_size = 0;
-    int64_t high_level_size = 0;
+        int64_t low_level_size = 0;
+        int64_t safe_level_size = 0;
+        int64_t high_level_size = 0;
 
-    int64_t adjust_interval_s = 0;
-    int64_t idle_for_expansion_s = 0;
-};
-
+        int64_t adjust_interval_s = 0;
+        int64_t idle_for_expansion_s = 0;
+    };
 ```
 
 クォータの調整単位は 10 GB にアラインされる。
@@ -814,9 +818,7 @@ struct DiskOptions {
 [`be/src/cache/disk_space_monitor.h` L83-L84](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/cache/disk_space_monitor.h#L83-L84)
 
 ```cpp
-// We set it to 10G to keep consistent with underlying cache file size,
-// which can help reduce processing the special tail files.
-const static size_t kQuotaAlignUnit;
+    const static size_t kQuotaAlignUnit;
 
 ```
 
@@ -842,7 +844,7 @@ private:
     std::thread _adjust_datacache_thread;
     std::atomic<bool> _stopped = false;
 };
-
+} // namespace starrocks
 ```
 
 メモリ圧迫時には `_evict_datacache()` でキャッシュエントリを能動的に追い出す。
@@ -863,7 +865,6 @@ bool DataCache::adjust_mem_capacity(int64_t delta, size_t min_capacity) {
         return false;
     }
 }
-
 ```
 
 ## CacheInputStream によるキャッシュ統合 IO
@@ -880,8 +881,7 @@ bool DataCache::adjust_mem_capacity(int64_t delta, size_t min_capacity) {
 
 ```cpp
 CacheInputStream::CacheInputStream(const std::shared_ptr<SharedBufferedInputStream>& stream,
-                                   const std::string& filename, size_t size,
-                                   int64_t modification_time)
+                                   const std::string& filename, size_t size, int64_t modification_time)
         : SeekableInputStreamWrapper(stream.get(), kDontTakeOwnership),
           _filename(filename),
           _sb_stream(stream),
@@ -891,9 +891,15 @@ CacheInputStream::CacheInputStream(const std::shared_ptr<SharedBufferedInputStre
     _block_size = _cache->block_size();
 
     _cache_key.resize(12);
+
     char* data = _cache_key.data();
     uint64_t hash_value = HashUtil::hash64(filename.data(), filename.size(), 0);
     memcpy(data, &hash_value, sizeof(hash_value));
+    // The modification time is more appropriate to indicate the different file versions.
+    // While some data source, such as Hudi, have no modification time because their files
+    // cannot be overwritten. So, if the modification time is unsupported, we use file size instead.
+    // Usually the last modification timestamp has 41 bits, to reduce memory usage, we ignore the tail 9
+    // bytes and choose the high 32 bits to represent the second timestamp.
     if (modification_time > 0) {
         uint32_t mtime_s = (modification_time >> 9) & 0x00000000FFFFFFFF;
         memcpy(data + 8, &mtime_s, sizeof(mtime_s));
@@ -901,10 +907,10 @@ CacheInputStream::CacheInputStream(const std::shared_ptr<SharedBufferedInputStre
         uint32_t file_size = _size;
         memcpy(data + 8, &file_size, sizeof(file_size));
     }
+    // default _buffer size is 4MB = (16 * 256KB)
     _buffer_size = 16 * _block_size;
     _buffer.reserve(_buffer_size);
 }
-
 ```
 
 ### read_at_fully の処理フロー
@@ -923,17 +929,20 @@ Status CacheInputStream::read_at_fully(int64_t offset, void* out, int64_t count)
         size_t size = end - off;
         Status st = _read_block_from_local(off, size, p);
         if (st.is_not_found() || st.is_resource_busy()) {
+            // Not found block from local or disk is busy, we need to load it from remote
             need_read_from_remote.emplace_back(off, p, size);
         } else if (!st.ok()) {
             return st;
         }
-        // ... (中略) ...
+        offset += size;
+        p += size;
     }
-    // ... IO 範囲のマージ ...
+    // ... (中略: IO 範囲のマージ) ...
     for (const auto& io_range : merged_need_read_from_remote) {
-        RETURN_IF_ERROR(_read_blocks_from_remote(io_range.offset, io_range.size,
-                                                  io_range.write_pointer));
+        // ... (中略) ...
+        RETURN_IF_ERROR(_read_blocks_from_remote(io_range.offset, io_range.size, io_range.write_pointer));
     }
+
     return Status::OK();
 }
 
@@ -966,10 +975,10 @@ flowchart TD
 [`be/src/io/cache_input_stream.cpp` L475-L501](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/io/cache_input_stream.cpp#L475-L501)
 
 ```cpp
-void CacheInputStream::_write_cache(int64_t offset, const IOBuffer& iobuf,
-                                    DiskCacheWriteOptions* options) {
+void CacheInputStream::_write_cache(int64_t offset, const IOBuffer& iobuf, DiskCacheWriteOptions* options) {
     DCHECK(offset % _block_size == 0);
     if (_already_populated_blocks.contains(offset / _block_size)) {
+        // Already populate in CacheInputStream's lifecycle, ignore this time
         return;
     }
 
@@ -978,9 +987,21 @@ void CacheInputStream::_write_cache(int64_t offset, const IOBuffer& iobuf,
     if (r.ok() || r.is_already_exist()) {
         _already_populated_blocks.emplace(offset / _block_size);
     }
-    // ... (中略: 統計更新) ...
-}
 
+    if (r.ok()) {
+        _stats.write_block_cache_count += 1;
+        _stats.write_block_cache_bytes += iobuf.size();
+        _stats.write_mem_cache_bytes += options->stats.write_mem_bytes;
+        _stats.write_disk_cache_bytes += options->stats.write_disk_bytes;
+    } else if (!_can_ignore_populate_error(r)) {
+        _stats.write_cache_fail_count += 1;
+        _stats.write_cache_fail_bytes += iobuf.size();
+        LOG(WARNING) << "write block cache failed, errmsg: " << r.message();
+    } else if (r.is_already_exist() || r.is_resource_busy()) {
+        _stats.skip_write_cache_count += 1;
+        _stats.skip_write_cache_bytes += iobuf.size();
+    }
+}
 ```
 
 ### ピアキャッシュ
@@ -988,23 +1009,23 @@ void CacheInputStream::_write_cache(int64_t offset, const IOBuffer& iobuf,
 ローカルキャッシュでミスした場合、`_can_try_peer_cache()` が true であれば他の BE ノード(ピア)のキャッシュを試す。
 ピアキャッシュからの読み出しに成功した場合、そのデータをローカルにも書き戻す。
 
-[`be/src/io/cache_input_stream.cpp` L147-L163](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/io/cache_input_stream.cpp#L147-L163)
+[`be/src/io/cache_input_stream.cpp` L147-L165](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/io/cache_input_stream.cpp#L147-L165)
 
 ```cpp
-} else if (res.is_not_found() && _can_try_peer_cache()) {
-    {
-        SCOPED_RAW_TIMER(&read_peer_cache_ns);
-        res = _read_peer_cache(block_offset, block_size, &block.buffer, &options);
-        try_peer_cache = true;
-    }
+    } else if (res.is_not_found() && _can_try_peer_cache()) {
+        {
+            SCOPED_RAW_TIMER(&read_peer_cache_ns);
+            res = _read_peer_cache(block_offset, block_size, &block.buffer, &options);
+            try_peer_cache = true;
+        }
     // ... (中略) ...
-    if (res.ok() && _enable_populate_cache) {
-        DiskCacheWriteOptions write_options;
-        write_options.async = _enable_async_populate_mode;
+        if (res.ok() && _enable_populate_cache) {
+            DiskCacheWriteOptions write_options;
+            write_options.async = _enable_async_populate_mode;
         // ... (中略) ...
-        _write_cache(block_offset, block.buffer, &write_options);
+            _write_cache(block_offset, block.buffer, &write_options);
+        }
     }
-}
 
 ```
 
@@ -1015,22 +1036,22 @@ void CacheInputStream::_write_cache(int64_t offset, const IOBuffer& iobuf,
 `CacheInputStream::Stats` はキャッシュのヒット率を把握するための詳細な統計を記録する。
 メモリキャッシュからの読み出しバイト数(`read_mem_cache_bytes`)、ディスクキャッシュからの読み出しバイト数(`read_disk_cache_bytes`)、ピアキャッシュからの読み出しバイト数(`read_peer_cache_bytes`)が区別されている。
 
-[`be/src/io/cache_input_stream.h` L28-L52](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/io/cache_input_stream.h#L28-L52)
+[`be/src/io/cache_input_stream.h` L28-L53](https://github.com/StarRocks/starrocks/blob/4.1.1/be/src/io/cache_input_stream.h#L28-L53)
 
 ```cpp
-struct Stats {
-    int64_t read_block_cache_ns = 0;
-    int64_t write_block_cache_ns = 0;
-    int64_t read_block_cache_count = 0;
-    int64_t write_block_cache_count = 0;
-    int64_t write_mem_cache_bytes = 0;
-    int64_t write_disk_cache_bytes = 0;
-    int64_t read_block_cache_bytes = 0;
-    int64_t read_mem_cache_bytes = 0;
-    int64_t read_disk_cache_bytes = 0;
-    int64_t read_peer_cache_bytes = 0;
+    struct Stats {
+        int64_t read_block_cache_ns = 0;
+        int64_t write_block_cache_ns = 0;
+        int64_t read_block_cache_count = 0;
+        int64_t write_block_cache_count = 0;
+        int64_t write_mem_cache_bytes = 0;
+        int64_t write_disk_cache_bytes = 0;
+        int64_t read_block_cache_bytes = 0;
+        int64_t read_mem_cache_bytes = 0;
+        int64_t read_disk_cache_bytes = 0;
+        int64_t read_peer_cache_bytes = 0;
     // ... (中略) ...
-};
+    };
 
 ```
 
