@@ -40,7 +40,6 @@ public class Analyzer {
     public static void analyze(StatementBase statement, ConnectContext context) {
         GlobalStateMgr.getCurrentState().getAnalyzer().analyzerVisitor.visit(statement, context);
     }
-
 ```
 
 内部クラス **AnalyzerVisitor** がシングルトンとして保持されている。
@@ -55,7 +54,6 @@ public class Analyzer {
         public static Analyzer.AnalyzerVisitor getInstance() {
             return INSTANCE;
         }
-
 ```
 
 各 `visit` メソッドは、文種別に特化した Analyzer クラスへ処理を委譲する。
@@ -64,12 +62,10 @@ public class Analyzer {
 [`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/Analyzer.java` L497-L500](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/Analyzer.java#L497-L500)
 
 ```java
-        @Override
         public Void visitQueryStatement(QueryStatement stmt, ConnectContext session) {
             new QueryAnalyzer(session).analyze(stmt);
             return null;
         }
-
 ```
 
 `AnalyzerVisitor` は約1,100行にわたり、DDL、DML、認証、カタログ、ストレージボリュームなど約80種類の文に対応する `visit` メソッドを持つ。
@@ -107,7 +103,6 @@ public class QueryAnalyzer {
     public void analyze(StatementBase node) {
         new Visitor().process(node, new Scope(RelationId.anonymous(), new RelationFields()));
     }
-
 ```
 
 `analyze` メソッドは空の「Scope」を初期スコープとして渡し、内部の `Visitor` で AST を走査する。
@@ -121,7 +116,6 @@ public class QueryAnalyzer {
 [`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/QueryAnalyzer.java` L355-L366](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/QueryAnalyzer.java#L355-L366)
 
 ```java
-        @Override
         public Scope visitQueryRelation(QueryRelation node, Scope parent) {
             Scope scope = analyzeCTE(node, parent);
             return process(node, scope);
@@ -134,7 +128,6 @@ public class QueryAnalyzer {
             if (!stmt.hasWithClause()) {
                 return cteScope;
             }
-
 ```
 
 CTE は定義順に処理される。
@@ -146,7 +139,7 @@ CTE は定義順に処理される。
 `visitSelect` は SELECT 文解析の中心である。
 FROM 句のリレーション解決、スコープ構築、SelectAnalyzer への委譲という手順で進む。
 
-[`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/QueryAnalyzer.java` L489-L534](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/QueryAnalyzer.java#L489-L534)
+[`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/QueryAnalyzer.java` L489-L543](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/QueryAnalyzer.java#L489-L543)
 
 ```java
         @Override
@@ -162,19 +155,19 @@ FROM 句のリレーション解決、スコープ構築、SelectAnalyzer への
             Scope sourceScope = process(resolvedRelation, scope);
             sourceScope.setParent(scope);
             // ... (中略) ...
-            SelectAnalyzer selectAnalyzer = new SelectAnalyzer(session);
-            selectAnalyzer.analyze(
-                    analyzeState,
-                    selectRelation.getSelectList(),
-                    selectRelation.getRelation(),
-                    sourceScope,
-                    selectRelation.getGroupByClause(),
-                    selectRelation.getHavingClause(),
-                    selectRelation.getWhereClause(),
-                    selectRelation.getOrderBy(),
-                    selectRelation.getLimit());
+                SelectAnalyzer selectAnalyzer = new SelectAnalyzer(session);
+                selectAnalyzer.analyze(
+                        analyzeState,
+                        selectRelation.getSelectList(),
+                        selectRelation.getRelation(),
+                        sourceScope,
+                        selectRelation.getGroupByClause(),
+                        selectRelation.getHavingClause(),
+                        selectRelation.getWhereClause(),
+                        selectRelation.getOrderBy(),
+                        selectRelation.getLimit());
 
-            selectRelation.fillResolvedAST(analyzeState);
+                selectRelation.fillResolvedAST(analyzeState);
 
 ```
 
@@ -193,7 +186,7 @@ FROM 句のリレーション解決、スコープ構築、SelectAnalyzer への
 - **JoinRelation**：左右の子を再帰的に解決する
 - **TableRelation**：まず CTE スコープで名前を検索し、見つかればCTERelation に変換する。見つからなければ `MetadataMgr` でテーブルメタデータを取得する。取得結果が View であれば ViewRelation に変換する
 
-[`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/QueryAnalyzer.java` L648-L684](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/QueryAnalyzer.java#L648-L684)
+[`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/QueryAnalyzer.java` L648-L686](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/QueryAnalyzer.java#L648-L686)
 
 ```java
             } else if (relation instanceof TableRelation) {
@@ -205,14 +198,12 @@ FROM 句のリレーション解決、スコープ構築、SelectAnalyzer への
                         CTERelation withRelation = withQuery.get();
                         withRelation.addTableRef();
                         // ... (中略) ...
-                        // The CTERelation stored in the Scope is not used directly here,
-                        // but a new Relation is copied.
-                        // It is because we hope to obtain a new RelationId to distinguish
-                        // multiple cte reuses.
-                        CTERelation newCteRelation = new CTERelation(withRelation.getCteMouldId(),
-                                tableName.getTbl(),
-                                withRelation.getColumnOutputNames(),
-                                withRelation.getCteQueryStatement(),
+                        // The CTERelation stored in the Scope is not used directly here, but a new Relation is copied.
+                        // It is because we hope to obtain a new RelationId to distinguish multiple cte reuses.
+                        // Because the reused cte should not be considered the same relation.
+                        // ... (中略) ...
+                        CTERelation newCteRelation = new CTERelation(withRelation.getCteMouldId(), tableName.getTbl(),
+                                withRelation.getColumnOutputNames(), withRelation.getCteQueryStatement(),
                                 withRelation.isRecursive(), false);
                         // ... (中略) ...
                         return newCteRelation;
@@ -226,7 +217,7 @@ CTE が複数箇所で参照される場合、同じ `CTERelation` を再利用�
 
 ビューの解決では、テーブル名で取得した結果が `View` クラスであれば、ビューの定義 SQL をパースした `QueryStatement` を持つ `ViewRelation` に変換する。
 
-[`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/QueryAnalyzer.java` L706-L711](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/QueryAnalyzer.java#L706-L711)
+[`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/QueryAnalyzer.java` L706-L736](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/QueryAnalyzer.java#L706-L736)
 
 ```java
                 if (table instanceof View) {
@@ -242,7 +233,7 @@ CTE が複数箇所で参照される場合、同じ `CTERelation` を再利用�
 
 `visitTable` はテーブルのカラム情報から `Field` のリストを生成し、`Scope` を構築する。
 
-[`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/QueryAnalyzer.java` L803-L903](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/QueryAnalyzer.java#L803-L903)
+[`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/QueryAnalyzer.java` L803-L910](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/QueryAnalyzer.java#L803-L910)
 
 ```java
         @Override
@@ -256,16 +247,19 @@ CTE が複数箇所で参照される場合、同じ `CTERelation` を再利用�
                 List<Column> fullSchema = table.getFullSchema();
                 // ... (中略) ...
                 for (Column column : fullSchema) {
+                    // ... (中略) ...
+                    // only output visible columns
                     boolean visible = column.isVisible() && baseSchema.contains(column);
                     SlotRef slot = new SlotRef(tableName, column.getName(), column.getName());
-                    Field field = new Field(column.getName(), column.getType(), tableName,
-                            slot, visible, column.isAllowNull());
+                    Field field = new Field(column.getName(), column.getType(), tableName, slot, visible,
+                            column.isAllowNull());
                     columns.put(field, column);
                     fields.add(field);
                 }
             // ... (中略) ...
             Scope scope = new Scope(RelationId.of(node), new RelationFields(fields.build()));
             node.setScope(scope);
+            // ... (中略) ...
             return scope;
         }
 
@@ -279,7 +273,7 @@ CTE が複数箇所で参照される場合、同じ `CTERelation` を再利用�
 
 `visitJoin` は左右のリレーションをそれぞれ処理してスコープを取得し、JOIN 種別に応じて結合スコープを構築する。
 
-[`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/QueryAnalyzer.java` L973-L980](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/QueryAnalyzer.java#L973-L980)
+[`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/QueryAnalyzer.java` L972-L1010](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/QueryAnalyzer.java#L972-L1010)
 
 ```java
         @Override
@@ -313,7 +307,7 @@ JOIN 種別に応じたスコープ構築ルールは次のとおりである。
 
 `visitView` はビューの定義 SQL をパースした `QueryStatement` を再帰的に解析し、ビューのスキーマに基づいたスコープを返す。
 
-[`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/QueryAnalyzer.java` L1424-L1470](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/QueryAnalyzer.java#L1424-L1470)
+[`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/QueryAnalyzer.java` L1424-L1463](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/QueryAnalyzer.java#L1424-L1463)
 
 ```java
         @Override
@@ -323,19 +317,20 @@ JOIN 種別に応じたスコープ構築ルールは次のとおりである。
             try {
                 queryOutputScope = process(node.getQueryStatement(), scope);
             } catch (SemanticException e) {
-                throw new SemanticException("View " + node.getName() +
-                        " references invalid table(s) or column(s) or " +
-                        "function(s) or definer/invoker of view lack rights to use them: "
-                        + e.getMessage(), e);
+                throw new SemanticException("View " + node.getName() + " references invalid table(s) or column(s) or " +
+                        "function(s) or definer/invoker of view lack rights to use them: " + e.getMessage(), e);
+            } finally {
+                // ... (中略) ...
             }
-            // ... (中略) ...
+
             View view = node.getView();
             List<Field> fields = Lists.newArrayList();
             for (int i = 0; i < view.getBaseSchema().size(); ++i) {
                 Column column = view.getBaseSchema().get(i);
                 Field originField = queryOutputScope.getRelationFields().getFieldByIndex(i);
-                Field field = new Field(column.getName(), originField.getType(),
-                        node.getResolveTableName(), originField.getOriginExpression());
+                // ... (中略) ...
+                Field field = new Field(column.getName(), originField.getType(), node.getResolveTableName(),
+                        originField.getOriginExpression());
                 fields.add(field);
             }
 
@@ -384,14 +379,13 @@ flowchart TD
                         List<OrderByElement> sortClause,
                         LimitElement limitElement) {
         analyzeWhere(whereClause, analyzeState, sourceScope);
-
 ```
 
 ### 解析の順序
 
 解析は SQL の構文上の出現順ではなく、意味的な依存関係に基づいた順序で行われる。
 
-[`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/SelectAnalyzer.java` L87-L117](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/SelectAnalyzer.java#L87-L117)
+[`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/SelectAnalyzer.java` L87-L116](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/SelectAnalyzer.java#L87-L116)
 
 ```java
         analyzeWhere(whereClause, analyzeState, sourceScope);
@@ -401,18 +395,16 @@ flowchart TD
         Scope outputScope = analyzeState.getOutputScope();
 
         List<Expr> groupByExpressions = new ArrayList<>(
-                analyzeGroupBy(groupByClause, analyzeState, sourceScope, outputScope,
-                        outputExpressions));
+                analyzeGroupBy(groupByClause, analyzeState, sourceScope, outputScope, outputExpressions));
         // ... (中略) ...
-        analyzeHaving(havingClause, analyzeState, sourceScope, outputScope,
-                outputExpressions);
+        analyzeHaving(havingClause, analyzeState, sourceScope, outputScope, outputExpressions);
 
-        Scope sourceAndOutputScope = computeAndAssignOrderScope(analyzeState,
-                sourceScope, outputScope, selectList.isDistinct());
+        // Construct sourceAndOutputScope with sourceScope and outputScope
+        Scope sourceAndOutputScope = computeAndAssignOrderScope(analyzeState, sourceScope, outputScope,
+                selectList.isDistinct());
 
         List<OrderByElement> orderByElements =
-                analyzeOrderBy(sortClause, analyzeState, sourceAndOutputScope,
-                        outputExpressions, selectList.isDistinct());
+                analyzeOrderBy(sortClause, analyzeState, sourceAndOutputScope, outputExpressions, selectList.isDistinct());
 
 ```
 
@@ -429,11 +421,10 @@ flowchart TD
 
 `analyzeSelect` は SELECT リストの各項目を処理して出力式と出力スコープを構築する。
 
-[`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/SelectAnalyzer.java` L214-L360](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/SelectAnalyzer.java#L214-L360)
+[`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/SelectAnalyzer.java` L214-L354](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/SelectAnalyzer.java#L214-L354)
 
 ```java
-    private List<Expr> analyzeSelect(SelectList selectList, Relation fromRelation,
-                                     AnalyzeState analyzeState, Scope scope) {
+    private List<Expr> analyzeSelect(SelectList selectList, Relation fromRelation, AnalyzeState analyzeState, Scope scope) {
         ImmutableList.Builder<Expr> outputExpressionBuilder = ImmutableList.builder();
         ImmutableList.Builder<Field> outputFields = ImmutableList.builder();
         // ... (中略) ...
@@ -442,18 +433,21 @@ flowchart TD
                 // ... (中略) ...
                 for (Field field : fields) {
                     int fieldIndex = scope.getRelationFields().indexOf(field);
+                    // ... (中略) ...
                     FieldReference fieldReference =
-                            new FieldReference(fieldIndex, /* ... */);
+                            new FieldReference(fieldIndex, item.getTblName() == null ? null : item.getTblName().toString());
                     analyzeExpression(fieldReference, analyzeState, scope);
                     outputExpressionBuilder.add(fieldReference);
                 }
                 outputFields.addAll(fields);
+
             } else {
                 // ... (中略) ...
                 analyzeExpression(item.getExpr(), analyzeState, scope);
                 outputExpressionBuilder.add(item.getExpr());
                 // ... (中略) ...
             }
+            // ... (中略) ...
         }
 
 ```
@@ -467,20 +461,19 @@ flowchart TD
 集約関数が含まれる場合、`AggregationAnalyzer` が SELECT リストと ORDER BY 式を検証する。
 GROUP BY に含まれないカラムが集約関数の外で参照されていないかをチェックする。
 
-[`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/SelectAnalyzer.java` L124-L143](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/SelectAnalyzer.java#L124-L143)
+[`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/SelectAnalyzer.java` L124-L145](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/SelectAnalyzer.java#L124-L145)
 
 ```java
         List<FunctionCallExpr> aggregates = analyzeAggregations(analyzeState, sourceScope,
-                Stream.concat(sourceExpressions.stream(), orderByExpressions.stream())
-                        .collect(Collectors.toList()));
+                Stream.concat(sourceExpressions.stream(), orderByExpressions.stream()).collect(Collectors.toList()));
         if (AnalyzerUtils.isAggregate(aggregates, groupByExpressions)) {
             // ... (中略) ...
-            new AggregationAnalyzer(session, analyzeState, groupByExpressions,
-                    sourceScope, null).verify(sourceExpressions);
+            new AggregationAnalyzer(session, analyzeState, groupByExpressions, sourceScope, null)
+                    .verify(sourceExpressions);
 
             if (!orderByElements.isEmpty()) {
-                new AggregationAnalyzer(session, analyzeState, groupByExpressions,
-                        sourceScope, sourceAndOutputScope).verify(orderByExpressions);
+                new AggregationAnalyzer(session, analyzeState, groupByExpressions, sourceScope, sourceAndOutputScope)
+                        .verify(orderByExpressions);
             }
         }
 
@@ -512,7 +505,6 @@ public class Scope {
         this.relationId = relationId;
         this.relationFields = relation;
     }
-
 ```
 
 ### カラム名の解決アルゴリズム
@@ -523,29 +515,28 @@ public class Scope {
 [`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/Scope.java` L102-L123](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/Scope.java#L102-L123)
 
 ```java
-    private Optional<ResolvedField> resolveField(SlotRef expression, int fieldIndexOffset,
-                                                  RelationId outerRelationId) {
+    private Optional<ResolvedField> resolveField(SlotRef expression, int fieldIndexOffset, RelationId outerRelationId) {
         List<Field> matchFields = relationFields.resolveFields(expression);
         if (matchFields.size() > 1) {
-            throw new SemanticException("Column '%s' is ambiguous",
-                    expression.getColumnName());
+            throw new SemanticException("Column '%s' is ambiguous", expression.getColumnName());
         } else if (matchFields.size() == 1) {
-            // ... (中略) ...
-            return Optional.of(asResolvedField(matchFields.get(0), fieldIndexOffset));
+            if (matchFields.get(0).getType().getPrimitiveType().equals(PrimitiveType.UNKNOWN_TYPE)) {
+                throw new SemanticException("Datatype of external table column [" + matchFields.get(0).getName()
+                        + "] is not supported!");
+            } else {
+                return Optional.of(asResolvedField(matchFields.get(0), fieldIndexOffset));
+            }
         } else {
             if (parent != null
-                    //Correlated subqueries currently only support accessing
-                    //properties in the first level outer layer
+                    //Correlated subqueries currently only support accessing properties in the first level outer layer
                     && !relationId.equals(outerRelationId)
-                    || parent != null && isLambdaScope) {
-                return parent.resolveField(expression,
-                        fieldIndexOffset + relationFields.getAllFields().size(),
+                    || parent != null && isLambdaScope) { // also to analyze the nested lambda arguments.
+                return parent.resolveField(expression, fieldIndexOffset + relationFields.getAllFields().size(),
                         outerRelationId);
             }
             return Optional.empty();
         }
     }
-
 ```
 
 この処理には3つの重要な特徴がある。
@@ -571,38 +562,35 @@ public class Scope {
         this.resolveStruct = fields.stream().anyMatch(x -> x.getType().isStructType());
         this.fromFullOuterJoinUsing = fromFullOuterJoinUsing;
         if (!resolveStruct) {
-            this.names = this.allFields.stream().collect(
-                    ImmutableListMultimap.toImmutableListMultimap(
-                            x -> x.getName().toLowerCase(), x -> x));
+            this.names = this.allFields.stream().collect(ImmutableListMultimap.toImmutableListMultimap(
+                    x -> x.getName().toLowerCase(), x -> x));
         } else {
             this.names = null;
         }
     }
-
 ```
 
 構造体型を含まない通常のケースでは、コンストラクタの時点で `ImmutableListMultimap`(カラム名の小文字 → Field の一覧)を構築する。
 この事前構築により、`resolveFields` での名前検索は O(1) のハッシュテーブルルックアップになる。
 
-[`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/RelationFields.java` L92-L114](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/RelationFields.java#L92-L114)
+[`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/RelationFields.java` L92-L115](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/RelationFields.java#L92-L115)
 
 ```java
     public List<Field> resolveFields(SlotRef name) {
         if (resolveStruct) {
-            return allFields.stream().filter(x -> x.canResolve(name))
-                    .collect(Collectors.toList());
+            return allFields.stream().filter(x -> x.canResolve(name)).collect(Collectors.toList());
         }
         // Resolve the slot based on column name first, then table name
+        // For the case a table with thousands of columns, resolve by table name could not reduce the cardinality,
+        // but resolve by column name first could reduce it a lot
         List<Field> resolved =
-                names.get(name.getColumnName().toLowerCase()).stream()
-                        .collect(ImmutableList.toImmutableList());
+                names.get(name.getColumnName().toLowerCase()).stream().collect(ImmutableList.toImmutableList());
 
         if (name.getTblNameWithoutAnalyzed() == null) {
             // ... (中略) ...
             return resolved;
         } else {
-            return resolved.stream().filter(input -> input.canResolve(name))
-                    .collect(toImmutableList());
+            return resolved.stream().filter(input -> input.canResolve(name)).collect(toImmutableList());
         }
     }
 
@@ -632,7 +620,7 @@ flowchart TD
 
 `bottomUpAnalyze` は子ノードを先に解析してから親ノードの `visit` を呼ぶ。
 
-[`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/ExpressionAnalyzer.java` L420-L441](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/ExpressionAnalyzer.java#L420-L441)
+[`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/ExpressionAnalyzer.java` L420-L442](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/ExpressionAnalyzer.java#L420-L442)
 
 ```java
     private void bottomUpAnalyze(Visitor visitor, Expr expression, Scope scope) {
@@ -644,8 +632,8 @@ flowchart TD
         }
         if (hasLambdaFunc) {
             // ... (中略) ...
-            analyzeHighOrderFunction(visitor, expression, scope);
-            visitor.visit(expression, scope);
+                analyzeHighOrderFunction(visitor, expression, scope);
+                visitor.visit(expression, scope);
         } else {
             for (Expr expr : expression.getChildren()) {
                 bottomUpAnalyze(visitor, expr, scope);
@@ -664,7 +652,7 @@ flowchart TD
 
 `visitSlot` はカラム参照を `Scope` で解決し、型とテーブル名を設定する。
 
-[`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/ExpressionAnalyzer.java` L494-L515](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/ExpressionAnalyzer.java#L494-L515)
+[`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/ExpressionAnalyzer.java` L493-L516](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/ExpressionAnalyzer.java#L493-L516)
 
 ```java
         @Override
@@ -687,7 +675,7 @@ flowchart TD
 
 `visitBinaryPredicate` は二項比較式(`=`, `<`, `>` など)の型を推論する。
 
-[`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/ExpressionAnalyzer.java` L757-L775](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/ExpressionAnalyzer.java#L757-L775)
+[`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/ExpressionAnalyzer.java` L738-L776](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/ExpressionAnalyzer.java#L738-L776)
 
 ```java
         @Override
@@ -696,13 +684,11 @@ flowchart TD
             Type type2 = node.getChild(1).getType();
 
             Type compatibleType =
-                    TypeManager.getCompatibleTypeForBinary(
-                            !node.getOp().isNotRangeComparison(), type1, type2);
-            final String ERROR_MSG =
-                    "Column type %s does not support binary predicate operation with type %s";
+                    TypeManager.getCompatibleTypeForBinary(!node.getOp().isNotRangeComparison(), type1, type2);
+            // check child type can be cast
+            final String ERROR_MSG = "Column type %s does not support binary predicate operation with type %s";
             if (!TypeManager.canCastTo(type1, compatibleType)) {
-                throw new SemanticException(
-                        String.format(ERROR_MSG, type1.toSql(), type2.toSql()), node.getPos());
+                throw new SemanticException(String.format(ERROR_MSG, type1.toSql(), type2.toSql()), node.getPos());
             }
             // ... (中略) ...
             node.setType(BooleanType.BOOLEAN);
@@ -720,7 +706,7 @@ flowchart TD
 
 `visitFunctionCall` は関数名と引数の型から一致する関数定義を検索する。
 
-[`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/ExpressionAnalyzer.java` L1028-L1127](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/ExpressionAnalyzer.java#L1028-L1127)
+[`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/ExpressionAnalyzer.java` L1027-L1128](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/ExpressionAnalyzer.java#L1027-L1128)
 
 ```java
         @Override
@@ -731,18 +717,16 @@ flowchart TD
             }
             String fnName = node.getFunctionName();
             // ... (中略) ...
-            Type[] argumentTypes = node.getChildren().stream()
-                    .map(Expr::getType).toArray(Type[]::new);
+            Type[] argumentTypes = node.getChildren().stream().map(Expr::getType).toArray(Type[]::new);
+            // check fn & throw exception direct if analyze failed
             checkFunction(fnName, node, argumentTypes);
-            Function fn = FunctionAnalyzer.getAnalyzedFunction(
-                    session, node, argumentTypes);
+            // get function by function expression and argument types
+            Function fn = FunctionAnalyzer.getAnalyzedFunction(session, node, argumentTypes);
             if (fn == null) {
-                String msg = String.format(
-                        "No matching function with signature: %s(%s)",
+                String msg = String.format("No matching function with signature: %s(%s)",
                         fnName,
                         node.getParams().isStar() ? "*" : Joiner.on(", ")
-                                .join(Arrays.stream(argumentTypes).map(Type::toSql)
-                                        .collect(Collectors.toList())));
+                                .join(Arrays.stream(argumentTypes).map(Type::toSql).collect(Collectors.toList())));
                 throw new SemanticException(msg, node.getPos());
             }
             node.setFn(fn);
@@ -768,9 +752,9 @@ flowchart TD
 [`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/ExpressionAnalyzer.java` L1007-L1025](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/ExpressionAnalyzer.java#L1007-L1025)
 
 ```java
-        @Override
         public Void visitCastExpr(CastExpr cast, Scope context) {
             Type castType;
+            // If cast expr is implicit, targetTypeDef is null
             if (cast.isImplicit()) {
                 castType = cast.getType();
             } else {
@@ -778,15 +762,15 @@ flowchart TD
             }
             Type fromType = cast.getChild(0).getType();
             if (!TypeManager.canCastTo(fromType, castType)) {
-                throw new SemanticException("Invalid type cast from " + fromType.toSql()
-                        + " to " + castType.toSql() + " in sql `" +
-                        AstToStringBuilder.toString(cast.getChild(0))
-                                .replace("%", "%%") + "`", cast.getPos());
+                throw new SemanticException("Invalid type cast from " + fromType.toSql() + " to "
+                        + castType.toSql() + " in sql `" +
+                        AstToStringBuilder.toString(cast.getChild(0)).replace("%", "%%") + "`",
+                        cast.getPos());
             }
+
             cast.setType(castType);
             return null;
         }
-
 ```
 
 `TypeManager.canCastTo` がソース型からターゲット型への変換可能性を判定する。
@@ -829,12 +813,11 @@ public class Authorizer {
     public static void check(StatementBase statement, ConnectContext context) {
         getInstance().getPrivilegeCheckerVisitor().check(statement, context);
     }
-
 ```
 
 `AuthorizerStmtVisitor` は AST を再度走査し、テーブル、ビュー、カタログなどのオブジェクトに対するアクセス権を検証する。
 
-[`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/AuthorizerStmtVisitor.java` L284-L309](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/AuthorizerStmtVisitor.java#L284-L309)
+[`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/AuthorizerStmtVisitor.java` L283-L310](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/AuthorizerStmtVisitor.java#L283-L310)
 
 ```java
     @Override
@@ -850,19 +833,17 @@ public class Authorizer {
 `Authorizer.checkTableAction` はテーブルに対する特定の権限(SELECT、INSERT、DELETE など)を検証する。
 `Authorizer.checkViewAction` はビューに対する権限を検証する。
 
-[`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/Authorizer.java` L101-L111](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/Authorizer.java#L101-L111)
+[`fe/fe-core/src/main/java/com/starrocks/sql/analyzer/Authorizer.java` L101-L112](https://github.com/StarRocks/starrocks/blob/4.1.1/fe/fe-core/src/main/java/com/starrocks/sql/analyzer/Authorizer.java#L101-L112)
 
 ```java
     public static void checkTableAction(ConnectContext context, String db, String table,
                                         PrivilegeType privilegeType) throws AccessDeniedException {
-        TableName tableName = new TableName(
-                InternalCatalog.DEFAULT_INTERNAL_CATALOG_NAME, db, table);
-        Optional<Table> tableObj = GlobalStateMgr.getCurrentState()
-                .getMetadataMgr().getTable(context, tableName);
+        TableName tableName = new TableName(InternalCatalog.DEFAULT_INTERNAL_CATALOG_NAME, db, table);
+        Optional<Table> tableObj = GlobalStateMgr.getCurrentState().getMetadataMgr().getTable(context, tableName);
         // ... (中略) ...
-        getInstance().getAccessControlOrDefault(
-                InternalCatalog.DEFAULT_INTERNAL_CATALOG_NAME)
-                .checkTableAction(context, /* ... */ privilegeType);
+        getInstance().getAccessControlOrDefault(InternalCatalog.DEFAULT_INTERNAL_CATALOG_NAME)
+                .checkTableAction(context,
+                        new TableName(InternalCatalog.DEFAULT_INTERNAL_CATALOG_NAME, db, table), privilegeType);
     }
 
 ```
