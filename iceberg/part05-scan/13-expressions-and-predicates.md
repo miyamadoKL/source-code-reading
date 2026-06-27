@@ -716,6 +716,6 @@ Visitor パターンにより、式の構造は固定しつつ、評価のセマ
 
 ## 関連する章
 
-- [第5章 パーティション仕様と変換関数](../part02-partitioning/05-partition-spec-and-transforms.md)
-- [第7章 マニフェストファイルとエントリ](../part03-snapshot/07-manifest-file-and-entries.md)
-- [第14章 パーティションフィルタリングと射影](14-partition-filtering-and-projection.md)
+- [第5章 パーティション仕様と変換関数](../part02-partitioning/05-partition-spec.md)
+- [第8章 マニフェストファイル](../part03-snapshot/08-manifest-file.md)
+- [第14章 プランニングとスキャン](14-planning-and-scan.md)

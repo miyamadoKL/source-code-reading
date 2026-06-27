@@ -669,5 +669,5 @@ Iceberg の仕様はメタデータを階層構造で管理する。
 
 ## 関連する章
 
-- [第13章 式と述語プッシュダウン](./13-expressions-and-predicate-pushdown.md)
-- [第15章 削除ファイルとマージオンリード](./15-delete-files-and-merge-on-read.md)
+- [第13章 式と述語](./13-expressions-and-predicates.md)
+- [第15章 カタログ抽象と TableOperations](../part06-catalog/15-catalog-abstraction.md)
