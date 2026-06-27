@@ -9,7 +9,8 @@
     "mysql/**/*.md",
     "tidb/**/*.md",
     "trino/**/*.md",
-    "starrocks/**/*.md"
+    "starrocks/**/*.md",
+    "iceberg/**/*.md"
   ],
   "config": {
     "default": true,
