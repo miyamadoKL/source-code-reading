@@ -86,7 +86,8 @@ flowchart TB
 ## FlinkCatalog: カタログの橋渡し
 
 **FlinkCatalog** は Flink の `AbstractCatalog` を継承し、Iceberg の `Catalog` をラップするアダプタである。
-Flink SQL で `CREATE CATALOG` を実行すると `FlinkCatalog` が生成され、以後の DDL/DML は全てこのクラスを経由して Iceberg テーブルを操作する。
+Flink SQL で `CREATE CATALOG` を実行すると `FlinkCatalog` が生成され、DDL とテーブル解決はこのクラスを経由する。
+実行時の SELECT/INSERT は `FlinkDynamicTableFactory` が `IcebergTableSource`/`IcebergTableSink` を生成して処理する。
 
 ### コンストラクタと CachingCatalog
 
@@ -850,10 +851,12 @@ Flink の exactly-once 保証の要となるコンポーネントである。
 
 Flink と Iceberg の連携で最も巧みな設計は、Flink のチェックポイント機構と Iceberg のスナップショットアトミシティを組み合わせた exactly-once セマンティクスの実現である。
 
-書き込みパイプラインの exactly-once は次の 3 つの性質に依存している。
+書き込みパイプラインの exactly-once は次の 3 つの性質と前提条件に依存している。
+
+前提として、チェックポイントごとに単一の `IcebergCommittable` が生成されること、遅延チェックポイントが存在しないこと、同一の branch/job/operator/checkpoint の組み合わせを複数の Writer が同時に生成しないことが必要である。
 
 1. **先行書き込み**: Writer はチェックポイントバリアの到達前にデータファイルをストレージに書き出す。ファイルはこの時点ではどのスナップショットにも属さず、テーブルからは不可視である
-2. **アトミックコミット**: チェックポイントが完了した時点で Committer が Iceberg の `AppendFiles` や `RowDelta` を実行する。Iceberg のコミットはメタデータファイルの原子的な置き換えであるため、全ファイルが一度に可視になるか、失敗すれば何も残らない
+2. **アトミックコミット**: チェックポイントが完了した時点で Committer が Iceberg の `AppendFiles` や `RowDelta` を実行する。Iceberg のコミットはメタデータファイルの原子的な置き換えであるため、全ファイルが一度に可視になるか、失敗すればテーブルメタデータには反映されず読み取り側からは見えない
 3. **べき等な復旧**: 障害発生時は Flink がチェックポイントから状態を復元する。Committer は `maxCommittedCheckpointId` を参照し、すでにコミット済みのチェックポイントを再コミットしない。未コミットのチェックポイントだけが復旧処理でコミットされる
 
 この設計により、Flink 側の状態と Iceberg テーブルの内容は常に一貫した状態に収束する。
