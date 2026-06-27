@@ -37,6 +37,7 @@ Trino は Coordinator と Worker からなる MPP（Massively Parallel Processin
 15. [集約と Window 関数](part03-execution/15-aggregation-and-window.md)
 16. [Exchange と OutputBuffer](part03-execution/16-exchange-and-output-buffer.md)
 17. [メモリ管理と Spill](part03-execution/17-memory-and-spill.md)
+28. [Fault Tolerant Execution](part03-execution/28-fault-tolerant-execution.md)
 
 ## 第4部　データ表現と型システム
 
@@ -48,6 +49,9 @@ Trino は Coordinator と Worker からなる MPP（Massively Parallel Processin
 20. [Connector SPI の詳細](part05-connector/20-connector-spi-detail.md)
 21. [Hive Connector と Metastore](part05-connector/21-hive-connector.md)
 22. [Iceberg Connector](part05-connector/22-iceberg-connector.md)
+25. [Delta Lake Connector](part05-connector/25-delta-lake-connector.md)
+26. [JDBC Connector ファミリーと Pushdown](part05-connector/26-jdbc-connector.md)
+27. [Kafka Connector](part05-connector/27-kafka-connector.md)
 
 ## 第6部　運用と可観測性
 
@@ -56,5 +60,5 @@ Trino は Coordinator と Worker からなる MPP（Massively Parallel Processin
 
 ---
 
-> 対象バージョンは Trino 482。
+> 全7部28章。対象バージョンは Trino 482。
 > 各章のコード引用は `482` タグに固定した GitHub リンクから該当行を直接参照できる。
