@@ -1,4 +1,4 @@
-# 第24章 障害検出とセキュリティ
+# 第28章 障害検出とセキュリティ
 
 > **本章で読むソース**
 >
@@ -33,7 +33,7 @@ Trino のセキュリティは、クラスタ全体を制御する `SystemAccess
 ## 前提
 
 - Trino のクラスタ構成（Coordinator と Worker）を理解していること（第1章、第2章）。
-- Connector と Catalog の関係を理解していること（第20章）。
+- Connector と Catalog の関係を理解していること（第21章）。
 - SPI（Service Provider Interface）による Plugin 拡張の基本を知っていること。
 
 ## FailureDetector インタフェース
@@ -880,4 +880,4 @@ Trino は多数の Connector を同時に登録できるが、すべての Conne
 
 - [第1章 Trino とは何か](../part00-overview/01-what-is-trino.md): Trino 全体のアーキテクチャと Coordinator/Worker の役割分担。
 - [第2章 サーバーアーキテクチャ](../part00-overview/02-server-architecture.md): Coordinator の起動シーケンスにおける各サブシステムの初期化。
-- [第20章 Connector SPI の詳細](../part05-connector/20-connector-spi-detail.md): Connector SPI の概要と Catalog の登録。
+- [第21章 Connector SPI の詳細](../part05-connector/21-connector-spi-detail.md): Connector SPI の概要と Catalog の登録。
