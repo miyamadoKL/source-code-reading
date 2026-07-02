@@ -1,4 +1,4 @@
-# 第21章 Hive Connector と Metastore
+# 第22章 Hive Connector と Metastore
 
 > **本章で読むソース**
 >
@@ -18,16 +18,16 @@
 ## この章の狙い
 
 Hive Connector は Trino が最初期から備える Connector であり、HDFS や S3 上の Parquet, ORC, CSV などのファイルを Hive Metastore のメタデータと組み合わせて読み書きする。
-Connector SPI（第20章）の各インタフェースを Hive の世界にどう対応づけているかを、具体的なコードで確認する。
+Connector SPI（第21章）の各インタフェースを Hive の世界にどう対応づけているかを、具体的なコードで確認する。
 
 本章では、`HiveConnector` と `HiveConnectorFactory` による組み立てから始め、`HiveMetadata` によるメタデータ操作、`HiveSplitManager` と `BackgroundHiveSplitLoader` による Split 生成、`HivePageSourceProvider` によるファイルフォーマットの選択とデータ読み取りを順に読む。
 あわせて、`HiveMetastore` インタフェースと `Table`, `Partition` モデルが Connector の各コンポーネントにどう組み込まれているかを確認する。
 
 ## 前提
 
-- Connector SPI の全体像（`ConnectorFactory`, `Connector`, `ConnectorMetadata`, `ConnectorSplitManager`, `ConnectorPageSourceProvider`）を理解していること（第20章）。
+- Connector SPI の全体像（`ConnectorFactory`, `Connector`, `ConnectorMetadata`, `ConnectorSplitManager`, `ConnectorPageSourceProvider`）を理解していること（第21章）。
 - Split がデータ読み取りの並列単位であることを知っていること（第11章）。
-- Page と Block のデータモデルを理解していること（第18章）。
+- Page と Block のデータモデルを理解していること（第19章）。
 
 ## HiveConnector の構成と SPI の対応
 
@@ -790,6 +790,6 @@ Hive Connector は、Connector SPI の各インタフェースに対して以下
 
 ## 関連する章
 
-- 第20章 Connector SPI の設計：`ConnectorFactory`, `Connector`, `ConnectorMetadata` など、本章の Hive 実装が準拠する SPI の全体像
+- 第21章 Connector SPI の設計：`ConnectorFactory`, `Connector`, `ConnectorMetadata` など、本章の Hive 実装が準拠する SPI の全体像
 - 第11章 Split とデータソース：Split がクエリ実行でどう分配されるか
-- 第18章 Page と Block のデータモデル：`HivePageSourceProvider` が生成する Page の内部構造
+- 第19章 Page と Block のデータモデル：`HivePageSourceProvider` が生成する Page の内部構造

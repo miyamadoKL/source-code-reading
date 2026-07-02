@@ -37,26 +37,26 @@ Trino は Coordinator と Worker からなる MPP（Massively Parallel Processin
 15. [集約と Window 関数](part03-execution/15-aggregation-and-window.md)
 16. [Exchange と OutputBuffer](part03-execution/16-exchange-and-output-buffer.md)
 17. [メモリ管理と Spill](part03-execution/17-memory-and-spill.md)
-28. [Fault Tolerant Execution](part03-execution/28-fault-tolerant-execution.md)
+18. [Fault Tolerant Execution](part03-execution/18-fault-tolerant-execution.md)
 
 ## 第4部　データ表現と型システム
 
-18. [Page と Block のデータモデル](part04-data/18-page-and-block.md)
-19. [型システムと関数レジストリ](part04-data/19-type-system-and-functions.md)
+19. [Page と Block のデータモデル](part04-data/19-page-and-block.md)
+20. [型システムと関数レジストリ](part04-data/20-type-system-and-functions.md)
 
 ## 第5部　コネクタとデータソース
 
-20. [Connector SPI の詳細](part05-connector/20-connector-spi-detail.md)
-21. [Hive Connector と Metastore](part05-connector/21-hive-connector.md)
-22. [Iceberg Connector](part05-connector/22-iceberg-connector.md)
-25. [Delta Lake Connector](part05-connector/25-delta-lake-connector.md)
-26. [JDBC Connector ファミリーと Pushdown](part05-connector/26-jdbc-connector.md)
-27. [Kafka Connector](part05-connector/27-kafka-connector.md)
+21. [Connector SPI の詳細](part05-connector/21-connector-spi-detail.md)
+22. [Hive Connector と Metastore](part05-connector/22-hive-connector.md)
+23. [Iceberg Connector](part05-connector/23-iceberg-connector.md)
+24. [Delta Lake Connector](part05-connector/24-delta-lake-connector.md)
+25. [JDBC Connector ファミリーと Pushdown](part05-connector/25-jdbc-connector.md)
+26. [Kafka Connector](part05-connector/26-kafka-connector.md)
 
 ## 第6部　運用と可観測性
 
-23. [リソースグループとクエリキューイング](part06-ops/23-resource-groups.md)
-24. [障害検出とセキュリティ](part06-ops/24-failure-detection-and-security.md)
+27. [リソースグループとクエリキューイング](part06-ops/27-resource-groups.md)
+28. [障害検出とセキュリティ](part06-ops/28-failure-detection-and-security.md)
 
 ---
 

@@ -902,4 +902,4 @@ flowchart LR
 - [第5章 Analyzer と意味解析](../part01-parsing/05-analyzer.md)：`SqlQueryExecution` のコンストラクタ内で呼ばれる意味解析
 - [第10章 分散プラン生成と Exchange](../part02-planning/10-distributed-plan.md)：`planQuery` で使われる Fragment 分割
 - [第12章 Stage と Task のスケジューリング](12-stage-and-task-scheduling.md)：`scheduler.start()` 以降の分散スケジューリング
-- [第23章 リソースグループとクエリキューイング](../part06-ops/23-resource-groups.md)：リソースグループによるクエリのキューイングと同時実行制御
+- [第27章 リソースグループとクエリキューイング](../part06-ops/27-resource-groups.md)：リソースグループによるクエリのキューイングと同時実行制御
