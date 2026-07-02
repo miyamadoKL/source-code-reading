@@ -824,6 +824,6 @@ Connector の生成は `ConnectorFactory.create()` で行われ、返される `
 ## 関連する章
 
 - [第2章 サーバーアーキテクチャ](02-server-architecture.md)：Plugin がロードされる起動シーケンスの全体像。
-- [第20章 Connector SPI の詳細](../part05-connector/20-connector-spi-detail.md)：`ConnectorMetadata` の各メソッドの実装パターンを読む。
-- [第21章 Hive Connector と Metastore](../part05-connector/21-hive-connector.md)：SPI を実装した具体的な Connector の例。
-- [第18章 Page と Block のデータモデル](../part04-data/18-page-and-block.md)：`ConnectorPageSourceProvider` が返す Page の内部構造。
+- [第21章 Connector SPI の詳細](../part05-connector/21-connector-spi-detail.md)：`ConnectorMetadata` の各メソッドの実装パターンを読む。
+- [第22章 Hive Connector と Metastore](../part05-connector/22-hive-connector.md)：SPI を実装した具体的な Connector の例。
+- [第19章 Page と Block のデータモデル](../part04-data/19-page-and-block.md)：`ConnectorPageSourceProvider` が返す Page の内部構造。
