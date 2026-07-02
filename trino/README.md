@@ -60,5 +60,6 @@ Trino は Coordinator と Worker からなる MPP（Massively Parallel Processin
 
 ---
 
-> 全7部28章。対象バージョンは Trino 482。
+> 全7部28章。
+> 対象バージョンは Trino 482。
 > 各章のコード引用は `482` タグに固定した GitHub リンクから該当行を直接参照できる。
