@@ -14,7 +14,8 @@
     "iceberg/**/*.md",
     "openssh/**/*.md",
     "prometheus/**/*.md",
-    "spark/**/*.md"
+    "spark/**/*.md",
+    "yunikorn/**/*.md"
   ],
   "config": {
     "default": true,
