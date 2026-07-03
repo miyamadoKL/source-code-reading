@@ -13,7 +13,8 @@
     "starrocks/**/*.md",
     "iceberg/**/*.md",
     "openssh/**/*.md",
-    "prometheus/**/*.md"
+    "prometheus/**/*.md",
+    "spark/**/*.md"
   ],
   "config": {
     "default": true,
