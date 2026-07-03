@@ -21,6 +21,7 @@
 | [nginx](nginx/README.md) | 1.31.2 | イベント駆動の Web サーバーとリバースプロキシ。コア基盤、イベントエンジン、HTTP エンジン、upstream、HTTP/2、HTTP/3 まで全6部18章。 | [目次](nginx/README.md) |
 | [Apache Spark](spark/README.md) | v4.1.2 | 分散データ処理フレームワーク。RDD、スケジューリング、Catalyst/Tungsten、Structured Streaming、PySpark、Kubernetes/YuniKorn 連携まで全10部28章。 | [目次](spark/README.md) |
 | [YuniKorn エコシステム](yunikorn/README.md) | v1.8.0 | Kubernetes 向けユニバーサルリソーススケジューラ。core（キュー階層、プレイスメント、プリエンプション）を分冊で読む。全6部17章。 | [目次](yunikorn/README.md) |
+| [Kubernetes](kubernetes/README.md) | v1.36.2 | コンテナオーケストレーター。apiserver、scheduler、controller-manager、kubelet、kube-proxy、ストレージ、client-go、RBAC まで分冊で読む。全8部23章。 | [目次](kubernetes/README.md) |
 
 今後、他の OSS のソースコード読解ドキュメントを `<oss-name>/` 配下に追加していく。
 
