@@ -13,7 +13,7 @@ SSH トランスポート層は、TCP 上で暗号化・認証されたパケッ
 
 ## 前提
 
-[第1章](part00-overview/01-openssh-overview.md)で説明したように、接続確立後にクライアントとサーバーは
+[第1章](../part00-overview/01-openssh-overview.md)で説明したように、接続確立後にクライアントとサーバーは
 SSH2 バイナリパケットプロトコル（RFC 4253）に従って通信する。
 
 ## 中央接続オブジェクト `struct ssh`
