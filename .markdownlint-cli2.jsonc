@@ -10,7 +10,8 @@
     "tidb/**/*.md",
     "trino/**/*.md",
     "starrocks/**/*.md",
-    "iceberg/**/*.md"
+    "iceberg/**/*.md",
+    "openssh/**/*.md"
   ],
   "config": {
     "default": true,
