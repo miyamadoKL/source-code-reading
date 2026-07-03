@@ -9,6 +9,7 @@
     "mysql/**/*.md",
     "tidb/**/*.md",
     "trino/**/*.md",
+    "nginx/**/*.md",
     "starrocks/**/*.md",
     "iceberg/**/*.md",
     "openssh/**/*.md",
