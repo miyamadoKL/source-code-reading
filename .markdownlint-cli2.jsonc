@@ -10,7 +10,8 @@
     "tidb/**/*.md",
     "trino/**/*.md",
     "starrocks/**/*.md",
-    "iceberg/**/*.md"
+    "iceberg/**/*.md",
+    "prometheus/**/*.md"
   ],
   "config": {
     "default": true,
