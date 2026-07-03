@@ -15,7 +15,8 @@
     "openssh/**/*.md",
     "prometheus/**/*.md",
     "spark/**/*.md",
-    "yunikorn/**/*.md"
+    "yunikorn/**/*.md",
+    "kubernetes/**/*.md"
   ],
   "config": {
     "default": true,
