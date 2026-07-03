@@ -18,6 +18,7 @@
 | [Apache Iceberg](iceberg/README.md) | 1.11.0 | Open Table Format の仕様と参照実装。型、スナップショット、マニフェスト、カタログ、Spark/Flink 連携まで全11部24章。 | [目次](iceberg/README.md) |
 | [OpenSSH](openssh/README.md) | V_10_3_P1 | SSH プロトコルの標準実装。トランスポート層、認証、チャネル、権限分離まで全5部12章。 | [目次](openssh/README.md) |
 | [Prometheus](prometheus/README.md) | v3.12.0 | プル型監視システムと時系列データベース。スクレイプ、TSDB、PromQL、アラート、リモート連携まで全6部16章。 | [目次](prometheus/README.md) |
+| [nginx](nginx/README.md) | 1.31.2 | イベント駆動の Web サーバーとリバースプロキシ。コア基盤、イベントエンジン、HTTP エンジン、upstream、HTTP/2、HTTP/3 まで全6部18章。 | [目次](nginx/README.md) |
 
 今後、他の OSS のソースコード読解ドキュメントを `<oss-name>/` 配下に追加していく。
 
