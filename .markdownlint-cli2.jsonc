@@ -11,6 +11,7 @@
     "trino/**/*.md",
     "starrocks/**/*.md",
     "iceberg/**/*.md",
+    "openssh/**/*.md",
     "prometheus/**/*.md"
   ],
   "config": {
