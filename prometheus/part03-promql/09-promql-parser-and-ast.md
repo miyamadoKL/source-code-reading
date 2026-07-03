@@ -23,7 +23,7 @@ Lexer は入力文字列を一連のトークン（Item）に分割する。
 
 Lexer は状態機械として実装されており、`stateFn` 型の関数が現在の状態を表す。
 
-// https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/lex.go#L284-L284
+[`promql/parser/lex.go` L284](https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/lex.go#L284-L284)
 
 ```go
 type stateFn func(*Lexer) stateFn
@@ -31,7 +31,7 @@ type stateFn func(*Lexer) stateFn
 
 Lexer 構造体は入力バッファと位置情報を保持する。
 
-// https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/lex.go#L296-L318
+[`promql/parser/lex.go` L296](https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/lex.go#L296-L318)
 
 ```go
 type Lexer struct {
@@ -60,7 +60,7 @@ type Lexer struct {
 
 Lexer は `next()` / `peek()` / `backup()` / `emit()` という基本操作で 1 文字ずつ読み進める。
 
-// https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/lex.go#L320-L349
+[`promql/parser/lex.go` L320](https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/lex.go#L320-L349)
 
 ```go
 // next returns the next rune in the input.
@@ -97,7 +97,7 @@ func (l *Lexer) emit(t ItemType) {
 
 キーワードとアグリゲーターの対応は `key` マップに定義されている。
 
-// https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/lex.go#L107-L150
+[`promql/parser/lex.go` L107](https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/lex.go#L107-L150)
 
 ```go
 var key = map[string]ItemType{
@@ -153,7 +153,7 @@ Parser は字句解析済みのトークン列を受け取り、AST を構築す
 PromQL のパーサーは 2 層構造を持つ。
 上位層は手書きの再帰下降パーサー（`parse.go`）、下位層は goyacc 生成の LALR(1) パーサー（`generated_parser.y`）である。
 
-// https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/parse.go#L143-L167
+[`promql/parser/parse.go` L143](https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/parse.go#L143-L167)
 
 ```go
 type parser struct {
@@ -187,7 +187,7 @@ type parser struct {
 
 `ParseExpr()` がエントリポイントである。
 
-// https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/parse.go#L70-L74
+[`promql/parser/parse.go` L70](https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/parse.go#L70-L74)
 
 ```go
 func (pql *promQLParser) ParseExpr(input string) (Expr, error) {
@@ -199,7 +199,7 @@ func (pql *promQLParser) ParseExpr(input string) (Expr, error) {
 
 `parseExpr()` は生成パーサーを起動し、結果に対して型検査 `checkAST()` を実行する。
 
-// https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/parse.go#L196-L215
+[`promql/parser/parse.go` L196](https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/parse.go#L196-L215)
 
 ```go
 func (p *parser) parseExpr() (expr Expr, err error) {
@@ -229,7 +229,7 @@ func (p *parser) parseExpr() (expr Expr, err error) {
 生成パーサーは `yyLexer` インターフェースを通じてパーサー構造体の `Lex()` メソッドを呼び出す。
 `Lex()` は lexer からトークンを取得し、コメントをスキップして生成パーサーに渡す。
 
-// https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/parse.go#L367-L401
+[`promql/parser/parse.go` L367](https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/parse.go#L367-L401)
 
 ```go
 func (p *parser) Lex(lval *yySymType) int {
@@ -280,7 +280,7 @@ func (p *parser) Lex(lval *yySymType) int {
 
 パーサーは `sync.Pool` で管理され、毎回のパースでゼロアロケーションに近い再利用が行われる。
 
-// https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/parse.go#L37-L41
+[`promql/parser/parse.go` L37](https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/parse.go#L37-L41)
 
 ```go
 var parserPool = sync.Pool{
@@ -294,7 +294,7 @@ var parserPool = sync.Pool{
 
 すべての AST ノードは `Node` インターフェースを実装する。
 
-// https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/ast.go#L38-L50
+[`promql/parser/ast.go` L38](https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/ast.go#L38-L50)
 
 ```go
 type Node interface {
@@ -314,7 +314,7 @@ type Node interface {
 
 `Statement` と `Expr` はその下位インターフェースである。
 
-// https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/ast.go#L52-L85
+[`promql/parser/ast.go` L52](https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/ast.go#L52-L85)
 
 ```go
 // Statement is a generic interface for all statements.
@@ -341,7 +341,7 @@ type Expr interface {
 
 **EvalStmt** はクエリ全体の評価文脈（時間範囲、インターバル、lookback delta）を保持する。
 
-// https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/ast.go#L62-L72
+[`promql/parser/ast.go` L62](https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/ast.go#L62-L72)
 
 ```go
 // EvalStmt holds an expression and information on the range it should
@@ -361,7 +361,7 @@ type EvalStmt struct {
 
 **VectorSelector** は instant vector の選択を表す。
 
-// https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/ast.go#L205-L235
+[`promql/parser/ast.go` L205](https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/ast.go#L205-L235)
 
 ```go
 // VectorSelector represents a Vector selection.
@@ -399,7 +399,7 @@ type VectorSelector struct {
 
 **MatrixSelector** は range vector の選択を表す。
 
-// https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/ast.go#L131-L139
+[`promql/parser/ast.go` L131](https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/ast.go#L131-L139)
 
 ```go
 // MatrixSelector represents a Matrix selection.
@@ -415,7 +415,7 @@ type MatrixSelector struct {
 
 **Call** は関数呼び出しを表す。
 
-// https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/ast.go#L123-L129
+[`promql/parser/ast.go` L123](https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/ast.go#L123-L129)
 
 ```go
 // Call represents a function call.
@@ -429,7 +429,7 @@ type Call struct {
 
 **AggregateExpr** は集約操作を表す。
 
-// https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/ast.go#L90-L98
+[`promql/parser/ast.go` L90](https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/ast.go#L90-L98)
 
 ```go
 // AggregateExpr represents an aggregation operation on a Vector.
@@ -445,7 +445,7 @@ type AggregateExpr struct {
 
 **BinaryExpr** は二項演算を表す。
 
-// https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/ast.go#L100-L111
+[`promql/parser/ast.go` L100](https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/ast.go#L100-L111)
 
 ```go
 // BinaryExpr represents a binary expression between two child expressions.
@@ -464,7 +464,7 @@ type BinaryExpr struct {
 
 **VectorMatching** は二項演算におけるラベルマッチングの方式を指定する。
 
-// https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/ast.go#L307-L323
+[`promql/parser/ast.go` L307](https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/ast.go#L307-L323)
 
 ```go
 // VectorMatching describes how elements from two Vectors in a binary
@@ -488,7 +488,7 @@ type VectorMatching struct {
 
 **SubqueryExpr** はサブクエリを表す。
 
-// https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/ast.go#L141-L160
+[`promql/parser/ast.go` L141](https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/ast.go#L141-L160)
 
 ```go
 // SubqueryExpr represents a subquery.
@@ -517,7 +517,7 @@ type SubqueryExpr struct {
 
 AST を巡回するための Visitor パターンが用意されている。
 
-// https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/ast.go#L340-L342
+[`promql/parser/ast.go` L340](https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/ast.go#L340-L342)
 
 ```go
 type Visitor interface {
@@ -532,7 +532,7 @@ type Visitor interface {
 各ノードの子ノードをイテレートする `ChildrenIter()` は型スイッチで実装されている。
 コメントにもある通り、インターフェースの動的ディスパッチより型スイッチの方が有意に速い。
 
-// https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/ast.go#L401-L450
+[`promql/parser/ast.go` L401](https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/ast.go#L401-L450)
 
 ```go
 // ChildrenIter returns an iterator over all child nodes of a syntax tree node.
@@ -580,7 +580,7 @@ func ChildrenIter(node Node) func(func(Node) bool) {
 
 例えば `Call` の `String()` は単純に関数名と引数を連結する。
 
-// https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/printer.go#L249-L251
+[`promql/parser/printer.go` L249](https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/printer.go#L249-L251)
 
 ```go
 func (node *Call) String() string {
@@ -594,7 +594,7 @@ func (node *Call) String() string {
 
 `parser/functions.go` の `Function` 構造体は各関数の名前、引数型、戻り値型を保持する。
 
-// https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/functions.go#L18-L24
+[`promql/parser/functions.go` L18](https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/functions.go#L18-L24)
 
 ```go
 type Function struct {
