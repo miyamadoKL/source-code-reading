@@ -26,15 +26,17 @@
 1. コマンドラインと設定ファイルのパース
 2. ホスト鍵の読み込み（`load_host_key()`）
 3. 設定されたポートで `ssh_listen()` による TCP 待受
-4. `rexec_flag` が有効なら `fork()` → `exec()` で `sshd` を再実行（rexec）
-5. `accept()` ループ（新規接続を受け付けるたびに `fork()` → `exec()` で `sshd-session` を起動）
+4. `rexec_flag` が有効なら `sshd-session` 用の argv を準備
+5. `accept()` ループ（新規接続を受け付けるたびに `fork()` → 子プロセスが `execv()` で `sshd-session` を起動）
 
 [`sshd.c L1287-L1911`](https://github.com/openssh/openssh-portable/blob/V_10_3_P1/sshd.c#L1287-L1911)
 
 ### 最適化：rexec によるケーパビリティ保持
 
-`sshd` は接続を受け付ける前に自身を `fork()` → `exec()` し直す。
-これにより、リストラプロセスが純粋な accept 専用となり、ホスト鍵の秘密情報を子が継承せず、OpenBSD の `pledge()` 制限をより厳しくかけられる。
+`sshd` は接続を受け付ける前に `sshd-session` 用の argv を準備する。
+`accept()` 後に `fork()` した子プロセスが `execv()` で `sshd-session` を実行する。
+これにより、リストラプロセスが純粋な accept 専用となり、OpenBSD の `pledge()` 制限をより厳しくかけられる。
+秘密ホスト鍵は rexec state に直列化され、特権側 `sshd-session` が復元する。
 
 ## sshd-session.c: main()（接続単位の特権プロセス）
 

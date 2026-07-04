@@ -36,12 +36,9 @@ stateDiagram-v2
     Negotiate --> KeyExchange: kex_choose_conf() でアルゴリズム決定
     KeyExchange --> DeriveKeys: kex_derive_keys() で鍵導出
     DeriveKeys --> SendNewKeys: kex_send_newkeys()
-    SendNewKeys --> WaitNewKeys: SSH2_MSG_NEWKEYS 送信
+    SendNewKeys --> WaitNewKeys: SSH2_MSG_NEWKEYS 送信（直後に ssh_set_newkeys(MODE_OUT)、kex_maybe_send_ext_info()）
     WaitNewKeys --> InstallKeys: kex_input_newkeys() 受信
-    InstallKeys --> [*]: ssh_set_newkeys() で鍵インストール
-
-    InstallKeys --> ExtInfo: kex_maybe_send_ext_info()
-    ExtInfo --> [*]
+    InstallKeys --> [*]: ssh_set_newkeys(MODE_IN) で鍵インストール
 ```
 
 以下、各ステップを実装コードとともに見ていく。
@@ -418,11 +415,12 @@ sequenceDiagram
     S-->>C: SSH2_MSG_KEXINIT（cookie + 提案リスト）
     C->>S: SSH2_MSG_KEX_ECDH_INIT（クライアント公開鍵）
     S-->>C: SSH2_MSG_KEX_ECDH_REPLY（サーバー公開鍵 + 署名）
+    S->>S: kex_derive_keys() で鍵導出
+    S->>C: SSH2_MSG_NEWKEYS（送信時に ssh_set_newkeys(MODE_OUT) で送信鍵を有効化）
     C->>C: kex_derive_keys() で鍵導出
-    C->>S: SSH2_MSG_NEWKEYS
-    S-->>C: SSH2_MSG_NEWKEYS
-    S->>S: ssh_set_newkeys(MODE_IN)
-    C->>C: ssh_set_newkeys(MODE_IN)
+    C->>S: SSH2_MSG_NEWKEYS（送信時に ssh_set_newkeys(MODE_OUT) で送信鍵を有効化）
+    C->>C: ssh_set_newkeys(MODE_IN) で受信鍵を有効化
+    S->>S: ssh_set_newkeys(MODE_IN) で受信鍵を有効化
     Note over C,S: これ以降のパケットは新しい鍵で暗号化
 ```
 
