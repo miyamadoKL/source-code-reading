@@ -319,7 +319,9 @@ flowchart LR
     H --> I{見つかった?}
     I -->|yes| G
     I -->|no| J[AuthorizedKeysCommand]
-    J --> G
+    J --> K{見つかった?}
+    K -->|yes| G
+    K -->|no| L[拒否]
 ```
 
 ## authorized_keys のパース

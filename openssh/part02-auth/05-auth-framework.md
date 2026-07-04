@@ -228,8 +228,9 @@ flowchart TD
 
 [`auth2.c L224-L266`](https://github.com/openssh/openssh-portable/blob/V_10_3_P1/auth2.c#L224-L266)
 
-`user_specific_delay()` はユーザー名と secret から SHA512 ハッシュを計算し、5ms から 5秒の範囲でユーザー固有の遅延量を決める。
+`user_specific_delay()` はユーザー名と secret から SHA512 ハッシュを計算し、5ms に 0〜約4.2ms のユーザー固有の遅延を加えた値を目標遅延とする。
 `ensure_minimum_time_since()` は認証処理にかかった実経過時間を計測し、目標遅延に満たなければ `nanosleep` で補う。
+`MAX_FAIL_DELAY_SECONDS`（5秒）は経過時間が長すぎる場合に遅延を省く上限であり、遅延の最大値ではない。
 これによりパスワード試行の総時間がユーザーごとに異なり、辞書攻撃の効率が下がる。
 
 ## メソッドリストと Authmethod 構造体
