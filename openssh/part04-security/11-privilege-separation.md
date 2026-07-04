@@ -45,9 +45,10 @@ graph TB
     end
     N[ネットワーク<br/>クライアント] --> C1
     C1 -- "socketpair<br/>mm_request_send/recv" --> M
-    M -- "認証成功後、鍵状態を送信" --> C1
+    C1 -- "認証成功後、mm_send_keystate() で鍵状態を送信" --> M
+    M -- "mm_get_keystate() で鍵状態を受信" --> C2
     C1 -- "exit" --> M
-    M -- "fork + monitor_apply_keystate" --> C2
+    M -- "fork + 子が monitor_apply_keystate" --> C2
 ```
 
 ## ソケットペア通信
@@ -135,7 +136,6 @@ monitor_child_preauth(struct ssh *ssh, struct monitor *pmonitor)
 | `MONITOR_REQ_AUTHPASSWORD` | MON_AUTH | パスワード検証 |
 | `MONITOR_REQ_KEYALLOWED` | MON_ISAUTH | 公開鍵の許可確認 |
 | `MONITOR_REQ_KEYVERIFY` | MON_AUTH | 署名検証 |
-| `MONITOR_REQ_PTY` | 0 | PTY 割り当て（post-auth のみ） |
 
 フラグ `MON_AUTH` は「認証を決定できる」ことを示し、これが成功した返り値を返すとループが終了する。
 フラグ `MON_ONCE` は一度使うと自動的に禁止されるため、同一リクエストの再送信を防げる。
@@ -217,7 +217,8 @@ mm_get_keystate(struct ssh *ssh, struct monitor *pmonitor)
 }
 ```
 
-その後、モニタは新しい子プロセス（sshd-session.c）を fork し、`monitor_apply_keystate` で鍵状態を適用する（[`monitor.c` L1862-L1901](https://github.com/openssh/openssh-portable/blob/V_10_3_P1/monitor.c#L1862-L1901)）。
+その後、モニタは新しい子プロセス（sshd-session.c）を fork し、子プロセス側が `monitor_apply_keystate` で鍵状態を適用する（[`monitor.c` L1862-L1901](https://github.com/openssh/openssh-portable/blob/V_10_3_P1/monitor.c#L1862-L1901)）。
+親モニタは `monitor_clear_keystate` で鍵状態を消去し、postauth monitor へ移行する。
 
 ```c
 // monitor.c L1862-L1901
