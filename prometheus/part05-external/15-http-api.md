@@ -127,10 +127,10 @@ API v1 のエンドポイントは [`web/api/v1/api.go`](https://github.com/prom
 
 ### リモート書き込みエンドポイント
 
-- `POST /api/v1/write`：リモート書き込みリクエストを受け付ける（`--web.enable-remote-write-receiver` が必要）。
-- `POST /api/v1/otlp/v1/metrics`：OTLP 書き込みリクエストを受け付ける（`--web.enable-otlp-write-receiver` が必要）。
+- `POST /api/v1/write`：リモート書き込みリクエストを受け付ける（`--web.enable-remote-write-receiver` が必要）。専用ハンドラへ委譲され、protobuf 系の `WriteResponse` を扱う。
+- `POST /api/v1/otlp/v1/metrics`：OTLP 書き込みリクエストを受け付ける（`--web.enable-otlp-write-receiver` が必要）。専用ハンドラへ委譲される。
 
-レスポンスはすべて共通の JSON ラッパー形式で返される。
+他の API のレスポンスは共通の JSON ラッパー形式で返される。
 
 ```json
 {
