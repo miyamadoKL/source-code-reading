@@ -59,7 +59,7 @@ abstract class StreamExecution(
 }
 ```
 
-ライフサイクルは `INITIALIZING`、`ACTIVE`、`TERMINATED` の3状態を取る。
+ライフサイクルは `INITIALIZING`、`ACTIVE`、`RECONFIGURING`、`TERMINATED` の4状態を取る。
 `state` は `AtomicReference[State]` で管理され、スレッド間で安全に状態遷移する。
 
 ### 21.1.1 スレッドモデルと起動

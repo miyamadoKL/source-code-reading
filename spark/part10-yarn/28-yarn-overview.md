@@ -17,7 +17,7 @@ YARN は Hadoop エコシステムのリソースマネージャであり、Spar
 ## 前提
 
 Spark のスケジューラバックエンドは `ExternalClusterManager` で切り替わる（第8章）。
-YARN の場合、ドライバは `ApplicationMaster` として YARN コンテナ内で動作し、`YarnAllocator` 経由でエグゼキュータコンテナを要求する。
+YARN の場合、cluster mode では `runDriver()` がドライバを起動し、client mode では `runExecutorLauncher()` がエグゼキュータランチャーとして動作し、既に起動しているドライバに接続する。`YarnAllocator` 経由でエグゼキュータコンテナを要求する。
 
 ## 28.1 コンポーネントの対応関係
 
