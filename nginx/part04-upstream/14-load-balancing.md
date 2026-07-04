@@ -512,7 +512,7 @@ ngx_http_upstream_get_peer(ngx_http_upstream_rr_peer_data_t *rrp,
 
 `effective_weight` の回復機構も見逃せない。
 初期値は `weight` に等しいが、ピアの失敗時に `weight / max_fails` ずつ減る。
-成功時には1ずつ `weight` まで戻る。
+回復はピア選択ループで候補として評価されるたびに行われ、成功時の `free` 側は `fails` のリセットだけを行う。
 
 [`src/http/ngx_http_upstream_round_robin.c` L884-L889](https://github.com/nginx/nginx/blob/release-1.31.2/src/http/ngx_http_upstream_round_robin.c#L884-L889)
 
