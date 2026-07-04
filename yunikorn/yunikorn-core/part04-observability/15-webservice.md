@@ -403,7 +403,7 @@ func getEvents(w http.ResponseWriter, r *http.Request) {
 
 ## ストリーミング API
 
-`getStream` は Server-Sent Events 形式でイベントをリアルタイム配信する。
+`getStream` は `application/json` で JSON を逐次エンコードして flush し、イベントをリアルタイム配信する。
 
 [pkg/webservice/handlers.go L1325-L1414](https://github.com/apache/yunikorn-core/blob/v1.8.0/pkg/webservice/handlers.go#L1325-L1414)
 
