@@ -473,7 +473,8 @@ graph LR
 iptables モードはチェーンの階層構造でトラフィックを転送し、`largeClusterMode` で大規模クラスタの性能を最適化する。
 IPVS モードはカーネルの L4 ロードバランサを使用し、VirtualServer/RealServer のモデルで O(1) のパケット転送を実現する。
 nftables モードはトランザクションによるアトミックなルール適用と、set/map を使った効率的なマッチングを提供する。
-3モードすべてが `BoundedFrequencyRunner` による同期頻度制御と、バッファ再利用によるメモリアロケーションの削減を実装している。
+3モードすべてが `BoundedFrequencyRunner` による同期頻度制御を実装している。
+バッファ再利用は iptables と IPVS で `bytes.Buffer` を `Reset` して再利用し、nftables は `knftables.Transaction` と `nftElementStorage` を使う。
 
 ## 関連する章
 
