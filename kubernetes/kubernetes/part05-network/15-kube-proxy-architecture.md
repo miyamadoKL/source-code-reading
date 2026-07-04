@@ -202,8 +202,9 @@ func (s *ProxyServer) Run(ctx context.Context) error {
 4. `birthCry()` による Starting イベントの発行
 5. `Proxier.SyncLoop()` のゴルーチン起動
 
-Informers はヘッドレスサービス（`clusterIP: None`）や `service.kubernetes.io/headless` ラベル付きのサービスを除外する。
-これらのサービスは DNS で直接解決されるため、kube-proxy の転送ルールを必要としない。
+EndpointSlice informer は `service.kubernetes.io/headless` ラベルセレクタでヘッドレスサービスを除外する。
+Service informer は `spec.clusterIP != None` のフィールドセレクタと `service.kubernetes.io/service-proxy-name` ラベルセレクタで除外する。
+これらのサービスは kube-proxy の転送ルールを必要としない。
 
 ## EndpointSliceCache
 
