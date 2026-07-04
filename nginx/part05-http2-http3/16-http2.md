@@ -200,11 +200,12 @@ static ngx_http_v2_handler_pt ngx_http_v2_frame_states[] = {
 ## HPACK：ヘッダーの圧縮と展開
 
 HTTP/2 のヘッダーブロックは HPACK で符号化される。
-nginx の HPACK 実装は、62エントリの**静的表**と、実行時に構築する**動的表**の2つで構成される。
+nginx の HPACK 実装は、61エントリの**静的表**と、実行時に構築する**動的表**の2つで構成される。
 
 ### 静的表
 
-静的表は RFC 7541 の付録に定義された62個のヘッダーフィールドの組であり、起動時に読み取り専用の配列として配置される。
+静的表は RFC 7541 の付録に定義された61個のヘッダーフィールドの組であり、起動時に読み取り専用の配列として配置される。
+インデックスは `index - 1` で配列参照される。
 
 [`src/http/v2/ngx_http_v2_table.c` L20-L82](https://github.com/nginx/nginx/blob/release-1.31.2/src/http/v2/ngx_http_v2_table.c#L20-L82)
 
