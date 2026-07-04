@@ -16,7 +16,7 @@
 ## この章の狙い
 
 `UnifiedMemoryManager` は実行メモリとストレージメモリの間にソフト境界を設け、互いに借用を可能にする。
-本章では `MemoryManager` の抽象クラス、`UnifiedMemoryManager` のの借用・エビクション機構、`TaskMemoryManager` と `MemoryConsumer` の関係を追う。
+本章では `MemoryManager` の抽象クラス、`UnifiedMemoryManager` の借用・エビクション機構、`TaskMemoryManager` と `MemoryConsumer` の関係を追う。
 
 ## 前提
 
@@ -203,8 +203,8 @@ flowchart LR
     end
     R --- S
     S --- E
-    S -.->|借用| E
-    E -.->|エビクション| S
+    S -.->|storage が free execution memory を借用| E
+    E -.->|execution が reclaim し cached block を evict| S
 ```
 
 `maxHeapMemory` は `(systemMemory - reservedMemory) × memoryFraction` で計算される。

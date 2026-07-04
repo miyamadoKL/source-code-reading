@@ -262,7 +262,7 @@ def collectAndServe[T](rdd: RDD[T]): Array[Any] = {
 
 `serveIterator` はローカルソケットサーバーを起動し、イテレータの要素を順次送信する。
 Python 側はソケットに接続してデータを受信し、デシリアライズして返す。
-これにより、全データを一度にメモリに確保せずにストリーミングで転送できる。
+ただし `collectAndServe` は `rdd.collect()` で先に結果をドライバ側へ materialize するため、全データを一度にメモリに確保する。
 
 ## 23.3 Serializer 階層
 

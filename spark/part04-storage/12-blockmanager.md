@@ -748,7 +748,7 @@ override def fetchBlocks(
 `maxRetries > 0` なら `RetryingBlockTransferor` がリトライを制御する。
 
 なぜ速いのか: Netty の非同期I/Oにより、複数ブロックのフェッチをパイプライン処理できる。
-`RetryingBlockTransferor` は指数バックオフではなく即座に別ロケーションへフォールバックするため、レイテンシを最小化できる。
+`RetryingBlockTransferor` は設定された待機時間後に outstanding block を再転送するため、リトライ間の負荷を調整できる。
 
 ## 12.8 BlockManagerDecommissioner: ブロックのマイグレーション
 

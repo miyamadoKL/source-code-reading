@@ -237,6 +237,7 @@ private[spark] object VolcanoFeatureStep {
 Volcano を使うには以下の設定が必要である。
 
 ```properties
+spark.kubernetes.scheduler.name=volcano
 spark.kubernetes.driver.pod.featureSteps=org.apache.spark.deploy.k8s.features.VolcanoFeatureStep
 spark.kubernetes.executor.pod.featureSteps=org.apache.spark.deploy.k8s.features.VolcanoFeatureStep
 ```
