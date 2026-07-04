@@ -120,7 +120,7 @@ sshkey_generate(int type, u_int bits, struct sshkey **keyp)
 }
 ```
 
-RSA の場合は OpenSSL の `RSA_generate_key_ex`、Ed25519 の場合は libsodium の `crypto_sign_ed25519_keypair` が実際の生成処理を担う。
+RSA の場合は OpenSSL の `EVP_PKEY_keygen`、Ed25519 の場合は OpenSSH 組み込みの `crypto_sign_ed25519_keypair`（`ed25519.o` 実装）が実際の生成処理を担う。
 ECDSA は NIST P-256/P-384/P-521 の3種類の曲線をサポートし、`ecdsa_nid` で判別する。
 
 ## 署名と検証
