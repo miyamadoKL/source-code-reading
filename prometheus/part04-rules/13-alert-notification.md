@@ -38,11 +38,14 @@ flowchart LR
     Manager --> relabel
     relabel --> alertmanagerSet
     alertmanagerSet --> sendLoop
-    sendLoop --> queue
-    queue --> httpPost
+    sendLoop --> add["sendLoop.add()"]
+    add --> queue
+    queue --> loop["sendLoop.loop()"]
+    loop --> httpPost
 ```
 
-AlertingRule の評価サイクルごとに `sendAlerts()`（`alerting.go` L618-L633）が呼ばれ、Firing および Resolved 状態のアラートが `NotifyFunc` を通じて notifier に送られる。
+AlertingRule の評価サイクルごとに `sendAlerts()`（`alerting.go` L618-L633）が呼ばれる。
+実装は `needsSending()` で再送間隔や解決時刻を見て送信対象を絞り、Firing および Resolved 状態のアラートを `NotifyFunc` を通じて notifier に送る。
 
 ## Manager：アラートの受付と振り分け
 

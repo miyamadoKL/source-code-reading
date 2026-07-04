@@ -593,7 +593,7 @@ func New(b []byte, contentType string, st *labels.SymbolTable, opts ParserOption
 Prometheus は3種類のパース書式をサポートする。
 
 1. **OpenMetrics 形式**（`application/openmetrics-text`）：最新の仕様で `_created` タイムスタンプやネイティブヒストグラムに対応する
-2. **Protobuf 形式**（`application/vnd.google.protobuf`）：gRPC の Write-Request と同じ protobuf スキーマを使い、効率的なパースが可能
+2. **Protobuf 形式**（`application/vnd.google.protobuf`）：`io.prometheus.client.MetricFamily` の exposition protobuf を使い、効率的なパースが可能
 3. **Prometheus 形式**（`text/plain`）：従来の Exposition 形式
 
 `NewNHCBParser` でラップすると、クラシックヒストグラムを NHCB（Native Histogram Custom Buckets）に変換できる。
