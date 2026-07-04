@@ -555,7 +555,7 @@ def revertPartialWritesAndClose(): File = {
 メトリクスからも未コミットのバイト数とレコード数が差し引かれる。
 
 なぜ速いのか: ファイルチャネルを再利用し、コミットごとにファイルを閉じ開きしない。
-`revertPartialWritesAndClose` は `truncate` で部分的な書き込みだけを原子적으로取り消すため、ファイル全体を書き直す必要がない。
+`revertPartialWritesAndClose` は `truncate` で部分的な書き込みだけを原子的に取り消すため、ファイル全体を書き直す必要がない。
 
 ## まとめ
 

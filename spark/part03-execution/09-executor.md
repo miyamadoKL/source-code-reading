@@ -301,7 +301,7 @@ class TaskRunner(
 
 ## 9.4 タスク実行の詳細
 
-`TaskRunner.run` はタスクの実際の执行処理を行う。
+`TaskRunner.run` はタスクの実際の実行処理を行う。
 以下に処理の流れを示す。
 
 ```mermaid
