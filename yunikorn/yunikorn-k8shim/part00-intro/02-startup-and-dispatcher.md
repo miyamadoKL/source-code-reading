@@ -258,7 +258,7 @@ func (p *Dispatcher) dispatch(event events.SchedulingEvent) error {
 ```
 
 `asyncDispatch` はキューが満杯のときに個別の goroutine を起動し、3秒ごとにキューへの投入を試みる。
-タイムアウト（デフォルト300秒）に達するか、`AsyncDispatchLimit`（デフォルト10,000）を超えるとパニックで停止する。
+タイムアウト（デフォルト300秒）に達するか、`AsyncDispatchLimit`（デフォルト104,857 = max(10000, EventChannelCapacity/10)）を超えるとパニックで停止する。
 
 ```go
 // pkg/dispatcher/dispatcher.go L170-L197

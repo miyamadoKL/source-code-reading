@@ -429,6 +429,7 @@ func fromCronJob(req *admissionv1.AdmissionRequest) (*extractResult, error) {
 
 この抽出結果は JSON Patch のパスとして使われる。
 Pod の場合は `/metadata/annotations`、ワークロードの場合は `/spec/template/metadata/annotations` になる。
+CronJob の場合は `/spec/jobTemplate/spec/template/metadata/annotations` になる。
 
 ## ユーザー情報の注入
 
