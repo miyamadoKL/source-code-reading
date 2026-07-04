@@ -114,7 +114,7 @@ sdJobName := sdCheckCmd.Arg("job", "The job to run service discovery for.").Requ
 出力形式は `-o` フラグで `promql`（デフォルト）または `json` を選べる（L178）。
 
 `query analyze`（L217-L222）はヒストグラムの使用パターンを分析する。
-指定された時間範囲内のヒストグラムメトリクスのバケット分布を集計し、推奨設定値を提案する。
+指定された時間範囲内のヒストグラムメトリクスのバケット分布を集計して出力する。
 
 ## test 系：ルールのユニットテスト
 

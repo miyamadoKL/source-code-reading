@@ -43,7 +43,7 @@ flowchart LR
 ```
 
 WAL Watcher が WAL を監視し、新しいサンプルを QueueManager に渡す。
-QueueManager はシャード化されたキューでバッファリングし、リモートエンドポイントへ HTTP/gRPC で送信する。
+QueueManager はシャード化されたキューでバッファリングし、リモートエンドポイントへ HTTP POST で送信する。
 受信側では WriteHandler がリクエストを受け取り、自身の TSDB に書き込む。
 
 ## Storage：リモートストレージのトップレベル管理
@@ -128,7 +128,7 @@ type QueueManager struct {
 ```
 
 `Append()`（L727）は WAL Watcher から呼ばれ、サンプルをキューに追加する。
-追加されたサンプルはシャードに対してラウンドロビンで振り分けられる。
+追加されたサンプルは系列参照 `ref` の剰余でシャードを決めるため、同じ系列は同じシャードに入る。
 
 ### シャードの動的調整
 

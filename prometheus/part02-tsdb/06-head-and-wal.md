@@ -113,7 +113,8 @@ type ChunkDiskMapper struct {
 ## WAL（Write Ahead Log）
 
 WAL（`tsdb/wlog/wlog.go`）は永続化の要である。
-すべてのサンプルはメモリー上の Head に追加される前に、WAL に書き込まれる。
+`Append()` は系列取得または作成、`pendingCommit = true` 設定、バッチへのサンプル追加までを行う。
+WAL 書き込みは `Commit()` の先頭で `a.log()` を呼ぶ箇所で実行され、その後 Head への反映処理に進む。
 
 WL 構造体（`tsdb/wlog/wlog.go` 内）は以下の特徴を持つ。
 
