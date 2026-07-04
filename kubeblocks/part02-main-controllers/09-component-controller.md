@@ -15,7 +15,7 @@
 ## この章の狙い
 
 `Component` コントローラは、KubeBlocks がデータベースクラスタを構成する各コンポーネントの実体リソースを生成する中核である。
-`Cluster` コントローラが `Component` オブジェクトを作成するところから始まり、Component コントローラはその `Component` を入力として `InstanceSet`、`Service`、`ConfigMap`、`Secret` といった Kubernetes リソースを实际に構築する。
+`Cluster` コントローラが `Component` オブジェクトを作成するところから始まり、Component コントローラはその `Component` を入力として `InstanceSet`、`Service`、`ConfigMap`、`Secret` といった Kubernetes リソースを実際に構築する。
 本章では 18種のトランスフォーマーが直列に並ぶ変換パイプラインを読み、`Component` の仕様から実行時ワークロードがどのように合成されるかを明らかにする。
 
 ## 前提
@@ -102,7 +102,7 @@ func (r *ComponentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 注目すべきは、`errBuild` と `errExec` を分けて処理している点である。
 Build 段階でエラーがあっても Execute を先に実行し、部分成功した DAG の操作を確定させてからエラーを返す。
-これにより、トランスフォーマーチェーンの途中で失敗しても、それ之前に変換されたリソース操作は確実に適用される。
+これにより、トランスフォーマーチェーンの途中で失敗しても、それ以前に変換されたリソース操作は確実に適用される。
 
 ## 2. トランスフォーマーチェーンの全体像
 

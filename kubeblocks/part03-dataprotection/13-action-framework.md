@@ -633,7 +633,7 @@ if backupFilePath == "" || (!strings.Contains(backupFilePath, backup.Name)) {
 ```
 
 過去バージョンで `FilePath` フィールドの形式が変更されていた際に、誤って他のバックアップのファイルを削除する事故を防ぐための安全装置である。
-パスが空이거나バックアップ名を含まない場合は、削除を実行せずに `Succeeded` を返す。
+パスが空であるか、またはバックアップ名を含まない場合は、削除を実行せずに `Succeeded` を返す。
 
 ## Action の実行フロー
 

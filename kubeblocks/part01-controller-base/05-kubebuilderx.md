@@ -34,7 +34,7 @@ Kubernetes のコントローラパターン、Informer、WorkQueue の基礎を
 ## controller-runtime との関係
 
 controller-runtime は Kubernetes コントローラを構築するための標準的な Go フレームワークである。
-コントローラは `Reconciler` インタフェースの `Reconcile` メソッドを実装し、オブジェクトの現在状態と期望状態の差分を調整する。
+コントローラは `Reconciler` インタフェースの `Reconcile` メソッドを実装し、オブジェクトの現在状態と期待状態の差分を調整する。
 `kubebuilderx` はこの `Reconcile` メソッドの**内側**を構造化するレイヤーとして機能する。
 
 ```mermaid
@@ -249,7 +249,7 @@ func (t *ObjectTree) Delete(objects ...client.Object) error {
 
 `Add` と `Update` は内部で `replace` を呼び、`children` マップにオブジェクトを追加または上書きする。
 `Delete` はマップからエントリを削除する。
-これらの操作は `Reconciler` 内で使用され、期望状態の `tree` を構築していく。
+これらの操作は `Reconciler` 内で使用され、期待状態の `tree` を構築していく。
 
 ### DeepCopy による状態隔離
 
@@ -372,7 +372,7 @@ var Commit = Result{Next: cmmt}
 
 ## Commit: 差分の計算と実行
 
-`Commit` は `oldTree`（現在状態）と `tree`（期望状態）の差分を計算し、API サーバへ適用する。
+`Commit` は `oldTree`（現在状態）と `tree`（期待状態）の差分を計算し、API サーバへ適用する。
 
 [pkg/controller/kubebuilderx/controller.go L105-L133](https://github.com/apecloud/kubeblocks/blob/v1.0.2/pkg/controller/kubebuilderx/controller.go#L105-L133)
 
