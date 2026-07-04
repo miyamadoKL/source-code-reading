@@ -418,8 +418,9 @@ func SetSchedulerConf(conf *SchedulerConf) {
 }
 ```
 
-`atomic.Value` への読み書きはアトミックであるため、設定の更新中に他のゴルーチンが古い設定を参照することはない。
-ただし、`SchedulerConf` の個々のフィールドへのアクセスは、構造体に埋め込まれた `RWMutex` で保護される。
+`atomic.Value` への読み書きはアトミックである。
+ただし、`Store` 前に `Load` した goroutine や既に取得済みのポインタは旧設定を参照し得る。
+`SchedulerConf` の個々のフィールドへのアクセスは、構造体に埋め込まれた `RWMutex` で保護される。
 
 ## Clone による安全な更新
 
@@ -492,9 +493,9 @@ plugin モードで kube-scheduler を起動する際に使用され、`YuniKorn
 ```mermaid
 flowchart TD
     Start[起動] --> LoadCM[LoadConfigMaps: API Server から<br>yunikorn-defaults と yunikorn-configs を取得]
-    LoadCM --> Flatten[FlattenConfigMaps:<br>Data をマージ、BinaryData を gzip 解凍]
-    Flatten --> Defaults[CreateDefaultConfig:<br>デフォルト値で SchedulerConf を生成]
-    Defaults --> Parse[parseConfig:<br>ConfigMap の値を型変換してフィールドに設定]
+    LoadCM --> Defaults[CreateDefaultConfig:<br>デフォルト値で SchedulerConf を生成]
+    Defaults --> Flatten[FlattenConfigMaps:<br>Data をマージ、BinaryData を gzip 解凍]
+    Flatten --> Parse[parseConfig:<br>ConfigMap の値を型変換してフィールドに設定]
     Parse --> ParseErr{パースエラー?}
     ParseErr -->|あり| Error[エラーを返して起動失敗]
     ParseErr -->|なし| SetConf[SetSchedulerConf:<br>atomic.Value に格納]

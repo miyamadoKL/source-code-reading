@@ -60,7 +60,8 @@ type Clients struct {
 
 `Clients` 構造体の `SchedulerAPI` フィールドが core との通信窓口である。
 `APIFactory` はこの `Clients` を生成し、`SchedulerAPI` の実装を外部から注入される。
-shim モードでは gRPC 経由で core と通信する実装が、plugin モードでは in-process の直接呼び出し実装が使われる。
+standalone shim は core を同一プロセスで起動し、`RMProxy` を `SchedulerAPI` として直接渡している。
+plugin モードでは in-process の直接呼び出し実装が使われる。
 
 ## RM の登録
 
@@ -241,7 +242,7 @@ func (callback *AsyncRMCallback) UpdateAllocation(response *si.AllocationRespons
 
 `AssumePod` が成功した後、Pod がすでに Node にバインド済みかどうかで分岐する。
 すでにバインド済みの場合は `MarkPreviouslyAllocated` で状態を整合させる。
-未バインドの場合は `AllocateTaskEvent` を `Dispatcher` に投入し、タスクの状態機械を `Scheduling` から `Bound` へ遷移させる。
+未バインドの場合は `AllocateTaskEvent` を `Dispatcher` に投入し、タスクの状態機械を `Scheduling` から `Allocated` へ遷移させる。Pod バインド後の `TaskBound` で `Bound` になる。
 
 ### 拒否された割り当ての処理
 
@@ -641,8 +642,11 @@ sequenceDiagram
     SI-->>Shim: UpdateAllocation（New allocation）
     Shim->>Shim: AssumePod（キャッシュに假定配置）
     Shim->>Disp: AllocateTaskEvent
-    Disp->>Shim: TaskEventHandler → Bound
+    Disp->>Shim: TaskEventHandler → Allocated
     Shim->>K8s: Pod バインド要求
+    K8s-->>Shim: Pod バインド完了
+    Shim->>Disp: TaskBoundEvent
+    Disp->>Shim: TaskEventHandler → Bound
 
     Core->>SI: アプリケーション状態変化
     SI-->>Shim: UpdateApplication（Accepted/Completed）
@@ -661,7 +665,8 @@ sequenceDiagram
 
 `AsyncRMCallback` の設計は、core のスケジューリングループをブロックしないことを目的としている。
 core は `ResourceManagerCallback` のメソッドを呼び出す際、その戻り値を待つ。
-`AsyncRMCallback` は各コールバックメソッド内で重い処理（Pod のバインド、状態機械の遷移）を直接行わず、`Dispatcher` のイベントチャネルに投入するだけで戻る。
+`UpdateAllocation` は同期的に `setAllocationKey` と `AssumePod` のリトライを実行し、失敗時はその場で `FailWithEvent` する。
+その後、`Dispatcher` のイベントチャネルに状態遷移イベントを投入する。
 イベントの実際の処理は `Dispatcher` の専用ゴルーチンが行うため、core は次のスケジューリング判断に進める。
 
 もう一つの最適化は `AssumePod` のリトライ機構である。
