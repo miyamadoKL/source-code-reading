@@ -57,9 +57,9 @@ func (r *InstanceSetReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 | 2 | `fixMetaReconciler` | Finalizer が未付与であれば追加する |
 | 3 | `deletionReconciler` | 削除要求を受けた二次リソースの先行削除を行う |
 | 4 | `statusReconciler` | 現存するポッドからステータスを再計算する |
-| 5 | `revisionUpdateReconciler` | spec 変更時に期望リビジョンを status に書き込む |
+| 5 | `revisionUpdateReconciler` | spec 変更時に期待リビジョンを status に書き込む |
 | 6 | `assistantObjectReconciler` | Headless Service 等の付随オブジェクトを同期する |
-| 7 | `replicasAlignmentReconciler` | 期望レプリカ数に合わせてポッドを作成・削除する |
+| 7 | `replicasAlignmentReconciler` | 期待されるレプリカ数に合わせてポッドを作成・削除する |
 | 8 | `updateReconciler` | ローリングアップデートまたは In-Place Update を実行する |
 
 各 Reconciler は `PreCondition` で実行条件を判定し、`ConditionUnsatisfied` を返すとスキップされる。
@@ -260,7 +260,7 @@ func buildReadyCondition(its *workloads.InstanceSet, ready bool,
 
 ## リビジョンの更新
 
-`revisionUpdateReconciler` は spec の変更を検出すると、各ポッド名に対応する期望リビジョンを計算して `status.updateRevisions` に書き込む。
+`revisionUpdateReconciler` は spec の変更を検出すると、各ポッド名に対応する期待リビジョンを計算して `status.updateRevisions` に書き込む。
 
 [pkg/controller/instanceset/reconciler_revision_update.go L54-L118](https://github.com/apecloud/kubeblocks/blob/v1.0.2/pkg/controller/instanceset/reconciler_revision_update.go#L54-L118)
 
@@ -330,11 +330,11 @@ func filterInPlaceFields(src *corev1.PodTemplateSpec) *corev1.PodTemplateSpec {
 
 ## インスタンスアライメント
 
-`instanceAlignmentReconciler` は期望のポッド集合と既存のポッド集合の差分を求め、作成と削除を実行する。
+`instanceAlignmentReconciler` は期待されるポッド集合と既存のポッド集合の差分を求め、作成と削除を実行する。
 
-### 期望名の生成と差分計算
+### 期待される名前の生成と差分計算
 
-まず `buildInstanceName2TemplateMap` で期望のポッド名からテンプレートへの写像を構築する。
+まず `buildInstanceName2TemplateMap` で期待されるポッド名からテンプレートへの写像を構築する。
 
 [pkg/controller/instanceset/reconciler_instance_alignment.go L60-L88](https://github.com/apecloud/kubeblocks/blob/v1.0.2/pkg/controller/instanceset/reconciler_instance_alignment.go#L60-L88)
 
@@ -541,7 +541,7 @@ func (a *assistantObjectReconciler) Reconcile(tree *kubebuilderx.ObjectTree) (ku
 }
 ```
 
-期望スナップショットと現存スナップショットの差分を集合演算で求め、作成・更新・削除の3操作に分類する。
+期待状態スナップショットと現存スナップショットの差分を集合演算で求め、作成・更新・削除の3操作に分類する。
 `copyAndMerge` は既存オブジェクトの更新可能フィールドのみをマージし、不変フィールドの変更によるエラーを防ぐ。
 
 ## 更新処理
@@ -674,7 +674,7 @@ func getPodUpdatePolicy(its *workloads.InstanceSet, pod *corev1.Pod) (podUpdateP
 
 判定ロジックは以下の通りである。
 
-1. ポッドのリビジョンが期望リビジョンと異なる場合は `recreatePolicy`（テンプレート自体が変更された）。
+1. ポッドのリビジョンが期待リビジョンと異なる場合は `recreatePolicy`（テンプレート自体が変更された）。
 2. リビジョンが一致していてもイメージやリソースが異なる場合は `inPlaceUpdatePolicy`。
 3. いずれにも該当しない場合は `noOpsPolicy`（更新不要）。
 
@@ -960,7 +960,7 @@ func (r *InstanceSetReconciler) setupWithManager(mgr ctrl.Manager, ctx *handler.
 ## まとめ
 
 `InstanceSet` コントローラは9段の Reconciler チェインにより、ポッドのライフサイクルを段階的に管理する。
-`treeLoader` が `ObjectTree` を読み込み、`instanceAlignmentReconciler` が期望レプリカ数との差分を集合演算で求めて作成・削除を実行する。
+`treeLoader` が `ObjectTree` を読み込み、`instanceAlignmentReconciler` が期待されるレプリカ数との差分を集合演算で求めて作成・削除を実行する。
 `updateReconciler` は `updatePlan` が構築する DAG に基づき、ロール優先度を考慮した順序で更新を行う。
 In-Place Update の判定は `filterInPlaceFields` でリビジョンハッシュから除外されたフィールド群（イメージ、CPU、メモリ、Toleration）に対して機能し、ポッドの再作成なしに変更を適用する。
 `zstd` 圧縮によるテンプレート保存と、`MaxConcurrentReconciles` による並列処理が、大規模なレプリカ集合での性能を支えている。

@@ -24,7 +24,7 @@
 
 ## 1. SynthesizedComponent 型
 
-`SynthesizedComponent` は `ComponentDefinition` と `Component` の双方から字段を取り出し、1つの構造体にまとめたものである。
+`SynthesizedComponent` は `ComponentDefinition` と `Component` の双方からフィールドを取り出し、1つの構造体にまとめたものである。
 この型が存在する理由を、まずは型定義から確認する。
 
 pkg/controller/component/type.go L31-L80
@@ -56,7 +56,7 @@ type SynthesizedComponent struct {
 ```
 
 `PodSpec` は `ComponentDefinition` のランタイム定義をそのまま保持し、`Replicas` や `Resources` は `Component` のユーザー指定値を保持する。
-このように「定義由来の字段」と「実行時指定の字段」が 1つの構造体に同居するのが `SynthesizedComponent` の特徴である。
+このように「定義由来のフィールド」と「実行時指定のフィールド」が 1つの構造体に同居するのが `SynthesizedComponent` の特徴である。
 
 ファイルテンプレートを表す `SynthesizedFileTemplate` も定義されている。
 
@@ -115,7 +115,7 @@ func BuildSynthesizedComponent(ctx context.Context, cli client.Reader,
 処理は大きく 3つの段階に分かれる。
 
 1. メタ情報の抽出（クラスタ名、UID、コンポーネント短縮名、コンポーネント間マッピング）。
-2. `SynthesizedComponent` の初期化（`ComponentDefinition` と `Component` の字段をマージ）。
+2. `SynthesizedComponent` の初期化（`ComponentDefinition` と `Component` のフィールドをマージ）。
 3. 追加ビルドステップ（ボリューム、サイドカー、kbagent、サービス参照など）。
 
 各段階を順に読む。
@@ -184,7 +184,7 @@ func BuildComp2CompDefs(ctx context.Context, cli client.Reader, namespace, clust
 ## 4. 初期フィールドのマージ
 
 メタ情報を得た後、関数は `SynthesizedComponent` のリテラルを構築する。
-ここでの核心は、どの字段が `ComponentDefinition` 由来で、どの字段が `Component` 由来かを明確に分離している点にある。
+ここでの核心は、どのフィールドが `ComponentDefinition` 由来で、どのフィールドが `Component` 由来かを明確に分離している点にある。
 
 pkg/controller/component/synthesize_component.go L78-L119
 
