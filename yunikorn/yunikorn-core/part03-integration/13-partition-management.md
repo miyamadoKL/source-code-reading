@@ -283,7 +283,7 @@ func (manager *partitionManager) cleanQueues(queue *objects.Queue) {
 ```
 
 子キューを先に処理してから親キューを削除することで、葉から順に空のキューを取り除く。
-`IsDraining()`（設定から削除された）または `!IsManaged()`（動的に作成された）キューが対象で、かつ `IsEmpty()`（割り当てがない）の場合에만削除される。
+`IsDraining()`（設定から削除された）または `!IsManaged()`（動的に作成された）キューが対象で、かつ `IsEmpty()`（割り当てがない）の場合にのみ削除される。
 
 ## パーティションの削除処理
 
