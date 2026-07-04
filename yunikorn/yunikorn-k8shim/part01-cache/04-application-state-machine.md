@@ -306,16 +306,20 @@ stateDiagram-v2
     Accepted --> Running : RunApplication
     Reserving --> Reserving : UpdateReservation
     Reserving --> Resuming : ResumingApplication
-    Resuming --> Resuming : AppTaskCompleted
     Reserving --> Running : RunApplication
+    Reserving --> Failing : FailApplication
+    Resuming --> Resuming : AppTaskCompleted
     Resuming --> Running : RunApplication
+    Accepted --> Running : ReleaseAppAllocation
+    Reserving --> Running : ReleaseAppAllocation
     Running --> Running : ReleaseAppAllocation
+    Failing --> Failing : ReleaseAppAllocation
+    Resuming --> Resuming : ReleaseAppAllocation
     Running --> Completed : CompleteApplication
     Rejected --> Failed : FailApplication
     Submitted --> Failing : FailApplication
     Accepted --> Failing : FailApplication
     Running --> Failing : FailApplication
-    Reserving --> Failing : FailApplication
     Failing --> Failed : FailApplication
     Accepted --> Killing : KillApplication
     Running --> Killing : KillApplication
@@ -453,7 +457,7 @@ func (app *Application) onReserving() {
 ```
 
 リカバリ時にすでにプレースホルダーが存在すれば、`UpdateReservation` イベントを送ってコアの状態を更新する。
-それ以外の場合は非ゴルーチンで `createAppPlaceholders` を呼び、プレースホルダー Pod を Kubernetes に作成する。
+それ以外の場合は `go func()` 内で非同期に `createAppPlaceholders` を呼び、プレースホルダー Pod を Kubernetes に作成する。
 作成に失敗すればプレースホルダーを片付けて `Running` に遷移し、通常のスケジューリングにフォールバックする。
 
 ## onReservationStateChange: 予約完了の判定
@@ -616,10 +620,9 @@ func (app *Application) handleFailApplicationEvent(errMsg string) {
 }
 ```
 
-プレースホルダーのクリーンアップは非ゴルーチンで実行する。
+プレースホルダーのクリーンアップは `handleFailApplicationEvent` で goroutine を起動して実行する。
 未割り当てのタスク（`New`、`Pending`、`Scheduling` 状態）について、タイムアウトか拒否かに応じて Pod を失敗状態にする。
-プレースホルダー Pod は失敗状態にしない。
-これはプレースホルダーがダミーの Pod であり、実際のワークロードではないためである。
+プレースホルダー Pod も `getTasks` で除外されず、`failTaskPodWithReasonAndMsg` で状態を `Failed` に更新する。
 
 ## 状態遷移の最適化: スケジュール対象のフィルタリング
 

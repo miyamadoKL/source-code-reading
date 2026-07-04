@@ -229,7 +229,8 @@ type Clients struct {
 ```
 
 `KubeClient` と `SchedulerAPI` は API 操作の入口である。
-`InformerFactory` は client-go の `SharedInformerFactory` であり、すべての Informer はこのファクトリから生成される。
+`InformerFactory` は client-go の `SharedInformerFactory` であり、ほとんどの Informer はこのファクトリから生成される。
+ただし `ConfigMapInformer` は名前空間付きの別 `namespaceInformerFactory` から生成される。
 16種類の Informer がフィールドとして並んでいる。
 Pod、Node、ConfigMap といった基本リソースに加え、PV、PVC、StorageClass、CSI 関連、ReplicaSet、StatefulSet、PriorityClass まで含む。
 これらはスケジューリングの判断材料としてクラスタの状態を監視する。

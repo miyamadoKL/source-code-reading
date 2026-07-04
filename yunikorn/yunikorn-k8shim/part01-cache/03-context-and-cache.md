@@ -518,7 +518,7 @@ func (ctx *Context) RemoveTask(appID, taskID string) {
 ## ロック戦略と直列化
 
 `Context` のロックは `locking.RWMutex` 型で、読み取りに `RLock`、書き込みに `Lock` を使う。
-すべての公開メソッドはロックを取得してから内部処理を行う。
+`AddSchedulingEventHandlers`、`IsPluginMode`、`EventsToRegister` を除く公開メソッドはロックを取得してから内部処理を行う。
 `Context` のロックはアプリケーションやタスクの追加と削除だけでなく、イベントハンドラ全体の直列化にも使われる。
 コメントの「used not only for context data but also to ensure that multiple event types are not executed concurrently」という記述がこれを示している。
 
