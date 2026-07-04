@@ -272,7 +272,7 @@ type kubeGenericRuntimeManager struct {
 }
 ```
 
-この構造体が `runtimeService` と `imageService` を通じて CRI を呼び出す。kubelet の `Kubelet` 構造体は直接 CRI を呼ばず、必ずこのマネージャを経由する。
+この構造体が `runtimeService` と `imageService` を通じて CRI を呼び出す。kubelet の `Kubelet` 構造体も `runtimeService` を保持し、ログ管理、EventedPLEG、ContainerManager、CRI stats など複数の構成要素に直接渡している。
 
 ## computePodActions による差分計算
 
@@ -421,7 +421,7 @@ Pod のライフサイクルは3フェーズで構成される。
 2. **SyncTerminatingPod**: 全コンテナをグレースピリオド付きで停止し、CRI 違反がないことを検証する。
 3. **SyncTerminatedPod**: ボリューム、cgroup、Secret/ConfigMap などのリソースを解放する。
 
-CRI は gRPC ベースの抽象化レイヤであり、kubelet は `kubeGenericRuntimeManager` を通じてのみコンテナランタイムと通信する。これにより containerd や CRI-O など異なるランタイムを同一のコードで扱える。
+CRI は gRPC ベースの抽象化レイヤであり、kubelet は `kubeGenericRuntimeManager` を主要な経路としてコンテナランタイムと通信する。これにより containerd や CRI-O など異なるランタイムを同一のコードで扱える。
 
 ## 関連する章
 
