@@ -236,7 +236,7 @@ func (callback *AsyncRMCallback) UpdateAllocation(response *si.AllocationRespons
 ### 新しい割り当ての処理
 
 `response.New` の各エントリについて、`Context.getTask` で対応するタスクを検索する。
-タスクが見つかれば、`AssumePod` を呼び出してスケジューラキャッシュに Pod を假定配置する。
+タスクが見つかれば、`AssumePod` を呼び出してスケジューラキャッシュに Pod を仮配置する。
 `AssumePod` は最大30回、指数バックオフでリトライされる（初期1秒、上限30秒）。
 これは、ボリュームバインディングの一時的な失敗に対して耐性を持つためである。
 
@@ -640,7 +640,7 @@ sequenceDiagram
 
     Core->>SI: 割り当て決定
     SI-->>Shim: UpdateAllocation（New allocation）
-    Shim->>Shim: AssumePod（キャッシュに假定配置）
+    Shim->>Shim: AssumePod（キャッシュに仮配置）
     Shim->>Disp: AllocateTaskEvent
     Disp->>Shim: TaskEventHandler → Allocated
     Shim->>K8s: Pod バインド要求
