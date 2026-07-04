@@ -16,7 +16,8 @@
     "prometheus/**/*.md",
     "spark/**/*.md",
     "yunikorn/**/*.md",
-    "kubernetes/**/*.md"
+    "kubernetes/**/*.md",
+    "kubeblocks/**/*.md"
   ],
   "config": {
     "default": true,
