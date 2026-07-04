@@ -13,7 +13,7 @@
 
 YuniKorn core がスケジューリングの判断に使うリソース表現の構造を理解する。
 `Resource` は CPU やメモリなどをキーに持つ疎なマップであり、すべての演算は nil 安全に設計されている。
-本章では `Resource` のデータ構造、算術演算、オーバーフロー防御、`TrackedResource` による使用量追跡、Kubernetes 互換の `Quantity` パー싱을 다루す。
+本章では `Resource` のデータ構造、算術演算、オーバーフロー防御、`TrackedResource` による使用量追跡、Kubernetes 互換の `Quantity` パースを扱う。
 
 ## 前提
 
@@ -359,7 +359,7 @@ nil の `Resource` は false を返す。
 負の値が1つでもあれば即座に false を返し、正の値を見つけたら `greater` フラグを立てる。
 すべての値を走査するのは、負の値が含まれていないことを確認する必要があるためである。
 
-`ComponentWiseMax` と `ComponentWiseMin` は、リソース种类ごとに最大値または最小値を取る。
+`ComponentWiseMax` と `ComponentWiseMin` は、リソース種類ごとに最大値または最小値を取る。
 
 [pkg/common/resources/resources.go L1092-L1103](https://github.com/apache/yunikorn-core/blob/v1.8.0/pkg/common/resources/resources.go#L1092-L1103)
 
@@ -455,7 +455,7 @@ func parse(value string, milli bool) (Quantity, error) {
 
 ## TrackedResource による使用量追跡
 
-`TrackedResource` はアプリケーションのリソース使用量をインスタンス种类ごとに集計する。
+`TrackedResource` はアプリケーションのリソース使用量をインスタンス種類ごとに集計する。
 
 [pkg/common/resources/tracked_resources.go L32-L44](https://github.com/apache/yunikorn-core/blob/v1.8.0/pkg/common/resources/tracked_resources.go#L32-L44)
 
@@ -471,7 +471,7 @@ func NewTrackedResource() *TrackedResource {
 }
 ```
 
-トップレベルのキーはインスタンスタイプ（`"m5.large"` など）であり、値はリソース种类ごとの累積使用時間（秒）である。
+トップレベルのキーはインスタンスタイプ（`"m5.large"` など）であり、値はリソース種類ごとの累積使用時間（秒）である。
 `RWMutex` を埋め込むことで、読み取りは並行、書き込みは排他でアクセスできる。
 
 `AggregateTrackedResource` は、リソースが確保されてから解放されるまでの時間を計算して累積する。
@@ -505,8 +505,8 @@ func (tr *TrackedResource) AggregateTrackedResource(instType string, resource *R
 ## まとめ
 
 `Resource` は `map[string]Quantity` を中核とする疎なリソース表現であり、すべての演算が nil 安全に設計されている。
-オーバーフロー防御は `addVal`、`mulVal` で符号反転と除算再検算により実装され、`math/big` を使った `Quantity` パー싱에서도同じ安全志向が見られる。
-`TrackedResource` は `RWMutex` で並行性を確保しつつ、インスタンス种类ごとの累積使用時間を追跡する。
+オーバーフロー防御は `addVal`、`mulVal` で符号反転と除算再検算により実装され、`math/big` を使った `Quantity` パースでも同じ安全志向が見られる。
+`TrackedResource` は `RWMutex` で並行性を確保しつつ、インスタンス種類ごとの累積使用時間を追跡する。
 リソースモデルはスケジューリングの根幹であり、その性能と正確性はキューの公平性とノードの適合判定に直結する。
 
 ## 関連する章
