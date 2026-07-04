@@ -63,7 +63,7 @@ func (kl *Kubelet) SyncPod(ctx context.Context, updateType kubetypes.SyncPodType
 5. イメージの pull secret を取得する。
 6. `kubeGenericRuntimeManager.SyncPod` を呼び、コンテナランタイムにコンテナの起動を指示する。
 
-このメソッドは冪等（reentrant）であり、複数回呼ばれても最終的に期望状態に収束する。
+このメソッドは冪等（reentrant）であり、複数回呼ばれても最終的に期待状態に収束する。
 
 ### SyncTerminatingPod: コンテナの停止
 
@@ -276,7 +276,7 @@ type kubeGenericRuntimeManager struct {
 
 ## computePodActions による差分計算
 
-`computePodActions` は Pod の現在状態と期望状態を比較し、実行すべきアクションの集合を計算する。
+`computePodActions` は Pod の現在状態と期待状態を比較し、実行すべきアクションの集合を計算する。
 
 [pkg/kubelet/kuberuntime/kuberuntime_manager.go L1175-L1264](https://github.com/kubernetes/kubernetes/blob/v1.36.2/pkg/kubelet/kuberuntime/kuberuntime_manager.go#L1175-L1264)
 
@@ -335,7 +335,7 @@ for idx, container := range pod.Spec.Containers {
 }
 ```
 
-この差分計算により、kubelet は毎回ゼロから Pod を構築するのではなく、現在状態から期望状態への最小限の操作だけを決定する。
+この差分計算により、kubelet は毎回ゼロから Pod を構築するのではなく、現在状態から期待状態への最小限の操作だけを決定する。
 
 ## SyncPod の実行フロー（kuberuntime レベル）
 
@@ -417,7 +417,7 @@ start := func(ctx context.Context, typeName, metricLabel string, spec *startSpec
 
 Pod のライフサイクルは3フェーズで構成される。
 
-1. **SyncPod**: `computePodActions` で差分を計算し、CRI 経由でサンドボックスとコンテナを起動する。冪等な処理で、呼び出されるたびに期望状態に収束する。
+1. **SyncPod**: `computePodActions` で差分を計算し、CRI 経由でサンドボックスとコンテナを起動する。冪等な処理で、呼び出されるたびに期待状態に収束する。
 2. **SyncTerminatingPod**: 全コンテナをグレースピリオド付きで停止し、CRI 違反がないことを検証する。
 3. **SyncTerminatedPod**: ボリューム、cgroup、Secret/ConfigMap などのリソースを解放する。
 
