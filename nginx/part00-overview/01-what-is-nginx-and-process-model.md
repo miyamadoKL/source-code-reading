@@ -576,11 +576,11 @@ ngx_worker_process_cycle(ngx_cycle_t *cycle, void *data)
 
 `ngx_quit` を受けた旧 worker は、`ngx_close_listening_sockets()` で自分の listen ソケットだけを閉じ、以後は新規接続を一切受け付けない。
 アイドル状態の keepalive 接続は `ngx_close_idle_connections()` で即座に切るが、処理中のリクエストが乗った接続はそのまま保持し、`ngx_exiting` フラグを見ながらループを回し続ける。
-`ngx_event_no_timers_left()` がタイマーの残りなし、つまり処理中のリクエストが尽きたと判定した時点で、ようやく `ngx_worker_process_exit()` に入って終了する。
+`ngx_event_no_timers_left()` がキャンセル可能なタイマーのみ残っていると判定し、つまり処理中のリクエストが尽きたと判定した時点で、ようやく `ngx_worker_process_exit()` に入って終了する。
 `worker_shutdown_timeout` ディレクティブで指定した時間を過ぎても終わらない場合は、`ngx_set_shutdown_timer()` が仕込んだタイマーが強制的に終了へ倒す。
 
 `ngx_master_process_cycle()` 側は `sigsuspend()` でシグナル待ちの間だけスリープし、`SIGCHLD` を受けて `ngx_reap_children()` が死んだ子プロセスを回収する。
-新旧の worker が入れ替わり終わるまでの間は、新しい設定で起動した worker と、graceful shutdown 中の旧 worker が同時に稼働し、どちらも自分の listen ソケットで接続を受け付けられる状態になる。
+新旧の worker が入れ替わり終わるまでの間は、新しい設定で起動した worker と、graceful shutdown 中の旧 worker が同時に稼働する。ただし旧 worker は `ngx_close_listening_sockets()` で listen ソケットを閉じているため、新規接続を受け付けるのは新しい worker だけである。
 
 ## バイナリアップグレード
 

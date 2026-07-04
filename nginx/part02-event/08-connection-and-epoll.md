@@ -317,7 +317,7 @@ ngx_reusable_connection(ngx_connection_t *c, ngx_uint_t reusable)
 }
 ```
 
-HTTP モジュールは、次のリクエストを待つだけの keepalive 接続をこの関数で `reusable_connections_queue`（`cycle->queue` フィールドを介した intrusive な双方向キュー）の先頭に登録する。
+HTTP モジュールは、次のリクエストを待つだけの keepalive 接続をこの関数で `reusable_connections_queue`（`ngx_connection_t` 側の `c->queue` フィールドを介した intrusive な双方向キュー）の先頭に登録する。
 新しく reusable になった接続ほど先頭に積まれるため、このキューの末尾には最も長くアイドル状態が続いている接続が並ぶ。
 
 [`src/core/ngx_connection.c` L1404-L1458](https://github.com/nginx/nginx/blob/release-1.31.2/src/core/ngx_connection.c#L1404-L1458)

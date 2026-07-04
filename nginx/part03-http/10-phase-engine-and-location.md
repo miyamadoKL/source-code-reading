@@ -1224,7 +1224,7 @@ ngx_http_core_find_static_location(ngx_http_request_t *r,
 `len + 1 == node->len` かつ `auto_redirect` の分岐は、`location /dir/` に `proxy_pass` 等が置かれているとき、URI `/dir` を `/dir/` へ301リダイレクトさせるための検出（`NGX_DONE`）である。
 
 ここに本章の最適化の2つ目がある。
-`tree` 方向へ降りるたびに照合済み接頭辞が URI から取り除かれるので、前方一致の照合で比較されるバイト数の合計は URI 長を超えない。
+`tree` 方向へ進む場合だけ接頭辞を消費する。left/right 方向では同じ `uri` と `len` のまま別ノードを比較する。
 left/right 方向の移動は平衡二分探索木の下降であり、比較はノード名の長さ分までで打ち切られる。
 その結果、検索時間は URI の文字数にほぼ比例し、location の個数には対数的にしか依存しない。
 これが速い理由は、location を先頭から1つずつ `strncmp` する素朴な実装で起きる「同じ接頭辞を location の数だけ繰り返し比較する」仕事が、木の構造によって1回に畳み込まれるからである。
