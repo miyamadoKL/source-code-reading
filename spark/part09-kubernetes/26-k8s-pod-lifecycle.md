@@ -192,7 +192,7 @@ private[spark] class BasicDriverFeatureStep(conf: KubernetesDriverConf)
 ```
 
 ドライバのポッド名、コンテナイメージ、CPU/メモリ設定を初期化する。
-メモリオーバーヘッドは `MEMORY_OVERHEAD_FACTOR`（デフォルト0.1）に基づいて計算される。
+メモリオーバーヘッドは `MEMORY_OVERHEAD_FACTOR` に基づいて計算される。JVM アプリではデフォルト0.1、非 JVM アプリでは未設定時に0.4が使われる。driver 専用の factor も優先される。
 
 ### 26.3.1 configurePod: コンテナとポッドの構築
 

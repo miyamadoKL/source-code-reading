@@ -640,11 +640,12 @@ private def getPreferredLocsInternal(
 
 シャッフル境界で RDD グラフを切断する理由は、シャッフル出力がディスクに永続化される点にある。
 ステージ内でタスクが失敗した場合、`TaskScheduler` が同じステージ内でタスクを再試行する。
-ステージ全体が失敗した場合（エグゼキュータの喪失など）、`DAGScheduler` はそのステージだけを再投入すればよい。
-親ステージのシャッフル出力はディスクに残っているため、再計算する必要がない。
+ステージ全体が失敗した場合（エグゼキュータの喪失など）、`DAGScheduler` はそのステージを再投入する。
+Fetch failure の場合は、失われた map output を持つ shuffle map stage も再投入対象になる。
+この場合、失われた map output は `MapOutputTracker` から登録解除され、対応する shuffle map stage が再実行される。
 
 もしステージ分割がなければ、1つのタスクの失敗でジョブ全体の RDD グラフを最初から再計算しなければならない。
-ステージ分割により、再実行の範囲は失敗したステージとその出力を消費する後続ステージに限定される。
+ステージ分割により、再実行の範囲は失敗したステージと、Fetch failure の場合は失われた map output を持つ親ステージに限定される。
 
 `ShuffleMapStage.isAvailable` と `MapOutputTracker` の組み合わせが、完了済みステージの出力を再利用する仕組みを支えている。
 `getMissingParentStages` は `mapStage.isAvailable` を確認し、出力が揃っていれば親ステージをスキップする。

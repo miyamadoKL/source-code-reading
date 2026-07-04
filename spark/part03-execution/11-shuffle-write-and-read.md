@@ -434,8 +434,8 @@ private long[] writePartitionedData(ShuffleMapOutputWriter mapOutputWriter) thro
 }
 ```
 
-`transferToEnabled` が有効なら NIO の `transferTo` を使い、OS レベルでファイルをコピーする。
-これはユーザー空間へのコピーを避け、ゼロコピー転送を実現する。
+`transferToEnabled` が有効なら NIO の `transferTo` を使う。
+ただし `openChannelWrapper()` が空なら stream copy にフォールバックするため、常にゼロコピーになるわけではない。
 
 なぜ速いのか: `FileChannel.transferTo` はカーネル内で直接データを転送するため、ユーザー空間へのコピーやコンテキストスイッチを省略でき、大量のファイル連結で効果を発揮する。
 
