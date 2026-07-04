@@ -523,7 +523,7 @@ object CostBasedJoinReorder extends Rule[LogicalPlan] with PredicateHelper {
 }
 ```
 
-CBO が有効で `joinReorderDPThreshold`（デフォルト10）以内の結合数であれば、`JoinReorderDP` が動的計画法で最適順序を探索する。
+Join reorder の適用条件は次の通り: `cboEnabled` が有効、`joinReorderEnabled` が有効、`joinReorderDPThreshold`（デフォルト10）以内の結合数、InnerLike join、条件あり、hint なし、3要素以上、条件非空、全 item の `rowCount` 統計が必要。
 
 ### 16.3.4 JoinReorderDP の探索
 
