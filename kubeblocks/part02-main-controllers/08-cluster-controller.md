@@ -113,7 +113,7 @@ type clusterTransformContext struct {
 }
 ```
 
-`Cluster` は処理过程中に変更が加えられる作業用オブジェクト、`OrigCluster` は API サーバから取得した時点のオリジナルである。
+`Cluster` は処理中に変更が加えられる作業用オブジェクト、`OrigCluster` は API サーバから取得した時点のオリジナルである。
 この2つを分けて保持することで、トランスフォーマー鎖の終端で変更を比較し、パッチを生成できる。
 
 `clusterPlanBuilder` は `graph.PlanBuilder` インタフェースの実装であり、トランスフォーマーの追加（`AddTransformer`）、DAG の構築（`Build`）、実行計画の生成（`Execute`）を担当する。

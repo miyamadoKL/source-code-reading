@@ -218,7 +218,7 @@ pkg/controller/component/synthesize_component.go L78-L119
 
 - `ServiceKind` は `ComponentDefinition` から取る。エンジン種別は定義層で決まる不変値である。
 - `ServiceVersion` は `Component` から取る。同じ定義を使ってもバージョンはユーザーが切り替えられる。
-- `PodSpec` は `ComponentDefinition` の `Runtime` をそのまま参照する。以降のビルドステップでこの `PodSpec` に変更为える。
+- `PodSpec` は `ComponentDefinition` の `Runtime` をそのまま参照する。以降のビルドステップでこの `PodSpec` に変更を加える。
 - `StaticLabels` と `DynamicLabels` を分けて保持するのは、後段のラベルマージで両者の優先順位を明確にするためである。
 
 ## 5. PodUpdatePolicy の解決

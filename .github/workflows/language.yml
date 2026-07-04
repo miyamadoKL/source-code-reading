@@ -1,0 +1,33 @@
+name: language
+
+# 日本語ドキュメントの地の文に混入したハングルと簡体字中国語を検査する。
+# 検査ロジックは .github/scripts/check-language.py に置き、ローカルでも同じスクリプトで実行できる。
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "**/*.md"
+      - ".markdownlint-cli2.jsonc"
+      - ".github/scripts/check-language.py"
+      - ".github/workflows/language.yml"
+  pull_request:
+    paths:
+      - "**/*.md"
+      - ".markdownlint-cli2.jsonc"
+      - ".github/scripts/check-language.py"
+      - ".github/workflows/language.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  language:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check non-Japanese language mixing
+        run: python3 .github/scripts/check-language.py
