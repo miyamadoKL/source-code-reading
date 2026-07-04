@@ -52,20 +52,15 @@ flowchart TD
 ```mermaid
 flowchart LR
     subgraph eval_cycle["1評価サイクル"]
-        tick["タイマー発火"] --> split["SplitGroupIntoBatches"]
-        split --> batch1["バッチ1\n依存なしルール\n（並行評価）"]
-        split --> batch2["バッチ2\n中継ルール\n（逐次評価）"]
-        split --> batch3["バッチ3\n被依存なしルール\n（並行評価）"]
-        batch1 --> eval1["rule.Eval()"]
-        batch2 --> eval2["rule.Eval()"]
-        batch3 --> eval3["rule.Eval()"]
-        eval1 --> append["Appender.Append()"]
-        eval2 --> append
-        eval3 --> append
+        tick["タイマー発火"] --> eval["rule.Eval()"]
+        eval --> append["Appender.Append()"]
         append --> commit["Commit()"]
         commit --> stale["StaleNaN マーカー"]
     end
 ```
+
+デフォルトは逐次評価である。
+並行評価は `concurrent-rule-eval` feature が有効な場合に `SplitGroupIntoBatches` によって行われる。
 
 ## Manager：ルールグループの管理
 

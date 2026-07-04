@@ -273,7 +273,8 @@ const (
 
 マッチング方式は `on()` と `ignoring()` の 2 種類があり、`group_left` / `group_right` で多対一や一対多を実現する。
 
-`fill` 修飾子を使うと、マッチしなかった側にデフォルト値を補完できる（`VectorMatchFillValues`）。
+`fill` 修飾子は experimental feature であり、`EnableBinopFillModifiers` が無効なら parse error になる。
+有効にすると、マッチしなかった側にデフォルト値を補完できる（`VectorMatchFillValues`）。
 
 // <https://github.com/prometheus/prometheus/blob/v3.12.0/promql/parser/ast.go#L329-L334>
 
