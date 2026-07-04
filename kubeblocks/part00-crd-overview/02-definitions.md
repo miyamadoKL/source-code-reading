@@ -442,11 +442,39 @@ const (
 ```
 
 `BestEffortParallel` はクォーラムを維持したまま並列に更新する戦略である。
-例えば5レプリカのコンポーネントで、うち3レプリカがクォーラム参加（`ParticipatesInQuorum: true`）の場合、同時に更新できるのは2レプリカまでとなる。
-残りの3レプリカが稼働を維持するため、クォーラムが保たれる。
+更新順序は3段階に分かれる。まず非クォーラム参加ロール（learner 等）と follower の半数を並列更新する。次に残り follower の半数を更新する。最後に leader を更新する。
+
+[apis/apps/v1/componentdefinition_types.go L1420-L1425](https://github.com/apecloud/kubeblocks/blob/v1.0.2/apis/apps/v1/componentdefinition_types.go#L1420-L1425)
+
+```go
+// For example, in a 5-pod component where:
+// - 2 learner pods (participatesInQuorum=false)
+// - 2 follower pods (participatesInQuorum=true)
+// - 1 leader pod (participatesInQuorum=true)
+// The quorum size would be 3 (based on the 3 participating pods), allowing parallel updates
+// of 2 learners and 1 follower while maintaining quorum.
+```
+
+この例では、2 learner と 1 follower の計3ポッドを第1段階で並列更新する。
+残りの 1 follower が稼働を維持するため、クォーラム（3台中2台以上）が保たれる。
+
+[apis/apps/v1/componentdefinition_types.go L1415-L1431](https://github.com/apecloud/kubeblocks/blob/v1.0.2/apis/apps/v1/componentdefinition_types.go#L1415-L1431)
+
+```go
+// ParticipatesInQuorum indicates if pods with this role are counted when determining quorum.
+// This affects update strategies that need to maintain quorum for availability. Roles participate
+// in quorum should have higher update priority than roles do not participate in quorum.
+// The default value is false.
+//
+// ...
+//
+// +kubebuilder:default=false
+// +optional
+ParticipatesInQuorum bool `json:"participatesInQuorum"`
+```
 
 `ReplicaRole.ParticipatesInQuorum` の値が並列度の計算に使われる。
-クォーラムに参加しないロール（例: learner）は更新の並列度を上げても可用性に影響しない。
+クォーラムに参加しないロールは更新の並列度を上げても可用性に影響しない。
 この計算は `ComponentDefinition` の宣言だけで導出されるため、コントローラはデータベースエンジンごとの更新ロジックをハードコードする必要がない。
 宣言されたロールの属性から並列度を自動計算する機構により、KubeBlocks は多様なデータベースエンジンを統一された更新パスで処理できる。
 
