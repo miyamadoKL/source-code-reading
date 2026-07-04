@@ -42,7 +42,8 @@ type EventHandlers struct {
 ```
 
 `EventHandlers` 構造体は2つのハンドラを束ねる。
-起動時に `RMProxyEventHandler` には `RMProxy` が、`SchedulerEventHandler` には `ClusterContext` が設定される。
+起動時に `RMProxyEventHandler` には `RMProxy` が、`SchedulerEventHandler` には `Scheduler` が設定される。
+`RMProxy` は `Scheduler` の `HandleEvent` にイベントを送る。
 両者は互いの参照を持ち、イベントを双方向に送れる。
 `interface{}` を使うことで、イベントの型を増やしてもインターフェースの変更が不要になっている。
 

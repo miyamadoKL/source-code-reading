@@ -275,8 +275,8 @@ flowchart TD
     I --> N{ResultType ==<br>Reserved?}
     N -->|Yes| O[pc.reserve]
     N -->|No| P[notifyRMNewAllocation]
-    O --> Q[registerActivity]
-    P --> Q
+    O --> Z[return nil]
+    P --> Q[registerActivity]
     F --> Q
     Q --> B
 ```

@@ -312,7 +312,7 @@ func (nc *baseNodeCollection) NodeUpdated(node *Node) {
 
 ノードコレクションの最適化は BTree の選択にある。
 
-BTree は平衡二分探索木であり、挿入も削除も検索も O(log n) で完了する。
+BTree は次数7のB-treeであり、挿入も削除も検索も O(log n) で完了する。
 次数7は5000ノード程度まで実験的にもっとも効率的な値として選択されている。
 
 さらに `treeIterator` はイテレーション開始時に BTree のクローンを生成する。
