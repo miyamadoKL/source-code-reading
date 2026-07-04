@@ -267,7 +267,8 @@ SSE（Server-Sent Events）やストリーミング API のように、リアル
 この上限を超えると、パイプは upstream から読むのを一時停止する。
 
 2つ目は **一時ファイル**である。
-`max_temp_file_size`（`proxy_max_temp_file_size`、デフォルト1GB）を超えると、パイプはレスポンスを一時ファイルに書き出す。
+`max_temp_file_size`（`proxy_max_temp_file_size`、デフォルト1GB）は一時ファイルへ書ける上限である。
+`cacheable` または現在の一時ファイルサイズが `max_temp_file_size` 未満の場合に一時ファイルへ書く。
 `temp_file_write_size`（`proxy_temp_file_write_size`）は1回の書き込みサイズである。
 レスポンスがメモリバッファに収まらない大きな場合でも、一時ファイルに逃がすことでメモリ使用量を抑える。
 
@@ -616,8 +617,8 @@ ngx_http_file_cache_lookup(ngx_http_file_cache_t *cache, u_char *key)
 }
 ```
 
-16バイトの MD5 キーのうち先頭4バイト（`ngx_rbtree_key_t` は `uint32_t`）を赤黒木の探索キーにし、残りの12バイトはノードのキーが等しいときに `memcmp` で照合する。
-これにより、赤黒木の探索は4バイト整数の比較で枝を絞り、衝突が起きたときだけ残りの12バイトを比較する。
+16バイトの MD5 キーのうち先頭部分（`ngx_rbtree_key_t` は `ngx_uint_t` で `uintptr_t`）を赤黒木の探索キーにし、残りのバイトはノードのキーが等しいときに `memcmp` で照合する。
+これにより、赤黒木の探索は `sizeof(ngx_rbtree_key_t)` バイト整数の比較で枝を絞り、衝突が起きたときだけ残りのバイトを比較する。
 共有メモリ上の全エントリを線形走査するのと比べ、検索コストはエントリ数の対数に比例する。
 
 エントリが見つかった場合の戻り値は4通りに分かれる。

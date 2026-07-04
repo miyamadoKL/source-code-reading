@@ -189,8 +189,11 @@ ngx_http_upstream_init(ngx_http_request_t *r)
 6. upstream サーバーの選択（`uscf->peer.init()` を呼んでロードバランシングを初期化）
 7. `ngx_http_upstream_connect()` で接続を開始
 
-サーバーの選択経路は2つに分かれる。
-`u->resolved` が NULL でない場合、つまり `proxy_pass` の引数に変数を含む場合は、`ngx_resolve_name()` による非同期の名前解決を経由する。
+サーバーの選択経路は3つに分かれる。
+`u->resolved` が NULL でない場合、つまり `proxy_pass` の引数に変数を含む場合は、さらに3つの経路に分かれる。
+まず、既存の upstream 定義に host/port が一致する場合、`goto found` で `uscf->peer.init(r, uscf)` を呼び、ロードバランシングモジュールの初期化関数を実行してから接続に移る。
+次に、`u->resolved->sockaddr` が設定済みの場合、`ngx_http_upstream_create_round_robin_peer()` によりラウンドロビンのピアリストを作り、resolver を経由せず直接 `ngx_http_upstream_connect()` に進む。
+最後に、いずれにも該当しない場合、`ngx_resolve_name()` による非同期の名前解決を経由する。
 名前解決完了後に `ngx_http_upstream_resolve_handler()` が呼ばれ、そこで `ngx_http_upstream_create_round_robin_peer()` によりラウンドロビンのピアリストが作られてから接続に移る。
 `u->resolved` が NULL の場合、つまり `upstream` ブロックで定義済みの名前の場合は、`uscf->peer.init(r, uscf)` を呼んでロードバランシングモジュールの初期化関数を実行する。
 デフォルトのラウンドロビンでは `ngx_http_upstream_init_round_robin_peer()` が呼ばれる（第14章で詳しく読む）。
@@ -202,15 +205,21 @@ graph TD
     C -->|"キャッシュ有効"| D["ngx_http_upstream_cache()"]
     D -->|"HIT"| D2["ngx_http_upstream_cache_send() で応答"]
     D -->|"MISS / BYPASS"| E
-    C -->|"create_request()"| E["uscf->peer.init() でピア選択初期化"]
-    E -->|"resolved あり"| F["ngx_resolve_name() 非同期名前解決"]
-    F -->|"完了"| F2["ngx_http_upstream_resolve_handler()"]
-    F2 --> G
-    E -->|"resolved なし"| G["ngx_http_upstream_connect()"]
-    G --> H["ngx_event_connect_peer()"]
-    H -->|"NGX_OK"| I["ngx_http_upstream_send_request()"]
-    H -->|"NGX_AGAIN"| I2["connect_timeout を設定して epoll 待ち"]
-    I2 -->|"書き込み可能"| I
+    C -->|"create_request()"| E{"u->resolved あり?"}
+    E -->|"あり"| F{"既存 upstream に一致?"}
+    F -->|"はい"| G["uscf->peer.init() でピア選択初期化"]
+    F -->|"いいえ"| H{"sockaddr あり?"}
+    H -->|"はい"| I["ngx_http_upstream_create_round_robin_peer()"]
+    H -->|"いいえ"| J["ngx_resolve_name() 非同期名前解決"]
+    J -->|"完了"| K["ngx_http_upstream_resolve_handler()"]
+    K --> I
+    I --> L["ngx_http_upstream_connect()"]
+    G --> L
+    E -->|"なし"| G
+    L --> M["ngx_event_connect_peer()"]
+    M -->|"NGX_OK"| N["ngx_http_upstream_send_request()"]
+    M -->|"NGX_AGAIN"| O["connect_timeout を設定して epoll 待ち"]
+    O -->|"書き込み可能"| N
 ```
 
 ## `ngx_http_upstream_connect()`：接続の確立とハンドラの設定
