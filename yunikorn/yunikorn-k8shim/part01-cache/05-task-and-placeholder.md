@@ -334,7 +334,7 @@ func (task *Task) handleSubmitTaskEvent() {
 
 タスクがタスクグループに属していれば、ギャングスケジューリングのイベントを Pod に発行する。
 
-`postTaskAllocated` は非ゴルーチンで Pod のバインドを行う。
+`postTaskAllocated` は goroutine 内で Pod のバインドを行う。
 
 [pkg/cache/task.go L348-L402](https://github.com/apache/yunikorn-k8shim/blob/v1.8.0/pkg/cache/task.go#L348-L402)
 
@@ -613,7 +613,8 @@ sequenceDiagram
     Shim->>Shim: postAppAccepted → TryReserve
     Shim->>Shim: onReserving()
     Shim->>K8s: Placeholder Pod 作成 × MinMember
-    K8s->>Core: Placeholder Pod Informer
+    K8s->>Shim: Placeholder Pod Informer
+    Shim->>Core: UpdateAllocation (Placeholder Allocated)
     Core-->>Shim: Placeholder Allocated (node 決定)
     Shim->>K8s: Placeholder Bind
     K8s-->>Shim: Bound
@@ -642,7 +643,7 @@ HARD スタイルでは、すべてのプレースホルダーが確保される
 リソースが不足していればタイムアウトまで待機し、タイムアウトすればアプリケーションは失敗する。
 
 SOFT スタイルでは、プレースホルダーがタイムアウトすると `Resuming` 状態に遷移する。
-`onResuming` はオリジネーター Pod にイベントを発行し、プレースホルダーのクリーンアップを開始する。
+`onResuming` はイベント発行だけを行い、削除処理は別の経路で行われる。
 すべてのプレースホルダーが `Completed` になれば `RunApplication` を発行して通常のスケジューリングに移行する。
 
 ## 最適化: 差分によるプレースホルダー作成
