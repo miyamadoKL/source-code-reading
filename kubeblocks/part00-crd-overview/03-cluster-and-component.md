@@ -397,7 +397,7 @@ type ClusterSharding struct {
     Shards int32 `json:"shards"`
 ```
 
-`Shards` は期望するシャード数を指定する。
+`Shards` は期待するシャード数を指定する。
 
 シャード数の増減に応じて、KubeBlocks はコンポーネントを動的に作成・削除する。
 

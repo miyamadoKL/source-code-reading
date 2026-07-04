@@ -422,7 +422,7 @@ func checkAllCompsUpToDate(transCtx *clusterTransformContext, cluster *appsv1.Cl
 
 ### 4.2 集合差分による CRUD の決定
 
-`transform` メソッドは、実行中のコンポーネント集合（`runningSet`）と期望のコンポーネント集合（`protoSet`）の差分を計算する。
+`transform` メソッドは、実行中のコンポーネント集合（`runningSet`）と期待されるコンポーネント集合（`protoSet`）の差分を計算する。
 
 [controllers/apps/cluster/transformer_cluster_component.go L73-L99](https://github.com/apecloud/kubeblocks/blob/v1.0.2/controllers/apps/cluster/transformer_cluster_component.go#L73-L99)
 
@@ -547,7 +547,7 @@ func (h *clusterComponentHandler) create(transCtx *clusterTransformContext, dag 
 `protoComp` は `buildComponentWrapper` を呼び、`Component` オブジェクトを構築する。
 この中で `component.BuildComponent` による基本構築と `buildComponentSidecars` によるサイドカーの付与が行われる。
 
-更新時は `copyAndMergeComponent` が既存オブジェクトと期望オブジェクトを比較し、差分だけをマージする。
+更新時は `copyAndMergeComponent` が既存オブジェクトと期待されるオブジェクトを比較し、差分だけをマージする。
 
 [controllers/apps/cluster/transformer_cluster_component.go L186-L297](https://github.com/apecloud/kubeblocks/blob/v1.0.2/controllers/apps/cluster/transformer_cluster_component.go#L186-L297)
 
@@ -606,7 +606,7 @@ func (h *clusterShardingHandler) create(transCtx *clusterTransformContext, dag *
 }
 ```
 
-シャーディングの更新では、実行中のサブコンポーネント集合と期望の集合の差分を `mapDiff` で計算し、削除・更新・作成を適用する。
+シャーディングの更新では、実行中のサブコンポーネント集合と期待される集合の差分を `mapDiff` で計算し、削除・更新・作成を適用する。
 スケールイン時には `ComponentScaleInAnnotationKey` アノテーションを付与して、下位レイヤにスケールインであることを通知する。
 
 ## 5. サービスとリストア

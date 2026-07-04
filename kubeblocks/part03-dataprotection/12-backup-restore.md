@@ -31,7 +31,7 @@
 
 ### 12.1.1 BackupSpec の構造
 
-`BackupSpec` はバックアップの期望状態を定義する。
+`BackupSpec` はバックアップの期待状態を定義する。
 `BackupPolicyName` で参照するポリシー名を、`BackupMethod` で実行するバックアップ手法の名を指定する。
 
 [apis/dataprotection/v1alpha1/backup_types.go L26-L88](https://github.com/apecloud/kubeblocks/blob/v1.0.2/apis/dataprotection/v1alpha1/backup_types.go#L26-L88)
@@ -308,7 +308,7 @@ func (r *Backup) GetEndTime() *metav1.Time {
 
 ### 12.2.1 RestoreSpec の構造
 
-`RestoreSpec` はリストアの期望状態を定義する。
+`RestoreSpec` はリストアの期待状態を定義する。
 `Backup` との主な違いは、リストアが2段階（`prepareData` と `postReady`）で構成される点である。
 
 [apis/dataprotection/v1alpha1/restore_types.go L26-L98](https://github.com/apecloud/kubeblocks/blob/v1.0.2/apis/dataprotection/v1alpha1/restore_types.go#L26-L98)
