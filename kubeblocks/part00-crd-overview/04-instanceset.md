@@ -332,27 +332,76 @@ type InstanceUpdateStrategy struct {
 ```mermaid
 sequenceDiagram
     participant ITS as InstanceSet Controller
-    participant L as Learner (priority=0)
-    participant F as Follower (priority=1)
-    participant LD as Leader (priority=2)
+    participant L1 as Learner 1
+    participant L2 as Learner 2
+    participant F1 as Follower 1
+    participant F2 as Follower 2
+    participant LD as Leader
     Note over ITS: BestEffortParallel 開始
-    par 並列更新（クォーラム維持範囲）
-        ITS->>L: Update
-        ITS->>F: Update
+    rect rgb(200, 230, 255)
+        Note over ITS,F1: 第1段階: 非クォーラム + follower半数
+        par 並列更新
+            ITS->>L1: Update
+            ITS->>L2: Update
+            ITS->>F1: Update
+        end
+        L1-->>ITS: Ready
+        L2-->>ITS: Ready
+        F1-->>ITS: Ready
     end
-    L-->>ITS: Ready
-    F-->>ITS: Ready
-    ITS->>LD: Update (最後に更新)
-    LD-->>ITS: Ready
+    rect rgb(230, 255, 200)
+        Note over ITS,F2: 第2段階: 残りfollower半数
+        ITS->>F2: Update
+        F2-->>ITS: Ready
+    end
+    rect rgb(255, 230, 200)
+        Note over ITS,LD: 第3段階: leader
+        ITS->>LD: Update
+        LD-->>ITS: Ready
+    end
     Note over ITS: 更新完了
 ```
 
-この図は `BestEffortParallel` 戦略で `UpdatePriority` に基づき Learner、Follower を並列更新した後に Leader を更新する流れを示す。
-クォーラムに参加しない Learner と Follower 2台の並列更新は可用性を維持したまま進められる。
+この図は `BestEffortParallel` 戦略での3段階の更新順序を示す。
+第1段階では非クォーラム参加ロール（Learner 2台）と follower の半数（1台）を並列更新する。
+第2段階では残り follower の半数（1台）を更新する。
+第3段階で最後に leader を更新する。
+この順序制御により、各段階でクォーラムを維持したまま並列更新を進められる。
+
+[pkg/controller/instanceset/update_plan.go L142-L143](https://github.com/apecloud/kubeblocks/blob/v1.0.2/pkg/controller/instanceset/update_plan.go#L142-L143)
+
+```go
+// unknown & empty & roles that do not participate in quorum & 1/2 followers -> 1/2 followers -> leader
+func (p *realUpdatePlan) buildBestEffortParallelUpdatePlan(rolePriorityMap map[string]int) {
+```
 
 ### 4.7.4 最適化: インプレース更新によるポッド再作成の回避
 
-`PodUpdatePolicy` に `PreferInPlace` を設定すると、リソース要求の変更や環境変数の変更をポッドの再作成なしに適用できる。
+`PodUpdatePolicy` に `PreferInPlace` を設定すると、インプレース更新対象のフィールド変更をポッドの再作成なしに適用できる。
+インプレース更新の対象は、コンテナイメージ、リソース要求（requests/limits）、`ActiveDeadlineSeconds`、Tolerations、ラベル、アノテーションである。
+環境変数の変更はインプレース更新の対象外であり、ポッドの再作成が必要となる。
+
+[pkg/controller/instanceset/in_place_update_util.go L117-L160](https://github.com/apecloud/kubeblocks/blob/v1.0.2/pkg/controller/instanceset/in_place_update_util.go#L117-L160)
+
+```go
+func mergeInPlaceFields(src, dst *corev1.Pod) {
+    mergeMap(&src.Annotations, &dst.Annotations)
+    mergeMap(&src.Labels, &dst.Labels)
+    dst.Spec.ActiveDeadlineSeconds = src.Spec.ActiveDeadlineSeconds
+    // according to the Pod API spec, tolerations can only be appended.
+    intctrlutil.MergeList(&src.Spec.Tolerations, &dst.Spec.Tolerations, ...)
+    for _, container := range src.Spec.InitContainers {
+        for i, c := range dst.Spec.InitContainers {
+            if container.Name == c.Name {
+                dst.Spec.InitContainers[i].Image = container.Image
+                break
+            }
+        }
+    }
+    // ... resources, containers[].Image のマージ
+}
+```
+
 Kubernetes の InPlace Pod Update 機能を利用し、コンテナイメージのホットアップデートやリソース仕様のインプレース変更を行う。
 ポッドを再作成すると一時的に利用不可となり、PVC の再アタッチやスケジューリングのやり直しが発生する。
 インプレース更新はこれらを回避して更新時間を短縮し、サービスの可用性を維持する。
