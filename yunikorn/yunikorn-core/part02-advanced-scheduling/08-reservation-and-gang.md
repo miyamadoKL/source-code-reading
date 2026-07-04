@@ -425,7 +425,7 @@ func (sq *Queue) UnReserve(appID string, releases int) {
 
 `tryReservedAllocate` と `tryPlaceholderAllocate` の双方で、処理対象が存在しなければ即座に `nil` を返す早期リターンが実装されている。`PartitionContext.tryReservedAllocate` は `getReservationCount() == 0` を最初に検査し、`tryPlaceholderAllocate` は `getPhAllocationCount() == 0` を検査する。
 
-これらのカウンターは `PartitionContext` レベルで管理されるアトミックな値であり、キュー階層を辿る前に処理不要を判定できる。大規模なクラスターではキュー階層の走査が最もコストがかかるため、この早期リターンがスケジューリングサイクルのレイテンシを削減する。
+これらのカウンターは `PartitionContext` レベルで管理される `int` フィールドであり、`PartitionContext` のロックで保護されている。キュー階層を辿る前に処理不要を判定できる。大規模なクラスターではキュー階層の走査が最もコストがかかるため、この早期リターンがスケジューリングサイクルのレイテンシを削減する。
 
 ## まとめ
 

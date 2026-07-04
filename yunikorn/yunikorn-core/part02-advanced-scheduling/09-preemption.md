@@ -129,7 +129,7 @@ func (p *Preemptor) CheckPreconditions() bool {
 1. アロケーションが他タスクのプリエンプションを許可しているか（`IsAllowPreemptOther`）。
 2. すでにプリエンプションをトリガ済みでないか（`HasTriggeredPreemption`）。
 3. 必須ノードが指定されていないか（必須ノードは別のアルゴリズムで処理する）。
-4. プリエンプション遅延時間が経過しているか（`preemptionDelay`、デフォルト5秒）。
+4. プリエンプション遅延時間が経過しているか（`preemptionDelay`、デフォルト30秒）。
 5. 前回のプリエンプション検査から十分時間が経過しているか（`preemptAttemptFrequency`、15秒）。
 
 これらの条件により、不要なプリエンプションの繰り返しを防ぐ。

@@ -132,13 +132,16 @@ stateDiagram-v2
     New --> Accepted: RunApplication
     New --> Rejected: RejectApplication
     New --> Resuming: ResumeApplication
+    New --> Failing: FailApplication
     Resuming --> Accepted: RunApplication
     Accepted --> Running: RunApplication
     Accepted --> Completing: CompleteApplication
+    Accepted --> Failing: FailApplication
     Running --> Running: RunApplication
     Running --> Completing: CompleteApplication
     Running --> Failing: FailApplication
     Completing --> Completed: CompleteApplication
+    Completing --> Running: RunApplication
     Failing --> Failed: FailApplication
     Rejected --> Expired: ExpireApplication
     Completed --> Expired: ExpireApplication

@@ -597,15 +597,11 @@ stateDiagram-v2
     Draining --> Draining: Remove (no-op)
     Draining --> Active: Start
 
-    Draining --> Stopped: partitionManager.Stop()
+    Draining --> Removed: manager.remove()
 
-    state Stopped {
-        [*] --> スケジューリングループでスキップ
-        [*] --> 全アプリ/ノード/キュー削除
+    state Removed {
         [*] --> ClusterContextから削除
     }
-
-    Stopped --> [*]: GC
 ```
 
 パーティションのライフサイクルは次の段階で進む。
