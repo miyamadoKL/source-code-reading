@@ -22,6 +22,7 @@
 | [Apache Spark](spark/README.md) | v4.1.2 | 分散データ処理フレームワーク。RDD、スケジューリング、Catalyst/Tungsten、Structured Streaming、PySpark、Kubernetes/YuniKorn 連携まで全10部28章。 | [目次](spark/README.md) |
 | [YuniKorn エコシステム](yunikorn/README.md) | v1.8.0 | Kubernetes 向けユニバーサルリソーススケジューラ。core（キュー階層、プレイスメント、プリエンプション）を分冊で読む。全6部17章。 | [目次](yunikorn/README.md) |
 | [Kubernetes](kubernetes/README.md) | v1.36.2 | コンテナオーケストレーター。apiserver、scheduler、controller-manager、kubelet、kube-proxy、ストレージ、client-go、RBAC まで分冊で読む。全8部23章。 | [目次](kubernetes/README.md) |
+| [KubeBlocks](kubeblocks/README.md) | v1.0.2 | Kubernetes 上のデータベース運用オペレーター。CRD 3層モデル、graph エンジン、InstanceSet、DataProtection、kbagent まで全5部17章。 | [目次](kubeblocks/README.md) |
 
 今後、他の OSS のソースコード読解ドキュメントを `<oss-name>/` 配下に追加していく。
 
