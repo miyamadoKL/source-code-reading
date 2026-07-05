@@ -289,17 +289,29 @@ class WritePlanObj {
 ```
 
 `to_read` が空でなければ、そのプランは既存チャンクの読み直しを要する。
-`Op` はこれを `requires_rmw()` で判定する。
+実際の書き込み経路 `RMWPipeline::start_rmw` は、各プランの `to_read` を `ECExtentCache::prepare` に渡して読み取りを準備する。
 
-[`src/osd/ECCommon.h` L498-L501](https://github.com/ceph/ceph/blob/v20.2.2/src/osd/ECCommon.h#L498-L501)
+[`src/osd/ECCommon.cc` L753-L765](https://github.com/ceph/ceph/blob/v20.2.2/src/osd/ECCommon.cc#L753-L765)
 
 ```cpp
-      ECTransaction::WritePlan plan;
-      bool requires_rmw() const { return !plan.want_read; }
+  for (auto &plan: op->plan.plans) {
+    ECExtentCache::OpRef cache_op = extent_cache.prepare(plan.hoid,
+      plan.to_read,
+      plan.will_write,
+      plan.orig_size,
+      plan.projected_size,
+      plan.invalidates_cache,
+      [op](ECExtentCache::OpRef const &cop)
+      {
+        op->cache_ready(cop->get_hoid(), cop->get_result());
+      });
+    op->cache_ops.emplace_back(std::move(cache_op));
+  }
 ```
 
 RMW が必要な部分書き込みでは、まず既存のデータチャンクを読み、書き込むバイトを重ねてから、`k` 個のデータチャンク全体でパリティを再計算する。
-`RMWPipeline` はこの読み取りを、キャッシュを介した `backend_read` として `ReadPipeline` の読み取り経路へ回し、応答が揃うと `cache_ready` から書き込みを続行する。
+読み取りは `ECExtentCache` を介し、キャッシュに載っていない分だけが `backend_read` として `ReadPipeline` の読み取り経路へ回る。
+応答が揃うと `cache_ready` から書き込みを続行する。
 
 [`src/osd/ECCommon.h` L575-L587](https://github.com/ceph/ceph/blob/v20.2.2/src/osd/ECCommon.h#L575-L587)
 
@@ -327,7 +339,7 @@ flowchart TB
   SUB["submit_transaction: client write を Op 化"]
   PLAN{"WritePlanObj: to_read は空か"}
   FULL["full-stripe write: 読まずに encode"]
-  RMW["requires_rmw: 既存 data chunk を backend_read"]
+  RMW["to_read あり: 既存 data chunk を extent_cache 経由で読む"]
   MERGE["書き込みバイトを重ねる"]
   ENC["k data 全体で parity を再計算"]
   TX["generate_transactions: data と parity へ配る"]
@@ -341,7 +353,7 @@ flowchart TB
 ## 高速化の工夫：フルストライプ書き込みで読み取りを省く
 
 EC 書き込みの重さは、パリティ再計算のために既存チャンクを読む往復にある。
-`WritePlanObj` が書き込み範囲を検査し、ストライプ境界にちょうど揃う書き込み（フルストライプ書き込み）に対しては `to_read` を立てず、`requires_rmw()` が偽になる。
+`WritePlanObj` が書き込み範囲を検査し、ストライプ境界にちょうど揃う書き込み（フルストライプ書き込み）に対しては `to_read` を立てない。
 このとき `k` 個のデータチャンクは書き込むデータだけで完全に決まるので、既存チャンクを読まずに `encode` でパリティを作れる。
 
 読み取りの往復を省けるのが速さの理由である。
