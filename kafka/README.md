@@ -31,7 +31,7 @@ Apache Kafka（[apache/kafka](https://github.com/apache/kafka)）のソースコ
 9. [UnifiedLog と LocalLog の追記と読み出し](part03-storage/09-unifiedlog.md)
 10. [LogManager とログのライフサイクル](part03-storage/10-logmanager.md)
 11. [LogCleaner によるコンパクション](part03-storage/11-logcleaner.md)
-12. [ProducerStateManager と冪等・トランザクション状態](part03-storage/12-producer-state.md)
+12. [ProducerStateManager と冪等プロデューサーのトランザクション状態](part03-storage/12-producer-state.md)
 
 ## 第4部　レプリケーション
 
