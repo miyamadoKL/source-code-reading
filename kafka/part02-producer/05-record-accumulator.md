@@ -195,7 +195,7 @@
 ```
 
 要求サイズが `poolableSize`（`batch.size` の設定値）と一致し、かつ空きリスト `free` に返却済みのバッファがあれば、それを `pollFirst()` でそのまま渡す。
-JVM のバッファ確保とガベージコレクションを経ずに再利用できるため、大量のバッチを生成・破棄するプロデューサーのホットパスでアロケーションの負荷を抑えられる。
+JVM のバッファ確保とガベージコレクションを経ずに再利用できるため、大量のバッチを生成しては破棄するプロデューサーのホットパスでアロケーションの負荷を抑えられる。
 これが本章で説明する最適化の要点であり、`batch.size` を固定サイズで運用する設計とあわせて効いてくる。
 
 要求サイズがちょうど `poolableSize` でない場合や、空きリストが空の場合は、`nonPooledAvailableMemory`（プール外の残量）から必要分を切り出す。
@@ -406,7 +406,7 @@ flowchart TD
 ## sticky partitioning によるパーティション選択
 
 パーティション未指定（`RecordMetadata.UNKNOWN_PARTITION`）でレコードを送る場合、`BuiltInPartitioner` が送り先パーティションを決める。
-1レコードごとにパーティションを切り替えるのではなく、一定バイト数（`stickyBatchSize`。実装上は `batch.size` を流用する）を書き込むまで同じパーティションに固定する。
+1レコードごとにパーティションを切り替えるのではなく、一定バイト数（`stickyBatchSize`、実装上は `batch.size` を流用する）を書き込むまで同じパーティションに固定する。
 
 [`clients/src/main/java/org/apache/kafka/clients/producer/internals/BuiltInPartitioner.java L190-L228`](https://github.com/apache/kafka/blob/4.3.1/clients/src/main/java/org/apache/kafka/clients/producer/internals/BuiltInPartitioner.java#L190-L228)
 

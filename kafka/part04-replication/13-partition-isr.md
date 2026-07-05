@@ -508,11 +508,11 @@ ISR の伸縮とは独立に、リーダーは自身と各フォロワーの LEO
 ```
 
 新しい High Watermark の候補は、リーダー自身の LEO から出発し、`maximalIsr`に含まれるレプリカ、または「追いついているが ISR への加入がまだ確定していないレプリカ」の LEO のうち最小のものまで引き下げられる。
-言い換えると、**ISR に含まれる全レプリカのうち最小の LEO が High Watermark になる**。
+言い換えると、**`maximalIsr`に含まれるレプリカと、ISR 加入待ちだが追いついているレプリカを合わせた集合のうち、最小の LEO が High Watermark になる**。
 この最小値だけを追跡すればよいという設計が、本章の最適化の要点である。
 
-ISR の実サイズがいくつであっても、High Watermark の再計算は「候補の初期値を1回更新し、あとはレプリカごとに最小値を取るだけ」の線形走査で終わる。
-レプリカ数が増えても、必要な比較の回数がレプリカ数に比例して増えるだけであり、レプリカの組み合わせを都度列挙するような計算にはならない。
+High Watermark の再計算は、`remoteReplicasMap`に含まれるリモートレプリカを1回ずつ走査し、そのつど最小値を取るだけの線形走査で終わる。
+比較の対象はレプリカ1個ごとであり、ISR に含まれるレプリカの組み合わせを都度列挙するような計算にはならない。
 また`isUnderMinIsr`（`min.insync.replicas`未満）の場合は計算そのものを打ち切ることで、無駄な走査を避けている。
 
 [`core/src/main/scala/kafka/cluster/Partition.scala L237-L248`](https://github.com/apache/kafka/blob/4.3.1/core/src/main/scala/kafka/cluster/Partition.scala#L237-L248)
@@ -561,8 +561,8 @@ stateDiagram-v2
 `Partition`は、フォロワーごとの LEO と最終追随時刻を`Replica`が保持する`ReplicaState`として追跡し、`replica.lag.time.max.ms`を基準に「追いついているか」を判定する。
 ISR の拡張と縮小はどちらもリーダー単独では確定せず、`AlterPartition` RPC でコントローラーに提案し、応答が返るまでは`PendingExpandIsr`/`PendingShrinkIsr`という未確定状態に留まる。
 未確定のあいだどちらの ISR を基準にするか（拡張は新しい ISR、縮小は元の ISR）を使い分けることで、調停の失敗が誤ったコミット判定につながらないようにしている。
-High Watermark は、`maximalIsr`に含まれるレプリカの LEO のうち最小のものとして計算される。
-この最小値だけを追えばよい設計により、レプリカ数によらず一定の走査コストでコミット済みの境界を決められる。
+High Watermark は、`maximalIsr`に含まれるレプリカと ISR 加入待ちだが追いついているレプリカを合わせた集合のうち、最小の LEO として計算される。
+この最小値だけを追えばよい設計により、レプリカの組み合わせを列挙せず、対象レプリカを1回ずつ見る線形走査でコミット済みの境界を決められる。
 
 ## 関連する章
 

@@ -9,9 +9,12 @@
 
 第8章では、1本の**セグメント**が `.log` ファイルと `OffsetIndex` / `TimeIndex` の組で構成され、オフセットや時刻からファイル上の位置を引けることを見た。
 
-本章では、そのセグメントの集合をパーティション単位の論理ログとしてまとめ上げる層を読む。**`UnifiedLog`** と **`LocalLog`** である。
+本章では、そのセグメントの集合をパーティション単位の論理ログとしてまとめ上げる層を読む。
+**`UnifiedLog`** と **`LocalLog`** である。
 
-両者は役割が異なる。`UnifiedLog` はレプリケーション・トランザクション・階層ストレージまで含めた「パーティションのログ」としての整合性を担う。`LocalLog` はディスク上に存在するセグメント集合そのものの管理に専念する。
+両者は役割が異なる。
+`UnifiedLog` はレプリケーション、トランザクション、階層ストレージまで含めた「パーティションのログ」としての整合性を担う。
+`LocalLog` はディスク上に存在するセグメント集合そのものの管理に専念する。
 
 この二層構造が、追記と読み出しという2つの基本操作をどう分担するかを、コードに沿って追う。
 
@@ -42,9 +45,11 @@
 public class UnifiedLog implements AutoCloseable {
 ```
 
-パーティションのログは、階層ストレージ（tiered storage）に退避された古いセグメントと、ディスク上にある新しいセグメントの両方から構成されうる。**アクティブセグメント**（末尾の書き込み対象セグメント）は常にローカルに存在する。
+パーティションのログは、階層ストレージ（tiered storage）に退避された古いセグメントと、ディスク上にある新しいセグメントの両方から構成されうる。
+**アクティブセグメント**（末尾の書き込み対象セグメント）は常にローカルに存在する。
 
-`UnifiedLog` はこの両方を束ねた「統一されたビュー」を提供する。一方、ローカルに存在するセグメント集合そのものの管理は、内部に保持する `LocalLog` インスタンスへ委譲する。
+`UnifiedLog` はこの両方を束ねた「統一されたビュー」を提供する。
+一方、ローカルに存在するセグメント集合そのものの管理は、内部に保持する `LocalLog` インスタンスへ委譲する。
 
 [`storage/src/main/java/org/apache/kafka/storage/internals/log/UnifiedLog.java L127-L128`](https://github.com/apache/kafka/blob/4.3.1/storage/src/main/java/org/apache/kafka/storage/internals/log/UnifiedLog.java#L127-L128)
 
@@ -67,7 +72,9 @@ public class UnifiedLog implements AutoCloseable {
 public class LocalLog {
 ```
 
-`LocalLog` はスレッドセーフではない。排他制御は呼び出し元の `UnifiedLog` が担う。実際、`UnifiedLog` は追記・ロールの経路すべてで自前のロックを取ってから `LocalLog` を呼び出している。
+`LocalLog` はスレッドセーフではない。
+排他制御は呼び出し元の `UnifiedLog` が担う。
+実際、`UnifiedLog` は追記やロールの経路すべてで自前のロックを取ってから `LocalLog` を呼び出している。
 
 [`storage/src/main/java/org/apache/kafka/storage/internals/log/UnifiedLog.java L122-L123`](https://github.com/apache/kafka/blob/4.3.1/storage/src/main/java/org/apache/kafka/storage/internals/log/UnifiedLog.java#L122-L123)
 
@@ -94,11 +101,13 @@ graph TD
     style C3 fill:#f9c74f
 ```
 
-`UnifiedLog` はオフセットの検証、High Watermark の管理、プロデューサー状態やレプリケーションに関わる整合性を担当する。`LocalLog` はその配下で、実際にどのセグメントへ書き込み、どのセグメントから読み出すかという物理的な操作に専念する。
+`UnifiedLog` はオフセットの検証、High Watermark の管理、プロデューサー状態やレプリケーションに関わる整合性を担当する。
+`LocalLog` はその配下で、実際にどのセグメントへ書き込み、どのセグメントから読み出すかという物理的な操作に専念する。
 
 ## リーダー追記とフォロワー追記の違い
 
-パーティションへの追記は、リーダーとして受ける場合とフォロワーとして受ける場合で意味が異なる。`UnifiedLog` はこの違いを `appendAsLeader` と `appendAsFollower` という2つの入口に分けている。
+パーティションへの追記は、リーダーとして受ける場合とフォロワーとして受ける場合で意味が異なる。
+`UnifiedLog` はこの違いを `appendAsLeader` と `appendAsFollower` という2つの入口に分けている。
 
 [`storage/src/main/java/org/apache/kafka/storage/internals/log/UnifiedLog.java L1049-L1058`](https://github.com/apache/kafka/blob/4.3.1/storage/src/main/java/org/apache/kafka/storage/internals/log/UnifiedLog.java#L1049-L1058)
 
@@ -131,9 +140,11 @@ graph TD
     }
 ```
 
-両者はいずれも private メソッド `append` に集約されるが、渡す引数が違う。`appendAsLeader` は `validateAndAssignOffsets` を（`RAFT_LEADER` 起源でない限り）真にして呼ぶのに対し、`appendAsFollower` はこれを常に偽で呼ぶ。
+両者はいずれも private メソッド `append` に集約されるが、渡す引数が違う。
+`appendAsLeader` は `validateAndAssignOffsets` を（`RAFT_LEADER` 起源でない限り）真にして呼ぶのに対し、`appendAsFollower` はこれを常に偽で呼ぶ。
 
-この一点が、リーダー追記とフォロワー追記の本質的な違いを表している。リーダーはプロデューサーから届いたレコードにオフセットを新規に割り当てる主体であり、フォロワーはリーダーがすでに割り当てたオフセットをそのまま受け入れる主体である。
+この一点が、リーダー追記とフォロワー追記の違いを表している。
+リーダーはプロデューサーから届いたレコードにオフセットを新規に割り当てる主体であり、フォロワーはリーダーがすでに割り当てたオフセットをそのまま受け入れる主体である。
 
 `append` メソッド内で、この差は次のように分岐する。
 
@@ -169,7 +180,8 @@ graph TD
                                 appendInfo.setRecordValidationStats(validateAndOffsetAssignResult.recordValidationStats());
 ```
 
-リーダー側は、現在の `logEndOffset()` を起点に `LogValidator` へオフセット割り当てを委ねる。バッチ内のレコードには連番のオフセットが振り直され、圧縮方式の変換やタイムスタンプの検証もここで行われる。
+リーダー側は、現在の `logEndOffset()` を起点に `LogValidator` へオフセット割り当てを委ねる。
+バッチ内のレコードには連番のオフセットが振り直され、圧縮方式の変換やタイムスタンプの検証もここで行われる。
 
 一方、フォロワー側（`validateAndAssignOffsets` が偽の分岐）では、バッチにすでに刻まれているオフセットをそのまま検証するだけで済ませる。
 
@@ -201,7 +213,9 @@ graph TD
                             }
 ```
 
-フォロワーが受け取ったバッチの先頭オフセットが、自身の `logEndOffset()` より小さければ矛盾である。フォロワーはリーダーから送られてくる連続したオフセット列をそのまま追記する立場であり、すでに書き込んだ位置より手前のオフセットを渡されることは想定されていない。この場合は `UnexpectedAppendOffsetException` を投げ、呼び出し元（`ReplicaFetcherThread`、第15章）に異常を伝える。
+フォロワーが受け取ったバッチの先頭オフセットが、自身の `logEndOffset()` より小さければ矛盾である。
+フォロワーはリーダーから送られてくる連続したオフセット列をそのまま追記する立場であり、すでに書き込んだ位置より手前のオフセットを渡されることは想定されていない。
+この場合は `UnexpectedAppendOffsetException` を投げ、呼び出し元（`ReplicaFetcherThread`、第15章）に異常を伝える。
 
 ## 追記の全体の流れ
 
@@ -238,7 +252,8 @@ flowchart TD
                             );
 ```
 
-ここで注目すべきは、書き込み先セグメントの決定が `analyzeAndValidateProducerState` より前に済んでいる点である。プロデューサーの冪等性やトランザクション状態の検証は、どのセグメントに書くかとは独立に行える処理であり、先にセグメントを確定させることで、以降の処理はそのセグメント1つに対して閉じて進められる。
+書き込み先セグメントの決定は、`analyzeAndValidateProducerState` より前に済んでいる。
+プロデューサーの冪等性やトランザクション状態の検証は、どのセグメントに書くかとは独立に行える処理であり、先にセグメントを確定させることで、以降の処理はそのセグメント1つに対して閉じて進められる。
 
 重複バッチと判定された場合は、実際のディスク書き込みを行わずに以前の結果を返す。
 
@@ -271,7 +286,9 @@ flowchart TD
                                 updateHighWatermarkWithLogEndOffset();
 ```
 
-コメントが明示するとおり、`logEndOffset` の更新は本体データの書き込み直後に行う。トランザクションインデックスへの追記は、この後に別途行われる副次的な処理であり、これが失敗しても `logEndOffset` はすでにレコード本体の書き込みと整合した値へ進んでいる。オフセットが単調に増加するという不変条件を、失敗しうる副次処理より先に確定させる順序である。
+コメントが明示するとおり、`logEndOffset` の更新は本体データの書き込み直後に行う。
+トランザクションインデックスへの追記は、この後に別途行われる副次的な処理であり、これが失敗しても `logEndOffset` はすでにレコード本体の書き込みと整合した値へ進んでいる。
+オフセットが単調に増加するという不変条件を、失敗しうる副次処理より先に確定させる順序である。
 
 `localLog.append` 自体は薄い。
 
@@ -284,11 +301,14 @@ flowchart TD
     }
 ```
 
-アクティブセグメントへの `append` と、`logEndOffset` の更新の2手順だけである。実際のバイト列の書き込みは `LogSegment.append`（第8章）に委ねられている。
+アクティブセグメントへの `append` と、`logEndOffset` の更新の2手順だけである。
+実際のバイト列の書き込みは `LogSegment.append`（第8章）に委ねられている。
 
 ## セグメントのロール
 
-セグメントが満杯になった場合、あるいは一定時間を超えて書き込みが続いた場合には、新しいアクティブセグメントへ切り替える。これを**ロール**と呼ぶ。判定は `maybeRoll` が行う。
+セグメントが満杯になった場合、あるいは一定時間を超えて書き込みが続いた場合には、新しいアクティブセグメントへ切り替える。
+これを**ロール**と呼ぶ。
+判定は `maybeRoll` が行う。
 
 [`storage/src/main/java/org/apache/kafka/storage/internals/log/UnifiedLog.java L2146-L2153`](https://github.com/apache/kafka/blob/4.3.1/storage/src/main/java/org/apache/kafka/storage/internals/log/UnifiedLog.java#L2146-L2153)
 
@@ -303,7 +323,8 @@ flowchart TD
             if (segment.shouldRoll(new RollParams(config().maxSegmentMs(), config().segmentSize(), appendInfo.maxTimestamp(), appendInfo.lastOffset(), messagesSize, now))) {
 ```
 
-`shouldRoll` の判定に使う `RollParams` には、設定上の最大セグメントサイズ（`segment.bytes`）と最大経過時間（`segment.ms`）の両方が渡っている。どちらか一方の条件を満たせばロールする。
+`shouldRoll` の判定に使う `RollParams` には、設定上の最大セグメントサイズ（`segment.bytes`）と最大経過時間（`segment.ms`）の両方が渡っている。
+どちらか一方の条件を満たせばロールする。
 
 ロールが必要なとき、`UnifiedLog.roll` は新しいベースオフセットを決めて `LocalLog.roll` を呼び出す。
 
@@ -328,7 +349,8 @@ flowchart TD
             updateHighWatermarkWithLogEndOffset();
 ```
 
-コメントにあるとおり、`fsync` を伴う可能性のあるフラッシュ処理は、ロックを握ったこの箇所では行わず、スケジューラスレッドへ委譲している。ロールは追記のたびに走りうる判定であり、ここで重い I/O を待ち合わせるとロック保持時間が延び、他の追記要求を遅らせる。
+コメントにあるとおり、`fsync` を伴う可能性のあるフラッシュ処理は、ロックを握ったこの箇所では行わず、スケジューラスレッドへ委譲している。
+ロールは追記のたびに走りうる判定であり、ここで重い I/O を待ち合わせるとロック保持時間が延び、他の追記要求を遅らせる。
 
 実際にファイルを切り替える処理は `LocalLog.roll` にある。
 
@@ -344,7 +366,8 @@ flowchart TD
                 long newOffset = Math.max(expectedNextOffset, logEndOffset());
 ```
 
-新しいベースオフセットは、渡された `expectedNextOffset` と現在の `logEndOffset()` の大きいほうを取る。通常は両者が一致するが、後述するように圧縮バッチの先頭オフセットを厳密に特定できない場合に備えた安全策である。
+新しいベースオフセットは、渡された `expectedNextOffset` と現在の `logEndOffset()` の大きいほうを取る。
+通常は両者が一致するが、後述するように圧縮バッチの先頭オフセットを厳密に特定できない場合に備えた安全策である。
 
 ## High Watermark と logEndOffset の関係
 
@@ -371,7 +394,8 @@ flowchart TD
     }
 ```
 
-`logEndOffset` は「ローカルに書き込み済みの末尾」、High Watermark は「クラスタ全体で複製が確認された末尾」を指し、常に `High Watermark <= logEndOffset` の関係にある。この不変条件は `updateHighWatermark` で明示的に守られている。
+`logEndOffset` は「ローカルに書き込み済みの末尾」、High Watermark は「クラスタ全体で複製が確認された末尾」を指し、常に `High Watermark <= logEndOffset` の関係にある。
+この不変条件は `updateHighWatermark` で明示的に守られている。
 
 [`storage/src/main/java/org/apache/kafka/storage/internals/log/UnifiedLog.java L535-L552`](https://github.com/apache/kafka/blob/4.3.1/storage/src/main/java/org/apache/kafka/storage/internals/log/UnifiedLog.java#L535-L552)
 
@@ -396,7 +420,8 @@ flowchart TD
     }
 ```
 
-指定された値が `logStartOffset` を下回れば `logStartOffset` に、`logEndOffset` を上回れば `logEndOffset` に切り詰める。High Watermark は常に `[logStartOffset, logEndOffset]` の範囲に収まる。
+指定された値が `logStartOffset` を下回れば `logStartOffset` に、`logEndOffset` を上回れば `logEndOffset` に切り詰める。
+High Watermark は常に `[logStartOffset, logEndOffset]` の範囲に収まる。
 
 追記直後にも `logEndOffset` の変化に合わせて High Watermark を追随させる処理がある。
 
@@ -412,7 +437,8 @@ flowchart TD
     }
 ```
 
-これは、単一パーティションのレプリカ数が1つしかない場合や、切り詰め（truncation）の直後に High Watermark が `logEndOffset` に追いついてしまっている状況で、両者のオフセットメタデータ（セグメントのベースオフセットや物理位置を含む `LogOffsetMetadata`）を整合させるための処理である。複数レプリカ間の High Watermark 更新自体は `ReplicaManager`（第14章）がフェッチ応答をもとに調停する。
+これは、単一パーティションのレプリカ数が1つしかない場合や、切り詰め（truncation）の直後に High Watermark が `logEndOffset` に追いついてしまっている状況で、両者のオフセットメタデータ（セグメントのベースオフセットや物理位置を含む `LogOffsetMetadata`）を整合させるための処理である。
+複数レプリカ間の High Watermark 更新自体は `ReplicaManager`（第14章）がフェッチ応答をもとに調停する。
 
 ## 読み出しの経路
 
@@ -435,7 +461,10 @@ flowchart TD
     }
 ```
 
-ここで `FetchIsolation` が読み出しの上限を決める役割を担う。コンシューマーからの通常のフェッチは `HIGH_WATERMARK` を指定し、High Watermark を超えるレコード（まだ全レプリカに複製されていないレコード）を読ませない。フォロワーからのフェッチは `LOG_END` を指定し、リーダーの末尾まで読める。トランザクションを考慮した read committed 読み出しは `TXN_COMMITTED` を使う。
+`FetchIsolation` が読み出しの上限を決める役割を担う。
+コンシューマーからの通常のフェッチは `HIGH_WATERMARK` を指定し、High Watermark を超えるレコード（まだ全レプリカに複製されていないレコード）を読ませない。
+フォロワーからのフェッチは `LOG_END` を指定し、リーダーの末尾まで読める。
+トランザクションを考慮した read committed 読み出しは `TXN_COMMITTED` を使う。
 
 読み出しの上限が一本化されたあと、実際のセグメント探索は `LocalLog.read` が行う。
 
@@ -482,13 +511,16 @@ flowchart TD
 
 まず `segments.floorSegment(startOffset)` で、開始オフセット以下の最大のベースオフセットを持つセグメントを1つ選ぶ（第8章で扱った `ConcurrentSkipListMap` による探索）。
 
-読み出し可能な上限位置（`maxPositionOpt`）は、セグメントと `maxOffsetMetadata`（`HIGH_WATERMARK` などで決まった上限のオフセットメタデータ）の関係で3通りに分岐する。上限のセグメントより前のセグメントならセグメント全体、上限と同じセグメントならその相対位置まで、まだ上限のセグメントに達していなければ無制限、という具合である。
+読み出し可能な上限位置（`maxPositionOpt`）は、セグメントと `maxOffsetMetadata`（`HIGH_WATERMARK` などで決まった上限のオフセットメタデータ）の関係で3通りに分岐する。
+上限のセグメントより前のセグメントならセグメント全体、上限と同じセグメントならその相対位置まで、まだ上限のセグメントに達していなければ無制限、という具合である。
 
-選んだセグメントに `startOffset` 以降のレコードが1件もなければ（セグメント境界をまたぐ場合）、`segments.higherSegment` で次のセグメントへ進む。この繰り返しにより、複数セグメントにまたがる読み出し要求も1回の `read` 呼び出しで解決する。
+選んだセグメントに `startOffset` 以降のレコードが1件もなければ（セグメント境界をまたぐ場合）、`segments.higherSegment` で次のセグメントへ進む。
+この繰り返しにより、複数セグメントにまたがる読み出し要求も1回の `read` 呼び出しで解決する。
 
 ## 最適化の工夫：末尾への順次追記とページキャッシュ
 
-`UnifiedLog` と `LocalLog` の構造には、Kafka のスループットを支える工夫が組み込まれている。追記は常にアクティブセグメントの末尾へのみ行われる、という制約である。
+`UnifiedLog` と `LocalLog` の構造には、Kafka のスループットを支える工夫が組み込まれている。
+追記は常にアクティブセグメントの末尾へのみ行われる、という制約である。
 
 [`storage/src/main/java/org/apache/kafka/storage/internals/log/LogSegment.java L250-L261`](https://github.com/apache/kafka/blob/4.3.1/storage/src/main/java/org/apache/kafka/storage/internals/log/LogSegment.java#L250-L261)
 
@@ -506,7 +538,8 @@ flowchart TD
             long appendedBytes = log.append(records);
 ```
 
-書き込み位置（`physicalPosition`）は常にファイルの現在サイズであり、既存データの途中を書き換える経路が存在しない。この**追記専用**（append-only）という制約により、OS のページキャッシュ上でファイル末尾のダーティページだけを追跡すればよくなり、ランダム書き込みで必要になるページの読み込みやキャッシュの追い出しを避けられる。
+書き込み位置（`physicalPosition`）は常にファイルの現在サイズであり、既存データの途中を書き換える経路が存在しない。
+この**追記専用**（append-only）という制約により、OS のページキャッシュ上でファイル末尾のダーティページだけを追跡すればよくなり、ランダム書き込みで必要になるページの読み込みやキャッシュの追い出しを避けられる。
 
 さらに、追記のたびにインデックスへエントリを足すわけではない。
 
@@ -522,17 +555,21 @@ flowchart TD
 
 前回のインデックス登録から `indexIntervalBytes`（設定 `index.interval.bytes`）を超えて書き込んだときだけインデックスに1エントリを追加する、疎な（sparse）インデックスである（第8章で扱った `OffsetIndex` の探索が、この間引かれたエントリを前提に成り立っている）。
 
-読み出し側は、この順次追記という性質を逆手に取り、`segments.floorSegment` によるセグメント単位のO(log n)探索と、セグメント内の疎インデックスによる絞り込みを組み合わせて、目的のオフセットに近い物理位置へ直接シークする。ファイル全体を先頭から走査する必要がない。
+読み出し側は、この順次追記という性質を逆手に取り、`segments.floorSegment` によるセグメント単位のO(log n)探索と、セグメント内の疎インデックスによる絞り込みを組み合わせて、目的のオフセットに近い物理位置へ直接シークする。
+ファイル全体を先頭から走査する必要がない。
 
 追記と読み出しの両方が「末尾に積むだけ」「末尾から辿るだけ」という単純な構造に還元されていることが、この層がロック競合や複雑な整合性制御を最小限に抑えられている理由である。
 
 ## まとめ
 
-`UnifiedLog` はパーティションの論理ログとして、オフセットの割り当てと検証、High Watermark の管理、プロデューサー状態やトランザクションとの整合性を担う。`LocalLog` はその配下で、ローカルディスク上のセグメント集合の管理に専念する。
+`UnifiedLog` はパーティションの論理ログとして、オフセットの割り当てと検証、High Watermark の管理、プロデューサー状態やトランザクションとの整合性を担う。
+`LocalLog` はその配下で、ローカルディスク上のセグメント集合の管理に専念する。
 
-追記では、リーダーがオフセットを新規に割り当てるのに対し、フォロワーは与えられたオフセットをそのまま検証するだけという非対称性がある。`logEndOffset` はローカルの書き込み末尾、High Watermark はクラスタ全体で複製済みの末尾を指し、常に前者が後者以上になるという不変条件が随所で保たれている。
+追記では、リーダーがオフセットを新規に割り当てるのに対し、フォロワーは与えられたオフセットをそのまま検証するだけという非対称性がある。
+`logEndOffset` はローカルの書き込み末尾、High Watermark はクラスタ全体で複製済みの末尾を指し、常に前者が後者以上になるという不変条件が随所で保たれている。
 
-読み出しは `FetchIsolation` によって見える範囲の上限が決まり、`LocalLog` がセグメントをまたいで探索する。追記が常に末尾へのシーケンシャル書き込みに限定されていることが、ページキャッシュの活用と疎インデックスによる高速な位置特定の両方を支えている。
+読み出しは `FetchIsolation` によって見える範囲の上限が決まり、`LocalLog` がセグメントをまたいで探索する。
+追記が常に末尾へのシーケンシャル書き込みに限定されていることが、ページキャッシュの活用と疎インデックスによる高速な位置特定の両方を支えている。
 
 ## 関連する章
 

@@ -107,7 +107,7 @@ graph LR
     }
 ```
 
-ここで重要なのは、`bytesSinceLastIndexEntry > indexIntervalBytes` という条件である。
+この処理の要は、`bytesSinceLastIndexEntry > indexIntervalBytes` という条件である。
 バッチが追記されるたびに索引を更新するのではなく、前回の索引エントリから `indexIntervalBytes` バイト以上進んだときだけ、そのバッチの最終オフセットと物理位置を `OffsetIndex` に登録する。
 つまり `OffsetIndex` は全レコードのオフセットを保持せず、一定バイト間隔で間引いたエントリだけを持つ**疎な索引**である。
 
