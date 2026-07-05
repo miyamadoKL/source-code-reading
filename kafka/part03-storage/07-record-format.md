@@ -174,7 +174,7 @@ CRC は`ATTRIBUTES_OFFSET`から末尾までの範囲を対象にしており、
  *     HeaderValue => Bytes
 ```
 
-`TimestampDelta`と`OffsetDelta`は、レコード自身の値ではなく、バッチヘッダの`BaseTimestamp`・`BaseOffset`との差分である。
+`TimestampDelta`と`OffsetDelta`は、レコード自身の値ではなく、バッチヘッダの`BaseTimestamp`と`BaseOffset`との差分である。
 `readFrom`はこの差分を読み、基準値へ足し戻すことで元の値を復元する。
 
 [`clients/src/main/java/org/apache/kafka/common/record/internal/DefaultRecord.java L316-L328`](https://github.com/apache/kafka/blob/4.3.1/clients/src/main/java/org/apache/kafka/common/record/internal/DefaultRecord.java#L316-L328)

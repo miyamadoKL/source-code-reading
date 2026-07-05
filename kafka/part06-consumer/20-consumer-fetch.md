@@ -42,9 +42,12 @@
             this.fetchBuffer = new FetchBuffer(logContext);
 ```
 
-- `applicationEventQueue`：アプリケーションスレッドがネットワークスレッドへ指示を送るキュー。要素は `ApplicationEvent`（購読変更、コミット、フェッチ要求の作成指示など）である。
-- `backgroundEventQueue`：ネットワークスレッドがアプリケーションスレッドへ結果やエラーを返すキュー。要素は `BackgroundEvent` である。
-- `fetchBuffer`：ネットワークスレッドが受信したフェッチ応答を溜め、アプリケーションスレッドが読み出す**フェッチバッファ**。キューとは異なり、レコードそのものを保持する。
+- `applicationEventQueue`：アプリケーションスレッドがネットワークスレッドへ指示を送るキュー。
+  要素は `ApplicationEvent`（購読変更、コミット、フェッチ要求の作成指示など）である。
+- `backgroundEventQueue`：ネットワークスレッドがアプリケーションスレッドへ結果やエラーを返すキュー。
+  要素は `BackgroundEvent` である。
+- `fetchBuffer`：ネットワークスレッドが受信したフェッチ応答を溜め、アプリケーションスレッドが読み出す**フェッチバッファ**。
+  キューとは異なり、レコードそのものを保持する。
 
 この3つのオブジェクトは、`ApplicationEventHandler`（`applicationEventQueue` をラップしたもの）と `ConsumerNetworkThread` の両方から参照される形でコンストラクタに渡される。
 一方のスレッドがもう一方のメソッドを直接呼ぶことはなく、常にこの3つの共有オブジェクトを経由する。
@@ -301,10 +304,11 @@ flowchart LR
 ```
 
 1. `processApplicationEvents()` で `applicationEventQueue` から溜まった `ApplicationEvent` をまとめて取り出し、`ApplicationEventProcessor` に処理させる。
-2. `RequestManager` の一覧（フェッチ、ハートビート、オフセットコミットなど機能ごとに分かれた管理オブジェクト）を順に `poll` し、送信すべきリクエストを集める。フェッチ用の `RequestManager` が `FetchRequestManager` であり、これが `AbstractFetch` を継承する。
-3. 集めたリクエストを `networkClientDelegate.poll` に渡し、実際のソケット I/O（送信・受信）を1回分行う。
+2. `RequestManager` の一覧（フェッチ、ハートビート、オフセットコミットなど機能ごとに分かれた管理オブジェクト）を順に `poll` し、送信すべきリクエストを集める。
+   フェッチ用の `RequestManager` が `FetchRequestManager` であり、これが `AbstractFetch` を継承する。
+3. 集めたリクエストを `networkClientDelegate.poll` に渡し、実際のソケット I/O（送信、受信）を1回分行う。
 
-`RequestManager` が複数種類存在し、それぞれが独立に「次にいつ起こされたいか」（`maximumTimeToWait`）を返す設計により、1本のネットワークスレッドと1個の `NetworkClient` だけでフェッチ・ハートビート・コミットなど種類の異なるリクエストを多重化できる。
+`RequestManager` が複数種類存在し、それぞれが独立に「次にいつ起こされたいか」（`maximumTimeToWait`）を返す設計により、1本のネットワークスレッドと1個の `NetworkClient` だけでフェッチ、ハートビート、コミットなど種類の異なるリクエストを多重化できる。
 第4章で見たブローカー側の `RequestChannel` が複数の `KafkaRequestHandler` にリクエストを配るのと対になる構図であり、こちらはクライアント側で複数の関心事を1つの I/O ループに集約する。
 
 ## フェッチリクエストの組み立て
@@ -388,7 +392,7 @@ flowchart LR
     }
 ```
 
-対象となるパーティションは、`subscriptions.fetchablePartitions` で得られる購読中パーティションから、既に `fetchBuffer` にデータが積まれているものを除いたものに限る（`fetchablePartitions` メソッド。[`AbstractFetch.java L346-L353`](https://github.com/apache/kafka/blob/4.3.1/clients/src/main/java/org/apache/kafka/clients/consumer/internals/AbstractFetch.java#L346-L353)）。
+対象となるパーティションは、`subscriptions.fetchablePartitions` で得られる購読中パーティションから、既に `fetchBuffer` にデータが積まれているものを除いたものに限る（`fetchablePartitions` メソッド、[`AbstractFetch.java L346-L353`](https://github.com/apache/kafka/blob/4.3.1/clients/src/main/java/org/apache/kafka/clients/consumer/internals/AbstractFetch.java#L346-L353)）。
 ユーザーがまだ処理していないデータを抱えたまま追加のフェッチを出さないことで、無駄なメモリ使用と、既に埋まっているバッファへ応答を書き込む競合を避ける。
 
 さらに、ノード単位で「フェッチ中のリクエストがある」「そのノードにバッファ済みデータがある」パーティションを丸ごとスキップしている。
@@ -542,7 +546,7 @@ flowchart LR
 
 ## まとめ
 
-`AsyncKafkaConsumer` は、ユーザーが呼び出すアプリケーションスレッドと、ブローカーとの通信を行うネットワークスレッドを、`ApplicationEvent`・`BackgroundEvent` の2つのキューと `fetchBuffer` という共有バッファで分離している。
+`AsyncKafkaConsumer` は、ユーザーが呼び出すアプリケーションスレッドと、ブローカーとの通信を行うネットワークスレッドを、`ApplicationEvent`、`BackgroundEvent` の2つのキューと `fetchBuffer` という共有バッファで分離している。
 
 `poll()` は `fetchBuffer` に既にデータがあればすぐに返し、なければネットワークスレッドからの通知を待つ。
 ネットワークスレッド側では `FetchRequestManager`（`AbstractFetch` を継承）が、バッファされていない購読パーティションだけを対象にノード単位でフェッチリクエストを組み立て、応答を `CompletedFetch` として `fetchBuffer` に積む。

@@ -591,7 +591,7 @@ public void doneCleaning(TopicPartition topicPartition, File dataDir, long endOf
 
 各パーティションは `LogCleaningState` によって、未処理（状態なし）、進行中（`LOG_CLEANING_IN_PROGRESS`）、中断要求中（`LOG_CLEANING_ABORTED`）、一時停止中（`LogCleaningPaused`）のいずれかの状態を持つ。
 `abortAndPauseCleaning` は進行中のクリーニングに中断を要求し、クリーナースレッドが `checkCleaningAborted` でその状態を検知して例外を投げるまで待つ。
-セグメント入れ替えの直前に別スレッドがパーティションを削除・移動しようとしても、この状態遷移によって「クリーニング中のセグメントをいきなり消す」事故を避けられる。
+セグメント入れ替えの直前に別スレッドがパーティションを削除、移動しようとしても、この状態遷移によって「クリーニング中のセグメントをいきなり消す」事故を避けられる。
 
 ```mermaid
 stateDiagram-v2
@@ -614,7 +614,7 @@ stateDiagram-v2
 `LogCleaner` は、`cleanup.policy=compact` なパーティションのうち最も dirty な1件を優先して選び、`CleanerThread` に割り当てる。
 `Cleaner` は dirty 区間を走査して `SkimpyOffsetMap` にキー→最新オフセットの索引を作り、その索引をもとにセグメントを再書き込みして古いレコードとトゥームストーンを除く。
 `SkimpyOffsetMap` はキーそのものではなくハッシュ値だけを固定長で保持するため、コンパクション用メモリの上限を保ったまま大量のキーを索引できる。
-コンパクションの進捗は `cleaner-offset-checkpoint` に記録され、`LogCleanerManager` の状態遷移がクリーニング中のセグメント操作と他の操作（削除・ディレクトリ移動）の競合を防ぐ。
+コンパクションの進捗は `cleaner-offset-checkpoint` に記録され、`LogCleanerManager` の状態遷移がクリーニング中のセグメント操作と他の操作（削除、ディレクトリ移動）の競合を防ぐ。
 
 ## 関連する章
 

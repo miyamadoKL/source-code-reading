@@ -141,7 +141,7 @@ PreVote はエポックを実際には進めず「もし選挙を始めたら過
         }
 ```
 
-投票を許可する条件には、依頼元の末尾エポック・末尾オフセットが自分のログ以上であることが含まれる（`lastEpochEndOffsetAndEpoch.compareTo(endOffset()) >= 0`）。
+投票を許可する条件には、依頼元の末尾エポックと末尾オフセットが自分のログ以上であることが含まれる（`lastEpochEndOffsetAndEpoch.compareTo(endOffset()) >= 0`）。
 ログが遅れているレプリカに投票してしまうと、当選後にコミット済みレコードを失う恐れがあるため、Raft は「自分より進んでいる候補にしか投票しない」という制約を課している。
 
 Prospective の候補者がまず PreVote を送る流れは `pollProspective` と `maybeSendVoteRequests` にある。
