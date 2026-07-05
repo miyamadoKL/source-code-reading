@@ -461,5 +461,5 @@ read_committedのコンシューマーは、この決定と配送の両方が完
 ## 関連する章
 
 - 第6章 [Sender と冪等プロデューサー](../part02-producer/06-sender-idempotence.md)（producerId、エポック、シーケンス番号の採番）
-- 第12章 [ProducerStateManager と冪等・トランザクション状態](../part03-storage/12-producer-state.md)（トランザクションマーカーの検証とLSOの計算）
+- 第12章 [ProducerStateManager と冪等プロデューサーのトランザクション状態](../part03-storage/12-producer-state.md)（トランザクションマーカーの検証とLSOの計算）
 - 第24章 [Share Coordinator](24-share-coordinator.md)
