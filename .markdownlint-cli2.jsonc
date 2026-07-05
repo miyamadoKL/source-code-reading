@@ -17,7 +17,8 @@
     "spark/**/*.md",
     "yunikorn/**/*.md",
     "kubernetes/**/*.md",
-    "kubeblocks/**/*.md"
+    "kubeblocks/**/*.md",
+    "kafka/**/*.md"
   ],
   "config": {
     "default": true,
