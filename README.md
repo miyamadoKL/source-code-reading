@@ -25,6 +25,7 @@
 | [KubeBlocks](kubeblocks/README.md) | v1.0.2 | Kubernetes 上のデータベース運用オペレーター。CRD 3層モデル、graph エンジン、InstanceSet、DataProtection、kbagent まで全5部17章。 | [目次](kubeblocks/README.md) |
 | [Apache Kafka](kafka/README.md) | 4.3.1 | 分散イベントストリーミングプラットフォーム。ネットワーク層、プロデューサー、ログストレージ、レプリケーション、KRaft、コンシューマー、各種 Coordinator まで全8部24章。 | [目次](kafka/README.md) |
 | [Ceph](ceph/README.md) | 20.2.2 | 統合分散ストレージ。共通基盤、Messenger、CRUSH、Monitor/Paxos、OSD/PG、BlueStore、Objecter/RBD/CephFS/RGW まで全8部26章。 | [目次](ceph/README.md) |
+| [ProxySQL](proxysql/README.md) | 3.0.9 | MySQL/PostgreSQL 向け高性能プロキシ。スレッドモデル、プロトコル、セッションとクエリ処理、コネクションプール、高可用性、Admin/Cluster まで全8部25章。 | [目次](proxysql/README.md) |
 
 今後、他の OSS のソースコード読解ドキュメントを `<oss-name>/` 配下に追加していく。
 
