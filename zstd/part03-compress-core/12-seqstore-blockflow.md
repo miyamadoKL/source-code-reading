@@ -150,7 +150,7 @@ ZSTD_storeSeq(SeqStore_t* seqStorePtr,
 リテラルのコピーは`ZSTD_wildcopy`による16バイト単位のオーバーコピーが主経路であり、バッファ末尾に近い場合だけ境界チェックつきの`ZSTD_safecopyLiterals`に切り替える。
 リテラルは短いことが多いという想定のもとで、まず16バイトを無条件にコピーし、それ以上長い場合だけ追加のwildcopyを回す構成になっている。
 
-`ZSTD_storeSeqOnly`はseqStoreの本体であり、リテラル長・オフセット・マッチ長の3値を`SeqDef`に書き込む。
+`ZSTD_storeSeqOnly`はseqStoreの本体であり、リテラル長、オフセット、マッチ長の3値を`SeqDef`に書き込む。
 
 [`lib/compress/zstd_compress_internal.h` L734-L767](https://github.com/facebook/zstd/blob/v1.5.7/lib/compress/zstd_compress_internal.h#L734-L767)
 
@@ -358,7 +358,7 @@ seqStoreが埋まったら、`ZSTD_compressBlock_internal`は`ZSTD_entropyCompre
 
 符号化後のサイズが出力バッファに収まらないなら、その場でエラーを`0`（非圧縮扱い）に読み替えて呼び出し元へ返す。
 さらに、バッファには収まっても`ZSTD_minGain`が要求する最低限の縮小幅に届かなければ、やはり`0`を返して非圧縮ブロックへ回す。
-この2段のチェックが、前節で見た`ZSTD_compress_frameChunk`側の生ブロック・RLEブロックへのフォールバックにつながっている。
+この2段のチェックが、前節で見た`ZSTD_compress_frameChunk`側の生ブロックと RLE ブロックへのフォールバックにつながっている。
 
 ## seqStoreという中間表現の利点
 

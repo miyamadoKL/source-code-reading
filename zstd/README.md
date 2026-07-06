@@ -11,14 +11,14 @@ zstd（[facebook/zstd](https://github.com/facebook/zstd)）のソースコード
 ## 第0部　全体像とフレームフォーマット
 
 1. [zstd とは何か：ライブラリ構成と圧縮の全体像](part00-overview/01-what-is-zstd.md)
-2. [フレームフォーマット：frame・block・エントロピーテーブルの配置](part00-overview/02-frame-format.md)
+2. [フレームフォーマット：frame、block、エントロピーテーブルの配置](part00-overview/02-frame-format.md)
 3. [公開 API とストリーミングの流れ](part00-overview/03-public-api-flow.md)
 
 ## 第1部　共通基盤
 
 4. [ワークスペース管理：ZSTD_cwksp による単一アロケーション](part01-common/04-cwksp-memory.md)
 5. [ビットストリーム：BIT_ 読み書きとビットコンテナ](part01-common/05-bitstream.md)
-6. [メモリ抽象・エラー処理・xxhash](part01-common/06-mem-error-xxhash.md)
+6. [メモリアクセス、エラー表現、XXH64 チェックサム](part01-common/06-mem-error-xxhash.md)
 
 ## 第2部　エントロピー符号化
 
@@ -41,11 +41,11 @@ zstd（[facebook/zstd](https://github.com/facebook/zstd)）のソースコード
 17. [lazy と row-based マッチファインダー](part04-matchfinder/17-lazy-row.md)
 18. [optimal parser：コストモデルに基づく最適解探索](part04-matchfinder/18-optimal-parser.md)
 19. [LDM：Long Distance Matching](part04-matchfinder/19-ldm.md)
-20. [ブロック分割：zstd_preSplit](part04-matchfinder/20-block-splitting.md)
+20. [ブロック分割：preSplitter](part04-matchfinder/20-block-splitting.md)
 
 ## 第5部　マルチスレッド圧縮
 
-21. [ZSTDMT：ジョブ分割・スレッドプール・LDM 連携](part05-mt/21-zstdmt.md)
+21. [ZSTDMT：ジョブ分割、スレッドプール、LDM 連携](part05-mt/21-zstdmt.md)
 
 ## 第6部　復号
 
