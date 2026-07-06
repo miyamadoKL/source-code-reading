@@ -251,8 +251,9 @@ Huffman 復号の前に、`ZSTD_allocateLiteralsBuffer` が復号したリテラ
 ## シーケンスのデコード：ZSTD_decodeSequence
 
 デコードテーブルがそろえば、`ZSTD_decodeSequence` が1シーケンスぶんの値を復元する。
-第14章で見たとおり、圧縮側は最後のシーケンスから逆向きに符号化し、3系統の状態を書き出す順はリテラル長、オフセット、マッチ長だった。
-復号側はビットストリームを先頭から読むため、状態の初期化もこの順で行う。
+第14章で見たとおり、圧縮側は最後のシーケンスから逆向きに符号化し、3系統の状態を書き出す順はマッチ長、オフセット、リテラル長だった。
+ビットストリームは後入れ先出しなので、最後に書き出したリテラル長の状態が先頭に来る。
+復号側は先頭から読むため、状態の初期化は書き出しと逆順のリテラル長、オフセット、マッチ長の順になる。
 
 [`lib/decompress/zstd_decompress_block.c` L1640-L1642](https://github.com/facebook/zstd/blob/v1.5.7/lib/decompress/zstd_decompress_block.c#L1640-L1642)
 
@@ -262,7 +263,7 @@ Huffman 復号の前に、`ZSTD_allocateLiteralsBuffer` が復号したリテラ
         ZSTD_initFseState(&seqState.stateML, &seqState.DStream, dctx->MLTptr);
 ```
 
-リテラル長、オフセット、マッチ長の順に初期状態を読むこの並びは、圧縮側が状態を書き出した順そのものである。
+リテラル長、オフセット、マッチ長の順に初期状態を読むこの並びは、圧縮側が書き出した順（マッチ長、オフセット、リテラル長）を、ビットストリームの後入れ先出しによって逆にたどったものである。
 初期化を終えると、各シーケンスでは3つの FSE 状態が指すデコードテーブルのセルから、コードに対応する基準値（`baseValue`）と追加ビット数（`nbAdditionalBits`）を取り出す。
 
 [`lib/decompress/zstd_decompress_block.c` L1253-L1256](https://github.com/facebook/zstd/blob/v1.5.7/lib/decompress/zstd_decompress_block.c#L1253-L1256)

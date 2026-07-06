@@ -323,4 +323,3 @@ size_t ZSTD_RowFindBestMatch(
 - [第16章 fast と double_fast：ハッシュテーブル探索](16-fast-doublefast.md)
 - [第18章 optimal parser：コストモデルに基づく最適解探索](18-optimal-parser.md)
 - [第11章 圧縮コンテキストとパラメータ：CCtx と cparams](../part03-compress-core/11-cctx-params.md)
-</content>

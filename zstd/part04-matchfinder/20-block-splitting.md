@@ -19,7 +19,7 @@
 
 ## 前提：blockを分ける動機
 
-1個のblockは、リテラルとシーケンスをそれぞれ1組のエントロピーテーブル（Huffman・FSEの正規化カウント）で符号化する。
+1個のblockは、リテラルとシーケンスをそれぞれ1組のエントロピーテーブル（Huffman と FSE の正規化カウント）で符号化する。
 入力の前半と後半で出現バイトの分布が大きく異なる場合、1組のテーブルは両方に対して中途半端にしか適合しない。
 境界をデータの性質が変わる位置に置けば、各blockが持つテーブルをその区間の分布へ寄せて作れるため、テーブル自体の符号化コストと、そこから生成される符号語の長さの両方を短くできる。
 これが本章で説明する最適化の核心であり、`zstd_preSplit.c`のコメントが「too different」と呼ぶ判定はこの分布の変わり目を検出するための処理である。
@@ -131,7 +131,7 @@ addEvents_generic(Fingerprint* fp, const void* src, size_t srcSize, size_t sampl
 ```
 
 `samplingRate`が大きいほど間引きが粗くなり、集計にかかる時間はサンプリングレートに反比例して減る。
-`ZSTD_splitBlock_byChunks`は、`level`ごとに用意した`ZSTD_GEN_RECORD_FINGERPRINT`マクロ展開の関数（サンプリングレート1・5・11・43、ハッシュビット数10・10・9・8の4通り）を使い分け、`level`が低いほど粗いサンプリングで速く済ませる。
+`ZSTD_splitBlock_byChunks`は、`level`ごとに用意した`ZSTD_GEN_RECORD_FINGERPRINT`マクロ展開の関数（サンプリングレート1、5、11、43、ハッシュビット数10、10、9、8の4通り）を使い分け、`level`が低いほど粗いサンプリングで速く済ませる。
 
 [`lib/compress/zstd_preSplit.c` L87-L90](https://github.com/facebook/zstd/blob/v1.5.7/lib/compress/zstd_preSplit.c#L87-L90)
 
@@ -237,8 +237,8 @@ static size_t ZSTD_splitBlock_byChunks(const void* blockStart, size_t blockSize,
 
 最初の8KBを`pastEvents`として記録したあと、次の8KBチャンクごとに`newEvents`を計測し、`pastEvents`と「too different」であればその位置`pos`をblock境界として返す。
 そうでなければ`newEvents`を`pastEvents`に併合（`mergeEvents`）し、`penalty`を1減らして次のチャンクへ進む。
-`penalty`が減るということは、`compareFingerprints`のしきい値が徐々に緩くなることを意味し、境界がなかなか見つからないまま累積統計が育つほど、次の判定は「まだ違う」と判定されにくくなる。
-これは、累積区間が大きくなるほど、それより小さい新しいチャンク1つぶんの揺らぎでは全体の分布を動かしにくくなることを補正する調整であり、統計的なノイズを分布の変化と誤認しないための減衰である。
+`penalty`が減ると`compareFingerprints`のしきい値（`threshold = p50 * (THRESHOLD_BASE + penalty) / THRESHOLD_PENALTY_RATE`）が下がり、`deviation >= threshold` が成立しやすくなるため、次のチャンクは境界候補と判定されやすくなる。
+境界が見つからないまま累積区間が育つほど`penalty`を下げてしきい値を緩め、累積イベント数の増加で相対的に埋もれがちな小さいチャンク1つぶんの揺らぎでも境界を打てるように補正する。
 どのチャンクとも「too different」にならなければ、ループは`blockSize`（128KB）に達して終わり、分割なしの1blockとして返す。
 
 `level`は0から3の4段階あり、値が小さいほど粗いサンプリングレート（`records_fs`の`FP_RECORD(43)`など）と小さい`hashLog`（`hashParams`の8）を使うため、計算量と精度がレベルに応じて変わる。
@@ -292,10 +292,10 @@ static size_t ZSTD_splitBlock_fromBorders(const void* blockStart, size_t blockSi
 ```
 
 まず先頭と末尾の512バイトを比較し、「too different」でなければ分割せずに終わる。
-両端が十分違っていれば、次に中央の512バイトを測り、中央が先頭側・末尾側のどちらに近いかで分割位置を決める。
+両端が十分違っていれば、次に中央の512バイトを測り、中央が先頭側と末尾側のどちらに近いかで分割位置を決める。
 中央が両端から同程度の距離にあれば境界は64KBちょうど（中央）に、先頭側に近ければ32KB、末尾側に近ければ96KBに置く。
 コメントが述べるとおり、この比較をさらにもう一段繰り返しても効果が見合わなかったため、2段階（両端の比較と中央の比較）で打ち切っている。
-`byChunks`が8KB刻みで境界そのものを走査するのに対し、`fromBorders`はあらかじめ用意した4通りの候補（分割なし・32KB・64KB・96KB）から選ぶだけであり、計測するバイト数も合計1.5KB程度と少ない。
+`byChunks`が8KB刻みで境界そのものを走査するのに対し、`fromBorders`はあらかじめ用意した4通りの候補（分割なし、32KB、64KB、96KB）から選ぶだけであり、計測するバイト数も合計1.5KB程度と少ない。
 
 ## レベルとstrategyの対応、圧縮率が確認できるまで分割しない安全策
 
@@ -344,7 +344,7 @@ static size_t ZSTD_optimalBlockSize(ZSTD_CCtx* cctx, const void* src, size_t src
 この条件によって、フレームの最初のフルサイズblockは`savings`がまだ計測できていないため、常に分割されない。
 
 `splitLevel`が1なら常に分割なし、0（自動）なら圧縮strategy（`ZSTD_fast`から`ZSTD_btultra2`まで）に応じた既定値を`splitLevels`配列から引く。
-strategyが低速で高圧縮率になるほど（`btopt`・`btultra`・`btultra2`など）、既定の`splitLevel`も高くなり、より精度の高い`byChunks`探索へ割り当てられる。
+strategyが低速で高圧縮率になるほど（`btopt`、`btultra`、`btultra2`など）、既定の`splitLevel`も高くなり、より精度の高い`byChunks`探索へ割り当てられる。
 呼び出し元の`ZSTD_compress_frameChunk`は、blockごとにこの関数で境界を決めてから、実際の圧縮関数（`ZSTD_compressBlock_splitBlock`や`ZSTD_compressBlock_internal`）へ渡す。
 
 [`lib/compress/zstd_compress.c` L4610-L4618](https://github.com/facebook/zstd/blob/v1.5.7/lib/compress/zstd_compress.c#L4610-L4618)
@@ -411,7 +411,7 @@ graph TD
 `zstd_preSplit.c`は、マッチファインダーを動かす前の生バイト列だけを見て、blockの区切り位置をデータの性質が変わる地点へ寄せる仕組みである。
 入力の一部区間から2バイト部分列のハッシュヒストグラム（`Fingerprint`）を取り、区間同士の分布の差（`fpDistance`）がしきい値を超えたら「too different」とみなして境界にする。
 `ZSTD_splitBlock_byChunks`は8KB刻みで累積統計と新しいチャンクを比較し、判定が続くほどしきい値を緩めながら精度重視で走査する。
-`ZSTD_splitBlock_fromBorders`は両端と中央だけを比較する軽量な二択で、32KB・64KB・96KB・128KBの4候補から選ぶ。
+`ZSTD_splitBlock_fromBorders`は両端と中央だけを比較する軽量な二択で、32KB、64KB、96KB、128KBの4候補から選ぶ。
 どちらの戦略も、境界をデータの分布が変わる位置へ置くことで、各blockのエントロピーテーブルをその区間の統計へ適合させ、圧縮率を上げることを狙っている。
 呼び出し元の`ZSTD_optimalBlockSize`は、圧縮strategyに応じて探索の精度を切り替え、かつ`savings`が確認できるまで（非圧縮性データやフレーム先頭のblockでは）分割そのものを行わない安全策を組み込んでいる。
 

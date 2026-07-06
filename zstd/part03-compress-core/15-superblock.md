@@ -88,7 +88,7 @@ size_t ZSTD_compressSuperBlock(ZSTD_CCtx* zc,
 }
 ```
 
-`ZSTD_buildBlockEntropyStats` は第13章・第14章で見た Huffman テーブルと FSE テーブルを、block 全体の literal と sequence から1回だけ構築する。
+`ZSTD_buildBlockEntropyStats` は第13章、第14章で見た Huffman テーブルと FSE テーブルを、block 全体の literal と sequence から1回だけ構築する。
 つまり super block を何個の小ブロックに割っても、Huffman テーブルと FSE テーブルは block あたり1組しか作らない。
 分割の主体は後段の `ZSTD_compressSubBlock_multi` であり、この関数は「どこで区切るか」と「テーブルをどう使い回すか」だけを決める。
 
@@ -314,7 +314,7 @@ static size_t sizeBlockSequences(const SeqDef* sp, size_t nbSeqs,
 
 ## 実際の圧縮とフォールバック：見積りと現実のずれをどう吸収するか
 
-見積りはあくまで期待値であり、実際に Huffman・FSE で符号化した結果とは一致しない。
+見積りはあくまで期待値であり、実際に Huffman と FSE で符号化した結果とは一致しない。
 `ZSTD_compressSubBlock_multi` は、見積りに基づいて区切ったシーケンス範囲を実際に `ZSTD_compressSubBlock` で圧縮し、結果が入力サイズより小さくなった場合だけその sub block を確定する。
 
 [`lib/compress/zstd_compress_superblock.c` L544-L582](https://github.com/facebook/zstd/blob/v1.5.7/lib/compress/zstd_compress_superblock.c#L544-L582)

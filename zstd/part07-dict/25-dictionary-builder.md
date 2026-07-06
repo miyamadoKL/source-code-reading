@@ -321,7 +321,7 @@ FASTCOVER_computeFrequency(U32* freqs, const FASTCOVER_ctx_t* ctx)
 COVER が「異なるサンプルに共通する部分文字列」を重視するのに対し、fastCover は近似頻度をそのまま使うぶん、この区別を犠牲にして速度を優先している。
 
 セグメント選択自体は COVER と同じ貪欲スライディングウィンドウであり、`FASTCOVER_selectSegment`（[`lib/dictBuilder/fastcover.c` L156-227](https://github.com/facebook/zstd/blob/v1.5.7/lib/dictBuilder/fastcover.c#L156-L227)）が `ctx->dmerAt` の代わりにその場でハッシュ値を計算しながら同じスコア更新を行う。
-`d` と `k` の探索範囲も COVER と同一であり、fastCover 固有の `f` と `accel` が既定値20・1として加わる（[`lib/dictBuilder/fastcover.c` L629-641](https://github.com/facebook/zstd/blob/v1.5.7/lib/dictBuilder/fastcover.c#L629-L641)）。
+`d` と `k` の探索範囲も COVER と同一であり、fastCover 固有の `f` と `accel` が既定値20と1として加わる（[`lib/dictBuilder/fastcover.c` L629-641](https://github.com/facebook/zstd/blob/v1.5.7/lib/dictBuilder/fastcover.c#L629-L641)）。
 
 ## 辞書の組み立て：ZDICT_finalizeDictionary
 
@@ -354,7 +354,7 @@ COVER と fastCover のどちらでコンテンツが選ばれても、最終的
 
 辞書は先頭4バイトのマジックナンバー `ZSTD_MAGIC_DICTIONARY`（`0xEC30A437`、[`lib/zstd.h` L143](https://github.com/facebook/zstd/blob/v1.5.7/lib/zstd.h#L143)）と、続く4バイトの `dictID` から始まる。
 `dictID` が明示されなければ、コンテンツの XXH64 ハッシュから予約域を避けて生成する。
-続けて `ZDICT_analyzeEntropy` がリテラルおよびリテラル長・マッチ長・オフセットのエントロピー統計を書き込み、最後にコンテンツ本体が続く。
+続けて `ZDICT_analyzeEntropy` がリテラルおよびリテラル長、マッチ長、オフセットのエントロピー統計を書き込み、最後にコンテンツ本体が続く。
 
 コンテンツをそのままヘッダの直後には置かず、必要ならパディングを挟む。
 
@@ -402,8 +402,8 @@ static void ZDICT_countEStats(EStats_ress_t esr, const ZSTD_parameters* params,
             ...
 ```
 
-各サンプルを実際に `ZSTD_compressBlock_deprecated` で圧縮し、第12章で見た seqStore からリテラルとリテラル長・マッチ長・オフセットのコードをそのまま数え上げる。
-辞書生成の段階で本物の圧縮パイプラインを走らせることで、実際の圧縮時と同じ分布のリテラル・コードから統計を得ている。
+各サンプルを実際に `ZSTD_compressBlock_deprecated` で圧縮し、第12章で見た seqStore からリテラルとリテラル長、マッチ長、オフセットのコードをそのまま数え上げる。
+辞書生成の段階で本物の圧縮パイプラインを走らせることで、実際の圧縮時と同じ分布のリテラルコードから統計を得ている。
 この頻度をもとに、第9章で扱った `HUF_buildCTable_wksp` でリテラルの Huffman テーブルを、第7章で扱った `FSE_normalizeCount` で3系統の正規化カウントを作り、`HUF_writeCTable_wksp` と `FSE_writeNCount` で辞書ヘッダへ直列に書き出す（[`lib/dictBuilder/zdict.c` L725-812](https://github.com/facebook/zstd/blob/v1.5.7/lib/dictBuilder/zdict.c#L725-L812)）。
 
 こうして埋め込まれたテーブルは、辞書を読み込んだ圧縮コンテキストが最初のブロックから使う初期テーブルになる。
@@ -421,7 +421,7 @@ static void ZDICT_countEStats(EStats_ress_t esr, const ZSTD_parameters* params,
 ```
 
 `divsufsort` は Yuta Mori による DivSufSort アルゴリズムの実装であり、全サンプルを連結したバイト列から完全な接尾辞配列を線形時間に近い計算量で構築する。
-COVER・fastCover はこの完全な接尾辞配列を使わず、それぞれ部分ソートとハッシュ近似で代替している。
+COVER と fastCover はこの完全な接尾辞配列を使わず、それぞれ部分ソートとハッシュ近似で代替している。
 legacy 経路は COVER 登場以前の実装であり、現在の既定経路である `ZDICT_trainFromBuffer` からは呼ばれない。
 
 ## まとめ
@@ -429,7 +429,7 @@ legacy 経路は COVER 登場以前の実装であり、現在の既定経路で
 `ZDICT_trainFromBuffer` は既定で fastCover を呼び出し、サンプル群から辞書コンテンツを自動生成する。
 COVER は全 d-mer の頻度を部分接尾辞配列で厳密に数え、貪欲なスライディングウィンドウで最もスコアの高いセグメントをエポックごとに選び、辞書バッファの末尾から詰めていく。
 fastCover は、この頻度カウントを `2^f` エントリのハッシュテーブルへの近似カウントに置き換えることで、接尾辞配列のソートを避けて計算量を大きく下げる。
-どちらの経路で選ばれたコンテンツも `ZDICT_finalizeDictionary` がマジックナンバーと `dictID` を付与し、`ZDICT_analyzeEntropy` が実際の圧縮パイプラインを走らせて得た Huffman・FSE の統計を辞書ヘッダに埋め込む。
+どちらの経路で選ばれたコンテンツも `ZDICT_finalizeDictionary` がマジックナンバーと `dictID` を付与し、`ZDICT_analyzeEntropy` が実際の圧縮パイプラインを走らせて得た Huffman と FSE の統計を辞書ヘッダに埋め込む。
 
 ## 関連する章
 

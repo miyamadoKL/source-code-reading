@@ -380,4 +380,4 @@ stateDiagram-v2
 - 第1章 [zstd とは何か：ライブラリ構成と圧縮の全体像](01-what-is-zstd.md)
 - 第11章 [圧縮コンテキストとパラメータ：CCtx と cparams](../part03-compress-core/11-cctx-params.md)
 - 第12章 [seqStore とブロック圧縮の流れ](../part03-compress-core/12-seqstore-blockflow.md)
-- 第21章 [ZSTDMT：ジョブ分割・スレッドプール・LDM 連携](../part05-mt/21-zstdmt.md)
+- 第21章 [ZSTDMT：ジョブ分割、スレッドプール、LDM 連携](../part05-mt/21-zstdmt.md)
