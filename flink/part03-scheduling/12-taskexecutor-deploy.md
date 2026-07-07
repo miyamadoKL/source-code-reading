@@ -36,7 +36,7 @@
 
 JobMaster から TaskExecutor へ送られるデプロイ要求は、`TaskDeploymentDescriptor`（以下 TDD）1つに詰められる。
 
-クラスの Javadoc は、その役割を「タスクをタスクマネージャへデプロイするのに必要な情報をすべて含む」と述べる。
+クラスの Javadoc は、その役割を「タスクを TaskManager へデプロイするのに必要な情報をすべて含む」と述べる。
 
 TDD が持つフィールドを見ると、デプロイに要る情報の内訳がわかる。
 
