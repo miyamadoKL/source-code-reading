@@ -203,7 +203,7 @@ private boolean processMail(TaskMailbox mailbox, boolean singleStep) throws Exce
 
 入力が枯渇するなどして `processInput` がすぐに戻る値を持たない状態（default action が使用不能）になると、mailbox スレッドは `mailbox.take` でブロッキング待機に移り、新しい mail か入力の到着を待つ。
 
-これにより、処理すべきレコードも mail もない間、mailbox スレッドはビジーループせずに休止する。
+これにより、処理すべきレコードも mail もない間、mailbox スレッドはビジーループせずにブロッキング待機する。
 
 ## mail という単位と TaskMailboxImpl
 

@@ -105,7 +105,8 @@ public interface SplitEnumerator<SplitT extends SourceSplit, CheckpointT>
     void start();
 ```
 
-`SplitEnumerator` は分割そのものを能動的に配ってしまわず、サブタスク側からの要求を受けて割り当てる形をとる。
+`SplitEnumerator` は分割の割り当て契機を複数持つ。
+サブタスクからの要求（`sendSplitRequest` に対応する `handleSplitRequest`）に応じて割り当てるほか、reader 登録を受け取る `addReader` を契機に connector 実装が割り当てを開始することもできる。
 
 [`SplitEnumerator.java` L44-L52](https://github.com/apache/flink/blob/release-2.3.0/flink-core/src/main/java/org/apache/flink/api/connector/source/SplitEnumerator.java#L44-L52)
 
@@ -123,7 +124,8 @@ public interface SplitEnumerator<SplitT extends SourceSplit, CheckpointT>
 
 `handleSplitRequest` の Javadoc が示すとおり、割り当てのきっかけは `SourceReaderContext.sendSplitRequest` である。
 
-つまり分割の流れ方は、`SourceReader` が「分割をもっとくれ」と要求し、`SplitEnumerator` がそれに応えて割り当てるという要求駆動の形になっている。
+`sendSplitRequest` による要求は割り当ての契機のひとつだが、それだけではない。
+reader 登録時の `addReader` でも connector 実装は割り当てを始められ、要求駆動にするか登録契機で配るかは Source 実装に委ねられている。
 
 `requesterHostname` を受け取れることも重要であり、`SplitEnumerator` は要求元サブタスクが動いているホストを踏まえて、ローカリティを考慮した割り当てを行える。
 

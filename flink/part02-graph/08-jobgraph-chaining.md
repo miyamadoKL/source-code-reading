@@ -145,6 +145,8 @@ private static boolean isChainableInput(
 - **union 演算でない**：同じ `typeNumber` の入力辺が2本以上存在しない
 
 `arePartitionerAndExchangeModeChainable` は、パーティショナが `ForwardPartitioner`（レコードを並列度が同じ上流サブタスクへそのまま渡す転送）であり、かつ交換モードがバッチ実行でないことを要求する。
+例外として、動的グラフ（`AdaptiveBatchScheduler` を用いる SQL Batch などの経路）では `ForwardForConsecutiveHashPartitioner` もチェイン可能と判定される。
+これはチェイン構築後に forward もしくは hash へ変換される特殊なパーティショナであり、`isDynamicGraph` が真のときにだけ現れる。
 
 [`StreamingJobGraphGenerator.java` L1786-L1799](https://github.com/apache/flink/blob/release-2.3.0/flink-runtime/src/main/java/org/apache/flink/streaming/api/graph/StreamingJobGraphGenerator.java#L1786-L1799)
 

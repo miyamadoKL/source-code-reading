@@ -16,7 +16,9 @@
 
 本章では対になる出力側、`Sink` と `SinkWriter` を読む。
 
-`Sink` は書き込みそのものを担う `SinkWriter` と、書き込みを確定させる `Committer` に責務を分けており、この分離が第20章で見たチェックポイントの仕組みと組み合わさることで、外部システムへの正確に1回の書き込みを実現する。
+`Sink` 自体は `createWriter` だけを持つ最小の契約であり、`Committer` は `SupportsCommitter` を実装した Sink だけが持つ任意の能力である。
+2相コミットに対応した Sink は、書き込みを担う `SinkWriter` と書き込みを確定させる `Committer` に責務を分け、これを第20章のチェックポイントの仕組みと組み合わせることで、外部システムへの正確に1回の書き込みを実装できる。
+ただし正確に1回が成り立つには、`Committer` の冪等性と、外部システム側のトランザクションや冪等な設計もあわせて必要になる。
 
 `SinkWriterOperator` と `CommitterOperator` が、この分離された責務を演算子としてどう駆動するかまで、順に見ていく。
 
@@ -28,7 +30,7 @@
 
 もう一つの前提が、第20章で見た `CheckpointCoordinator` によるチェックポイントの起動と、演算子チェインをバリアが流れる過程である。
 
-`Sink` の書き込みが「正確に1回」であることを保証する仕組みは、このバリアの通過というタイミングに強く結びついている。
+2相コミットに対応した `Sink` の書き込みが「正確に1回」になる仕組みは、このバリアの通過というタイミングに強く結びついている。
 
 ## Sink と SinkWriter：書き込みの最小契約
 
@@ -85,7 +87,7 @@ public interface SinkWriter<InputT> extends AutoCloseable {
 
 ## 2相コミットの分離：CommittingSinkWriter と Committer
 
-正確に1回の書き込みを実現する `Sink` は、`SinkWriter` に加えて、書き込みの確定を担う `Committer` を持つ。
+正確に1回の書き込みに対応する `Sink` は、`SinkWriter` に加えて、書き込みの確定を担う `Committer` を `SupportsCommitter` として持つ。
 
 この2段構えは、`SinkWriter` が `CommittingSinkWriter` を実装し、`Sink` が `SupportsCommitter` を実装するという2つのインタフェースの組み合わせで表現される。
 
@@ -353,7 +355,7 @@ public interface Committer<CommT> extends AutoCloseable {
 
 こうして、外部システムへの書き込みは「チェックポイントが完了するたびに、そのチェックポイントに属するデータだけがちょうど1回確定する」という単位に揃えられる。
 
-これが2相コミットとチェックポイントを組み合わせた、Sinkにおける正確に1回の書き込みの機構である。
+これが2相コミットとチェックポイントを組み合わせて、対応する Sink が正確に1回の書き込みを実装する機構である。
 
 ```mermaid
 sequenceDiagram
