@@ -18,7 +18,8 @@
     "yunikorn/**/*.md",
     "kubernetes/**/*.md",
     "kubeblocks/**/*.md",
-    "kafka/**/*.md"
+    "kafka/**/*.md",
+    "flink/**/*.md"
   ],
   "config": {
     "default": true,
