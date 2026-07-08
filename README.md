@@ -9,6 +9,7 @@
 | OSS | 対象バージョン | 概要 | 入口 |
 |---|---|---|---|
 | [Ceph](ceph/README.md) | 20.2.2 | 統合分散ストレージ。共通基盤、Messenger、CRUSH、Monitor/Paxos、OSD/PG、BlueStore、Objecter/RBD/CephFS/RGW まで全8部26章。 | [目次](ceph/README.md) |
+| [etcd](etcd/README.md) | 3.6.12 | 分散キーバリューストア。Raft、MVCC、WAL、リース、watch、gRPC API、clientv3 まで全8部24章。 | [目次](etcd/README.md) |
 | [Apache Flink](flink/README.md) | 2.3.0 | 分散ストリーム処理エンジン。コア基盤、グラフ生成、スケジューリング、タスク実行、ネットワークスタック、状態とチェックポイント、Table と SQL、Source と Sink まで全9部28章。 | [目次](flink/README.md) |
 | [Apache Iceberg](iceberg/README.md) | 1.11.0 | Open Table Format の仕様と参照実装。型、スナップショット、マニフェスト、カタログ、Spark/Flink 連携まで全11部24章。 | [目次](iceberg/README.md) |
 | [Apache Kafka](kafka/README.md) | 4.3.1 | 分散イベントストリーミングプラットフォーム。ネットワーク層、プロデューサー、ログストレージ、レプリケーション、KRaft、コンシューマー、各種 Coordinator まで全8部24章。 | [目次](kafka/README.md) |
