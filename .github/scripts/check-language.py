@@ -17,7 +17,7 @@ from pathlib import Path
 
 
 MARKDOWNLINT_CONFIG = Path(".markdownlint-cli2.jsonc")
-EXCLUDED_BASENAMES = {"WRITING_GUIDE.md"}
+EXCLUDED_BASENAMES = {"WRITING_GUIDE.md", ".writing-guide.md"}
 SKIP_DIRS = {".git", ".github", ".codex", "node_modules"}
 
 HANGUL_RE = re.compile(
