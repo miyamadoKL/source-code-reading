@@ -22,6 +22,7 @@
 | [RocksDB](rocksdb/README.md) | v11.1.1 | LSM-tree ベースの組み込み永続キーバリューストア。全11部・52章。 | [目次](rocksdb/README.md) |
 | [Apache Spark](spark/README.md) | v4.1.2 | 分散データ処理フレームワーク。RDD、スケジューリング、Catalyst/Tungsten、Structured Streaming、PySpark、Kubernetes/YuniKorn 連携まで全10部28章。 | [目次](spark/README.md) |
 | [StarRocks](starrocks/README.md) | 4.1.1 | MPP 分散分析データベース。Cascades CBO、ベクトル化パイプライン実行、列指向ストレージ、Lake モードまで全10部27章。 | [目次](starrocks/README.md) |
+| [systemd](systemd/README.md) | 261.1 | Linux の init システムとサービス管理。PID 1 コア、sd-event/sd-bus、cgroup、BPF、journald、udev、logind、networkd、resolved まで全9部24章。 | [目次](systemd/README.md) |
 | [TiDB エコシステム](tidb/README.md) | 8.5.6 | MySQL 互換の分散 SQL データベース。計算層（TiDB）、分散 KV（TiKV）、列指向 OLAP（TiFlash）を分冊で読む。 | [目次](tidb/README.md) |
 | [Trino](trino/README.md) | 482 | MPP 分散 SQL クエリエンジン。パーサーからプランナー、実行エンジン、Connector まで全7部28章。 | [目次](trino/README.md) |
 | [Valkey](valkey/README.md) | 9.1.0 | RESP プロトコルで話すインメモリのデータ構造ストア。全10部・52章。 | [目次](valkey/README.md) |
