@@ -17,6 +17,7 @@
 | [keepalived](keepalived/README.md) | 2.4.1 | VRRP 高可用性と LVS ヘルスチェック。スケジューラ、VRRP、IPVS チェッカー、BFD、運用機能まで全8部24章。 | GPL-2.0-or-later |
 | [KubeBlocks](kubeblocks/README.md) | v1.0.2 | Kubernetes 上のデータベース運用オペレーター。CRD 3層モデル、graph エンジン、InstanceSet、DataProtection、kbagent まで全5部17章。 | AGPL-3.0-or-later / Apache-2.0（ファイル別） |
 | [Kubernetes](kubernetes/README.md) | v1.36.2 | コンテナオーケストレーター。apiserver、scheduler、controller-manager、kubelet、kube-proxy、ストレージ、client-go、RBAC まで分冊で読む。全8部23章。 | Apache-2.0 |
+| [Linux カーネル](linux/README.md) | 6.18.38 | Linux カーネル本体。スケジューラ、メモリ管理、VFS、ネットワーク、BPF、Rust for Linux などをサブシステム別の分冊で読む。7.x 系の大きな変更は注釈で対比する。順次執筆中。 | GPL-2.0 WITH Linux-syscall-note |
 | [MySQL](mysql/README.md) | 8.4.10 | プラガブルなストレージエンジンを持つリレーショナルデータベース。InnoDB を中心に詳説。全7部・40章。 | GPL-2.0 |
 | [nginx](nginx/README.md) | 1.31.2 | イベント駆動の Web サーバーとリバースプロキシ。コア基盤、イベントエンジン、HTTP エンジン、upstream、HTTP/2、HTTP/3 まで全6部18章。 | BSD-2-Clause |
 | [OpenSSH](openssh/README.md) | V_10_3_P1 | SSH プロトコルの標準実装。トランスポート層、認証、チャネル、権限分離まで全5部12章。 | BSD 系 |
