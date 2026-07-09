@@ -16,15 +16,59 @@
 
 ## TCP/UDP
 
-`check_tcp.c`/`check_udp.c` はソケットを非ブロッキングで開き、タイムアウトをスケジューラに任せる。
+`tcp_connect_thread` は `SOCK_NONBLOCK` で TCP ソケットを開き、`tcp_bind_connect` の結果を `tcp_connection_state` に渡す。
+接続待ちはスケジューラの read/write コールバックへ委譲する。
+
+[`keepalived/check/check_tcp.c` L184-L214](https://github.com/acassen/keepalived/blob/v2.4.1/keepalived/check/check_tcp.c#L184-L214)
+
+```c
+static void
+tcp_connect_thread(thread_ref_t thread)
+{
+	checker_t *checker = THREAD_ARG(thread);
+	conn_opts_t *co = checker->co;
+	int fd;
+	int status;
+
+	if (!checker->enabled) {
+		thread_add_timer(thread->master, tcp_connect_thread, checker,
+				 checker->delay_loop);
+		return;
+	}
+
+	if ((fd = socket(co->dst.ss_family, SOCK_STREAM | SOCK_CLOEXEC | SOCK_NONBLOCK, IPPROTO_TCP)) == -1) {
+		// ... (中略) ...
+	}
+
+	status = tcp_bind_connect(fd, co);
+
+	if(tcp_connection_state(fd, status, thread, tcp_check_thread,
+			co->connection_to, 0)) {
+```
 
 ## HTTP
 
-`check_http.c` はリクエスト組み立て、正規表現によるレスポンス検証、リトライをサポートする。
+`http_read_thread` は応答ストリームを読み切り、digest モードでは `EVP_DigestFinal_ex` で MD5 を確定する。
+`EAGAIN` 時は同じ fd で `thread_add_read` を再登録する。
+
+[`keepalived/check/check_http.c` L1546-L1553](https://github.com/acassen/keepalived/blob/v2.4.1/keepalived/check/check_http.c#L1546-L1553)
+
+```c
+	/* Test if data are ready */
+	if (r == -1 && (check_EAGAIN(errno) || check_EINTR(errno))) {
+		log_message(LOG_INFO, "Read error with server %s: %s"
+				    , FMT_CHK(checker)
+				    , strerror(errno));
+		thread_add_read(thread->master, http_read_thread, checker,
+				thread->u.f.fd, timeout, THREAD_DESTROY_CLOSE_FD);
+		return;
+	}
+```
 
 ## 高速化・最適化の工夫
 
-同一ホストへのチェックは connection pooling 相当の再利用を避けつつ、FD 数上限で暴走を防ぐ。
+チェックごとにソケットを開き直し、完了後は `THREAD_DESTROY_CLOSE_FD` で fd を閉じる。
+接続プールは使わず、スケジューラ上の非ブロッキング I/O で待ち時間を他チェックと重ねる。
 
 ## まとめ
 

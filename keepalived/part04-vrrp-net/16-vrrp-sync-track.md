@@ -15,11 +15,56 @@
 
 ## 同期グループ
 
-`vrrp_sync.c` はグループ内でマスタ数を数え、スプリットブレインを抑える。
+`vrrp_sync_backup` は同期グループ内の他 instance を BACKUP へ揃える。
+1台が Backup 化したとき、グループ全体の状態を整合させる。
+
+[`keepalived/vrrp/vrrp_sync.c` L140-L158](https://github.com/acassen/keepalived/blob/v2.4.1/keepalived/vrrp/vrrp_sync.c#L140-L158)
+
+```c
+void
+vrrp_sync_backup(vrrp_t *vrrp)
+{
+	vrrp_sgroup_t *sgroup = vrrp->sync;
+	vrrp_t *isync;
+
+	if (GROUP_STATE(sgroup) == VRRP_STATE_BACK)
+		return;
+
+	log_message(LOG_INFO, "VRRP_Group(%s) Syncing instances to BACKUP state"
+			    , GROUP_NAME(sgroup));
+
+	list_for_each_entry(isync, &sgroup->vrrp_instances, s_list) {
+		if (isync == vrrp || isync->state == VRRP_STATE_BACK)
+			continue;
+
+		isync->wantstate = VRRP_STATE_BACK;
+```
 
 ## トラック
 
-`vrrp_track.c` は `track_interface`、`track_script`、`track_bfd` の重みを合算し、effective priority を下げる。
+`vrrp_set_effective_priority` は `total_priority` から effective priority を再計算し、変更時だけログする。
+`track_interface`、`track_script`、`track_bfd` の減点はこの合算に入る。
+
+[`keepalived/vrrp/vrrp_track.c` L582-L608](https://github.com/acassen/keepalived/blob/v2.4.1/keepalived/vrrp/vrrp_track.c#L582-L608)
+
+```c
+void
+vrrp_set_effective_priority(vrrp_t *vrrp)
+{
+	uint8_t new_prio;
+	// ... (中略) ...
+	if (vrrp->total_priority < 1)
+		new_prio = 1;
+	else if (vrrp->total_priority >= VRRP_PRIO_OWNER)
+		new_prio = VRRP_PRIO_OWNER - 1;
+	else
+		new_prio = (uint8_t)vrrp->total_priority;
+
+	if (vrrp->effective_priority == new_prio)
+		return;
+
+	vrrp->effective_priority = new_prio;
+```
 
 ## 高速化・最適化の工夫
 

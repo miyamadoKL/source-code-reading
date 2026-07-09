@@ -16,8 +16,25 @@ IPv4/IPv6 のセカンダリアドレスを知っていること。
 
 ## 仮想 IP
 
-`vrrp_ipaddress.c` は `netlink_iplist` で VIP を追加削除する。
-`no_prefix` や `peer` オプションはラベル付きアドレスとして扱う。
+`netlink_iplist` は VIP リストを走査し、未設定のエントリだけ `netlink_ipaddress` でカーネルに反映する。
+
+[`keepalived/vrrp/vrrp_ipaddress.c` L241-L262](https://github.com/acassen/keepalived/blob/v2.4.1/keepalived/vrrp/vrrp_ipaddress.c#L241-L262)
+
+```c
+/* Add/Delete a list of IP addresses */
+bool
+netlink_iplist(list_head_t *ip_list, int cmd, bool force)
+{
+	ip_address_t *ip_addr;
+	bool changed_entries = false;
+
+	list_for_each_entry(ip_addr, ip_list, e_list) {
+		if ((cmd == IPADDRESS_ADD && !ip_addr->set) ||
+		    (cmd == IPADDRESS_DEL &&
+		     (force || ip_addr->set || __test_bit(DONT_RELEASE_VRRP_BIT, &debug)))) {
+			if (netlink_ipaddress(ip_addr, cmd) > 0) {
+				ip_addr->set = (cmd == IPADDRESS_ADD);
+```
 
 ## インタフェース
 
