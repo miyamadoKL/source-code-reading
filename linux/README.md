@@ -42,7 +42,7 @@ graph TD
 
 | 分冊 | 範囲 | 主要ソースディレクトリ | 状態 |
 |---|---|---|---|
-| 全体像と横断基盤 | ソースツリーの地図、Kconfig と Kbuild、起動シーケンス、システムコール入口、主要データ構造（リスト、赤黒木、XArray、Maple Tree） | init/、kernel/entry/、lib/、include/linux/ | 計画 |
+| [全体像と横断基盤](foundation/README.md) | ソースツリーの地図、Kconfig と Kbuild、起動シーケンス、システムコール入口、主要データ構造（リスト、赤黒木、XArray、Maple Tree） | init/、kernel/entry/、lib/、include/linux/ | 公開 |
 | プロセスとスケジューラ | task_struct、fork と exec、EEVDF スケジューラ、RT と deadline クラス、プリエンプションモデル、PSI | kernel/sched/、kernel/fork.c、fs/exec.c | 計画 |
 | 同期と RCU | アトミック操作、スピンロック、mutex と rwsem、seqlock、lockdep、RCU、per-CPU 変数 | kernel/locking/、kernel/rcu/ | 計画 |
 | 割り込みと時間 | genirq、softirq、workqueue、タイマーホイール、hrtimer、tick と NO_HZ、クロックソース | kernel/irq/、kernel/time/、kernel/softirq.c、kernel/workqueue.c | 計画 |
