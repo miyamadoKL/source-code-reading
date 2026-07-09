@@ -3,6 +3,7 @@
 SELinux userspace（[SELinuxProject/selinux](https://github.com/SELinuxProject/selinux)）のソースコードを読み解き、libsepol、libselinux、libsemanage、checkpolicy、policycoreutils を日本語で解説するドキュメントである。
 
 - **対象バージョン**：3.10（コード引用はすべて [`3.10` タグ](https://github.com/SELinuxProject/selinux/tree/3.10)に固定）
+- **ライセンス**：コンポーネント別で、libsepol と libsemanage は LGPL-2.1、checkpolicy と policycoreutils は GPL-2.0、libselinux は Public Domain、secilc は FreeBSD License（引用の方針はリポジトリルートの[引用とライセンス](../README.md#引用とライセンス)を参照）。
 - **想定読者**：Linux セキュリティ、MAC、FLASK の基礎があり、userspace ツールチェーンの内部をソースから追いたい中級エンジニア。
 - **読み方**：第0部から順に読むと、概観、libsepol、ポリシー変換、コンパイル、libselinux、libsemanage、ユーティリティ、周辺ツールへ段階的に積み上がる。
 

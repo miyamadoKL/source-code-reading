@@ -3,6 +3,7 @@
 Docker Engine（[moby/moby](https://github.com/moby/moby)）のソースコードを読み解き、dockerd、containerd 連携、ストレージ、ネットワーク、ランタイムを日本語で解説するドキュメントである。
 
 - **対象バージョン**：29.6.1（コード引用はすべて [`docker-v29.6.1` タグ](https://github.com/moby/moby/tree/docker-v29.6.1)に固定）
+- **ライセンス**：Apache-2.0（引用の方針はリポジトリルートの[引用とライセンス](../README.md#引用とライセンス)を参照）。
 - **想定読者**：Go、Linux コンテナ、OCI の基礎があり、dockerd の内部をソースから追いたい中級エンジニア。
 - **読み方**：第0部から順に読むと、起動、Daemon コア、containerd、ストレージ、ネットワーク、実行、ビルド、運用へ段階的に積み上がる。
 

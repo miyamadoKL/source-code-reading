@@ -3,6 +3,7 @@
 Apache Spark（[apache/spark](https://github.com/apache/spark)）のソースコードを読み解き、各コンポーネントが「何のために、どういう処理を行うか」と「分散データ処理フレームワークを支える工夫」を、ソースコードを引用しながら日本語で解説するドキュメントである。
 
 - **対象バージョン**：v4.1.2（コード引用はすべて [`v4.1.2` タグ](https://github.com/apache/spark/tree/v4.1.2)に固定）
+- **ライセンス**：Apache-2.0（引用の方針はリポジトリルートの[引用とライセンス](../README.md#引用とライセンス)を参照）。
 - **想定読者**：Scala と分散システムの基礎がある中級エンジニア
 - **読み方**：全体像からコア（RDD・スケジューリング・実行）、SQL（Catalyst・Tungsten・AQE）、Structured Streaming、PySpark、Kubernetes 連携まで積み上げる構成で、第0部から順に読むことを想定する。
 
