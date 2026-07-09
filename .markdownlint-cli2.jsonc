@@ -19,6 +19,7 @@
     "kubernetes/**/*.md",
     "kubeblocks/**/*.md",
     "kafka/**/*.md",
+    "keepalived/**/*.md",
     "flink/**/*.md"
   ],
   "config": {

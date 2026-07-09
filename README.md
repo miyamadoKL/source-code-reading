@@ -13,6 +13,7 @@
 | [Apache Flink](flink/README.md) | 2.3.0 | 分散ストリーム処理エンジン。コア基盤、グラフ生成、スケジューリング、タスク実行、ネットワークスタック、状態とチェックポイント、Table と SQL、Source と Sink まで全9部28章。 | [目次](flink/README.md) |
 | [Apache Iceberg](iceberg/README.md) | 1.11.0 | Open Table Format の仕様と参照実装。型、スナップショット、マニフェスト、カタログ、Spark/Flink 連携まで全11部24章。 | [目次](iceberg/README.md) |
 | [Apache Kafka](kafka/README.md) | 4.3.1 | 分散イベントストリーミングプラットフォーム。ネットワーク層、プロデューサー、ログストレージ、レプリケーション、KRaft、コンシューマー、各種 Coordinator まで全8部24章。 | [目次](kafka/README.md) |
+| [keepalived](keepalived/README.md) | 2.4.1 | VRRP 高可用性と LVS ヘルスチェック。スケジューラ、VRRP、IPVS チェッカー、BFD、運用機能まで全8部24章。 | [目次](keepalived/README.md) |
 | [KubeBlocks](kubeblocks/README.md) | v1.0.2 | Kubernetes 上のデータベース運用オペレーター。CRD 3層モデル、graph エンジン、InstanceSet、DataProtection、kbagent まで全5部17章。 | [目次](kubeblocks/README.md) |
 | [Kubernetes](kubernetes/README.md) | v1.36.2 | コンテナオーケストレーター。apiserver、scheduler、controller-manager、kubelet、kube-proxy、ストレージ、client-go、RBAC まで分冊で読む。全8部23章。 | [目次](kubernetes/README.md) |
 | [MySQL](mysql/README.md) | 8.4.10 | プラガブルなストレージエンジンを持つリレーショナルデータベース。InnoDB を中心に詳説。全7部・40章。 | [目次](mysql/README.md) |
