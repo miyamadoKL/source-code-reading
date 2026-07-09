@@ -3,7 +3,8 @@
   // 詳細: https://github.com/DavidAnson/markdownlint-cli2
   "globs": [
     "README.md",
-    "rocksdb/**/*.md",
+    "ceph/**/*.md",
+    "docker/**/*.md",
     "valkey/**/*.md",
     "postgresql/**/*.md",
     "mysql/**/*.md",
@@ -18,6 +19,7 @@
     "yunikorn/**/*.md",
     "kubernetes/**/*.md",
     "kubeblocks/**/*.md",
+    "docker/**/*.md",
     "kafka/**/*.md",
     "keepalived/**/*.md",
     "flink/**/*.md"
