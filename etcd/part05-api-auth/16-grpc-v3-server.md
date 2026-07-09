@@ -194,6 +194,94 @@ func (s *kvServer) Range(ctx context.Context, r *pb.RangeRequest) (*pb.RangeResp
 }
 ```
 
+stream RPC も learner 制限と client API version 検査を先に行う。
+
+[`server/etcdserver/api/v3rpc/interceptor.go` L215-L236](https://github.com/etcd-io/etcd/blob/v3.6.12/server/etcdserver/api/v3rpc/interceptor.go#L215-L236)
+
+```go
+func newStreamInterceptor(s *etcdserver.EtcdServer) grpc.StreamServerInterceptor {
+	smap := monitorLeader(s)
+
+	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+		if !api.IsCapabilityEnabled(api.V3rpcCapability) {
+			return rpctypes.ErrGRPCNotCapable
+		}
+
+		if s.IsMemberExist(s.MemberID()) && s.IsLearner() && info.FullMethod != snapshotMethod { // learner does not support stream RPC except Snapshot
+			return rpctypes.ErrGRPCNotSupportedForLearner
+		}
+
+		md, ok := metadata.FromIncomingContext(ss.Context())
+		if ok {
+			ver, vs := "unknown", md.Get(rpctypes.MetadataClientAPIVersionKey)
+			if len(vs) > 0 {
+				ver = vs[0]
+			}
+			if !utf8.ValidString(ver) {
+				return rpctypes.ErrGRPCInvalidClientAPIVersion
+			}
+			clientRequests.WithLabelValues("stream", ver).Inc()
+```
+
+`NewWatchServer` は `WatchableKV` と progress notify 設定を束ねる。
+
+[`server/etcdserver/api/v3rpc/watch.go` L53-L80](https://github.com/etcd-io/etcd/blob/v3.6.12/server/etcdserver/api/v3rpc/watch.go#L53-L80)
+
+```go
+// NewWatchServer returns a new watch server.
+func NewWatchServer(s *etcdserver.EtcdServer) pb.WatchServer {
+	srv := &watchServer{
+		lg: s.Cfg.Logger,
+
+		clusterID: int64(s.Cluster().ID()),
+		memberID:  int64(s.MemberID()),
+
+		maxRequestBytes: s.Cfg.MaxRequestBytesWithOverhead(),
+
+		sg:        s,
+		watchable: s.Watchable(),
+		ag:        s,
+	}
+	if srv.lg == nil {
+		srv.lg = zap.NewNop()
+	}
+	if s.Cfg.WatchProgressNotifyInterval > 0 {
+		if s.Cfg.WatchProgressNotifyInterval < minWatchProgressInterval {
+			srv.lg.Warn(
+				"adjusting watch progress notify interval to minimum period",
+				zap.Duration("min-watch-progress-notify-interval", minWatchProgressInterval),
+			)
+			s.Cfg.WatchProgressNotifyInterval = minWatchProgressInterval
+		}
+		SetProgressReportInterval(s.Cfg.WatchProgressNotifyInterval)
+	}
+	return srv
+}
+```
+
+gRPC custom codec は protobuf marshal の前後で byte 数を metrics に載せる。
+
+[`server/etcdserver/api/v3rpc/codec.go` L19-L34](https://github.com/etcd-io/etcd/blob/v3.6.12/server/etcdserver/api/v3rpc/codec.go#L19-L34)
+
+```go
+type codec struct{}
+
+func (c *codec) Marshal(v any) ([]byte, error) {
+	b, err := proto.Marshal(v.(proto.Message))
+	sentBytes.Add(float64(len(b)))
+	return b, err
+}
+
+func (c *codec) Unmarshal(data []byte, v any) error {
+	receivedBytes.Add(float64(len(data)))
+	return proto.Unmarshal(data, v.(proto.Message))
+}
+
+func (c *codec) String() string {
+	return "proto"
+}
+```
+
 ## 最適化の工夫
 
 `grpc.MaxRecvMsgSize` を `MaxRequestBytesWithOverhead` に合わせることで、巨大 request を handler に入る前に gRPC 層で止められる。

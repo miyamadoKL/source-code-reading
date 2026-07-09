@@ -238,6 +238,72 @@ func (s *EtcdServer) applySnapshot(ep *etcdProgress, toApply *toApply) {
 	s.be = newbe
 ```
 
+復旧時は WAL に載った snapshot metadata と一致する newest file を選ぶ。
+
+[`server/etcdserver/api/snap/snapshotter.go` L112-L123](https://github.com/etcd-io/etcd/blob/v3.6.12/server/etcdserver/api/snap/snapshotter.go#L112-L123)
+
+```go
+// LoadNewestAvailable loads the newest snapshot available that is in walSnaps.
+func (s *Snapshotter) LoadNewestAvailable(walSnaps []walpb.Snapshot) (*raftpb.Snapshot, error) {
+	return s.loadMatching(func(snapshot *raftpb.Snapshot) bool {
+		m := snapshot.Metadata
+		for i := len(walSnaps) - 1; i >= 0; i-- {
+			if m.Term == walSnaps[i].Term && m.Index == walSnaps[i].Index {
+				return true
+			}
+		}
+		return false
+	})
+}
+```
+
+壊れた snapshot file は `.broken` へ rename し、次の候補探索を続けられる。
+
+[`server/etcdserver/api/snap/snapshotter.go` L140-L152](https://github.com/etcd-io/etcd/blob/v3.6.12/server/etcdserver/api/snap/snapshotter.go#L140-L152)
+
+```go
+func (s *Snapshotter) loadSnap(name string) (*raftpb.Snapshot, error) {
+	fpath := filepath.Join(s.dir, name)
+	snap, err := Read(s.lg, fpath)
+	if err != nil {
+		brokenPath := fpath + ".broken"
+		s.lg.Warn("failed to read a snap file", zap.String("path", fpath), zap.Error(err))
+		if rerr := os.Rename(fpath, brokenPath); rerr != nil {
+			s.lg.Warn("failed to rename a broken snap file", zap.String("path", fpath), zap.String("broken-path", brokenPath), zap.Error(rerr))
+		} else {
+			s.lg.Warn("renamed to a broken snap file", zap.String("path", fpath), zap.String("broken-path", brokenPath))
+		}
+	}
+	return snap, err
+}
+```
+
+`Read` は file を読み、CRC 付き `snappb.Snapshot` を protobuf へ戻す。
+
+[`server/etcdserver/api/snap/snapshotter.go` L155-L172](https://github.com/etcd-io/etcd/blob/v3.6.12/server/etcdserver/api/snap/snapshotter.go#L155-L172)
+
+```go
+// Read reads the snapshot named by snapname and returns the snapshot.
+func Read(lg *zap.Logger, snapname string) (*raftpb.Snapshot, error) {
+	verify.Assert(lg != nil, "the logger should not be nil")
+	b, err := os.ReadFile(snapname)
+	if err != nil {
+		lg.Warn("failed to read a snap file", zap.String("path", snapname), zap.Error(err))
+		return nil, err
+	}
+
+	if len(b) == 0 {
+		lg.Warn("failed to read empty snapshot file", zap.String("path", snapname))
+		return nil, ErrEmptySnapshot
+	}
+
+	var serializedSnap snappb.Snapshot
+	if err = serializedSnap.Unmarshal(b); err != nil {
+		lg.Warn("failed to unmarshal snappb.Snapshot", zap.String("path", snapname), zap.Error(err))
+		return nil, err
+	}
+```
+
 ## 最適化の工夫
 
 `Snapshotter.LoadNewestAvailable` は WAL 側に存在する snapshot metadata と一致する newest snapshot を選ぶため、復旧時に不整合な file を最後まで試す回数を減らせる。

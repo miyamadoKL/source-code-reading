@@ -175,6 +175,92 @@ func (t *batchTx) UnsafeCreateBucket(bucket Bucket) {
 }
 ```
 
+## concurrent read transaction
+
+`ConcurrentReadTx` は read buffer cache を見て、必要なときだけ buffer copy を行う。
+
+[`server/storage/backend/backend.go` L269-L292](https://github.com/etcd-io/etcd/blob/v3.6.12/server/storage/backend/backend.go#L269-L292)
+
+```go
+func (b *backend) ConcurrentReadTx() ReadTx {
+	b.readTx.RLock()
+	defer b.readTx.RUnlock()
+	// prevent boltdb read Tx from been rolled back until store read Tx is done. Needs to be called when holding readTx.RLock().
+	b.readTx.txWg.Add(1)
+
+	// TODO: might want to copy the read buffer lazily - create copy when A) end of a write transaction B) end of a batch interval.
+
+	// inspect/update cache recency iff there's no ongoing update to the cache
+	// this falls through if there's no cache update
+
+	// by this line, "ConcurrentReadTx" code path is already protected against concurrent "writeback" operations
+	// which requires write lock to update "readTx.baseReadTx.buf".
+	// Which means setting "buf *txReadBuffer" with "readTx.buf.unsafeCopy()" is guaranteed to be up-to-date,
+	// whereas "txReadBufferCache.buf" may be stale from concurrent "writeback" operations.
+	// We only update "txReadBufferCache.buf" if we know "buf *txReadBuffer" is up-to-date.
+	// The update to "txReadBufferCache.buf" will benefit the following "ConcurrentReadTx" creation
+	// by avoiding copying "readTx.baseReadTx.buf".
+	b.txReadBufferCache.mu.Lock()
+
+	curCache := b.txReadBufferCache.buf
+	curCacheVer := b.txReadBufferCache.bufVersion
+	curBufVer := b.readTx.buf.bufVersion
+```
+
+buffer 付き batch transaction の commit は、進行中の read transaction が boltdb tx を閉じるまで待つ。
+
+[`server/storage/backend/batch_tx.go` L354-L376](https://github.com/etcd-io/etcd/blob/v3.6.12/server/storage/backend/batch_tx.go#L354-L376)
+
+```go
+func (t *batchTxBuffered) commit(stop bool) {
+	// all read txs must be closed to acquire boltdb commit rwlock
+	t.backend.readTx.Lock()
+	t.unsafeCommit(stop)
+	t.backend.readTx.Unlock()
+}
+
+func (t *batchTxBuffered) unsafeCommit(stop bool) {
+	if t.backend.hooks != nil {
+		// gofail: var commitBeforePreCommitHook struct{}
+		t.backend.hooks.OnPreCommitUnsafe(t)
+		// gofail: var commitAfterPreCommitHook struct{}
+	}
+
+	if t.backend.readTx.tx != nil {
+		// wait all store read transactions using the current boltdb tx to finish,
+		// then close the boltdb tx
+		go func(tx *bolt.Tx, wg *sync.WaitGroup) {
+			wg.Wait()
+			if err := tx.Rollback(); err != nil {
+				t.backend.lg.Fatal("failed to rollback tx", zap.Error(err))
+			}
+		}(t.backend.readTx.tx, t.backend.readTx.txWg)
+```
+
+`run` は `batchInterval` ごとに pending 操作を commit し、時間ベースの flush を行う。
+
+[`server/storage/backend/backend.go` L431-L446](https://github.com/etcd-io/etcd/blob/v3.6.12/server/storage/backend/backend.go#L431-L446)
+
+```go
+func (b *backend) run() {
+	defer close(b.donec)
+	t := time.NewTimer(b.batchInterval)
+	defer t.Stop()
+	for {
+		select {
+		case <-t.C:
+		case <-b.stopc:
+			b.batchTx.CommitAndStop()
+			return
+		}
+		if b.batchTx.safePending() != 0 {
+			b.batchTx.Commit()
+		}
+		t.Reset(b.batchInterval)
+	}
+}
+```
+
 ## 最適化の工夫
 
 `BatchTx` は操作ごとに fsync せず、`pending` が `batchLimit` に達したときに commit するため、連続する apply のディスク同期回数を減らせる。

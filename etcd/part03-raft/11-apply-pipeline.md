@@ -209,6 +209,49 @@ func (a *uberApplier) Apply(r *pb.InternalRaftRequest) *Result {
 	return a.applyV3.Apply(r, a.dispatch)
 ```
 
+`applyEntryNormal` は noop entry で lessor を Promote し、通常 entry を applier へ渡す。
+
+[`server/etcdserver/server.go` L1950-L1975](https://github.com/etcd-io/etcd/blob/v3.6.12/server/etcdserver/server.go#L1950-L1975)
+
+```go
+// applyEntryNormal applies an EntryNormal type raftpb request to the EtcdServer
+func (s *EtcdServer) applyEntryNormal(e *raftpb.Entry, shouldApplyV3 membership.ShouldApplyV3) {
+	var ar *apply.Result
+	if shouldApplyV3 {
+		defer func() {
+			// The txPostLockInsideApplyHook will not get called in some cases,
+			// in which we should move the consistent index forward directly.
+			newIndex := s.consistIndex.ConsistentIndex()
+			if newIndex < e.Index {
+				s.consistIndex.SetConsistentIndex(e.Index, e.Term)
+			}
+		}()
+	}
+
+	// raft state machine may generate noop entry when leader confirmation.
+	// skip it in advance to avoid some potential bug in the future
+	if len(e.Data) == 0 {
+		s.firstCommitInTerm.Notify()
+
+		// promote lessor when the local member is leader and finished
+		// applying all entries from the last term.
+		if s.isLeader() {
+			s.lessor.Promote(s.Cfg.ElectionTimeout())
+		}
+		return
+	}
+```
+
+apply 経路の `Txn` は MVCC の `txn.Txn` へ委譲する薄いラッパーである。
+
+[`server/etcdserver/apply/apply.go` L167-L169](https://github.com/etcd-io/etcd/blob/v3.6.12/server/etcdserver/apply/apply.go#L167-L169)
+
+```go
+func (a *applierV3backend) Txn(rt *pb.TxnRequest) (*pb.TxnResponse, *traceutil.Trace, error) {
+	return mvcctxn.Txn(context.TODO(), a.lg, rt, a.txnModeWriteWithSharedBuffer, a.kv, a.lessor)
+}
+```
+
 ## 最適化の工夫
 
 `applyEntryNormal` は結果待ちが登録されておらず副作用もない request を省き、不要な read only range を transaction から外して apply の仕事量を減らす。

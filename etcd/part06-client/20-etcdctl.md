@@ -328,6 +328,55 @@ func putCommandFunc(cmd *cobra.Command, args []string) {
 }
 ```
 
+各 command は `mustClientFromCmd` で共有設定から client を作る。
+
+[`etcdctl/ctlv3/command/global.go` L153-L170](https://github.com/etcd-io/etcd/blob/v3.6.12/etcdctl/ctlv3/command/global.go#L153-L170)
+
+```go
+func mustClientFromCmd(cmd *cobra.Command) *clientv3.Client {
+	cfg := clientConfigFromCmd(cmd)
+	return mustClient(cfg)
+}
+
+func mustClient(cc *clientv3.ConfigSpec) *clientv3.Client {
+	lg, _ := logutil.CreateDefaultZapLogger(zap.InfoLevel)
+	cfg, err := clientv3.NewClientConfig(cc, lg)
+	if err != nil {
+		cobrautl.ExitWithError(cobrautl.ExitBadArgs, err)
+	}
+
+	client, err := clientv3.New(*cfg)
+	if err != nil {
+		cobrautl.ExitWithError(cobrautl.ExitBadConnection, err)
+	}
+
+	return client
+}
+```
+
+watch command は revision と prefix などの flag を持ち、stream 監視を開始する。
+
+[`etcdctl/ctlv3/command/watch_command.go` L47-L61](https://github.com/etcd-io/etcd/blob/v3.6.12/etcdctl/ctlv3/command/watch_command.go#L47-L61)
+
+```go
+// NewWatchCommand returns the cobra command for "watch".
+func NewWatchCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "watch [options] [key or prefix] [range_end] [--] [exec-command arg1 arg2 ...]",
+		Short: "Watches events stream on keys or prefixes",
+		Run:   watchCommandFunc,
+	}
+
+	cmd.Flags().BoolVarP(&watchInteractive, "interactive", "i", false, "Interactive mode")
+	cmd.Flags().BoolVar(&watchPrefix, "prefix", false, "Watch on a prefix if prefix is set")
+	cmd.Flags().Int64Var(&watchRev, "rev", 0, "Revision to start watching")
+	cmd.Flags().BoolVar(&watchPrevKey, "prev-kv", false, "get the previous key-value pair before the event happens")
+	cmd.Flags().BoolVar(&progressNotify, "progress-notify", false, "get periodic watch progress notification from server")
+
+	return cmd
+}
+```
+
 ## 最適化の工夫
 
 `clientConfigFromCmd` は watch command 用の環境変数警告を dummy flag で吸収し、通常の flag parser と同じ経路で環境変数を処理できる。

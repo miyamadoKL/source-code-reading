@@ -280,6 +280,69 @@ func (r *raftNode) start(rh *raftReadyHandler) {
 				r.Advance()
 ```
 
+`tick` は election timeout 進行のため、Raft library の `Tick` を mutex で包んで呼ぶ。
+
+[`server/etcdserver/raft.go` L157-L163](https://github.com/etcd-io/etcd/blob/v3.6.12/server/etcdserver/raft.go#L157-L163)
+
+```go
+// raft.Node does not have locks in Raft package
+func (r *raftNode) tick() {
+	r.tickMu.Lock()
+	r.Tick()
+	r.latestTickTs = time.Now()
+	r.tickMu.Unlock()
+}
+```
+
+`processMessages` は削除済み member 宛てを落とし、`MsgSnap` を server 側 snapshot 経路へ送る。
+
+[`server/etcdserver/raft.go` L355-L377](https://github.com/etcd-io/etcd/blob/v3.6.12/server/etcdserver/raft.go#L355-L377)
+
+```go
+func (r *raftNode) processMessages(ms []raftpb.Message) []raftpb.Message {
+	sentAppResp := false
+	for i := len(ms) - 1; i >= 0; i-- {
+		if r.isIDRemoved(ms[i].To) {
+			ms[i].To = 0
+			continue
+		}
+
+		if ms[i].Type == raftpb.MsgAppResp {
+			if sentAppResp {
+				ms[i].To = 0
+			} else {
+				sentAppResp = true
+			}
+		}
+
+		if ms[i].Type == raftpb.MsgSnap {
+			// There are two separate data store: the store for v2, and the KV for v3.
+			// The msgSnap only contains the most recent snapshot of store without KV.
+			// So we need to redirect the msgSnap to etcd server main loop for merging in the
+			// current store snapshot and KV snapshot.
+			select {
+			case r.msgSnapC <- ms[i]:
+```
+
+`updateCommittedIndex` は committed entries と snapshot の大きい方を apply 側の進行指標へ渡す。
+
+[`server/etcdserver/raft.go` L342-L353](https://github.com/etcd-io/etcd/blob/v3.6.12/server/etcdserver/raft.go#L342-L353)
+
+```go
+func updateCommittedIndex(ap *toApply, rh *raftReadyHandler) {
+	var ci uint64
+	if len(ap.entries) != 0 {
+		ci = ap.entries[len(ap.entries)-1].Index
+	}
+	if ap.snapshot.Metadata.Index > ci {
+		ci = ap.snapshot.Metadata.Index
+	}
+	if ci != 0 {
+		rh.updateCommittedIndex(ci)
+	}
+}
+```
+
 ## 最適化の工夫
 
 leader は disk 書き込みと follower への送信を並行させるため、message を永続化前に送る分岐を持ち、replication の待ち時間を短くする。

@@ -189,6 +189,68 @@ func Txn(ctx context.Context, lg *zap.Logger, rt *pb.TxnRequest, txnModeWriteWit
 	)
 ```
 
+read only transaction 判定は success と failure の operation がすべて Range であることで行う。
+
+[`server/etcdserver/txn/txn.go` L655-L667](https://github.com/etcd-io/etcd/blob/v3.6.12/server/etcdserver/txn/txn.go#L655-L667)
+
+```go
+func IsTxnReadonly(r *pb.TxnRequest) bool {
+	for _, u := range r.Success {
+		if r := u.GetRequestRange(); r == nil {
+			return false
+		}
+	}
+	for _, u := range r.Failure {
+		if r := u.GetRequestRange(); r == nil {
+			return false
+		}
+	}
+	return true
+}
+```
+
+`compareToPath` は compare 結果で success か failure を選び、ネストした Txn も再帰的に評価する。
+
+[`server/etcdserver/txn/txn.go` L544-L558](https://github.com/etcd-io/etcd/blob/v3.6.12/server/etcdserver/txn/txn.go#L544-L558)
+
+```go
+func compareToPath(rv mvcc.ReadView, rt *pb.TxnRequest) []bool {
+	txnPath := make([]bool, 1)
+	ops := rt.Success
+	if txnPath[0] = applyCompares(rv, rt.Compare); !txnPath[0] {
+		ops = rt.Failure
+	}
+	for _, op := range ops {
+		tv, ok := op.Request.(*pb.RequestOp_RequestTxn)
+		if !ok || tv.RequestTxn == nil {
+			continue
+		}
+		txnPath = append(txnPath, compareToPath(rv, tv.RequestTxn)...)
+	}
+	return txnPath
+}
+```
+
+serializable transaction は success と failure の Range がすべて `Serializable` であるときだけ ReadIndex を省略できる。
+
+[`server/etcdserver/txn/txn.go` L641-L653](https://github.com/etcd-io/etcd/blob/v3.6.12/server/etcdserver/txn/txn.go#L641-L653)
+
+```go
+func IsTxnSerializable(r *pb.TxnRequest) bool {
+	for _, u := range r.Success {
+		if r := u.GetRequestRange(); r == nil || !r.Serializable {
+			return false
+		}
+	}
+	for _, u := range r.Failure {
+		if r := u.GetRequestRange(); r == nil || !r.Serializable {
+			return false
+		}
+	}
+	return true
+}
+```
+
 ## 最適化の工夫
 
 `TxnModeWriteWithSharedBuffer` が有効な write transaction では compare 用 read に共有 buffer を使い、write 前の確認で transaction read buffer を余分に copy しない。

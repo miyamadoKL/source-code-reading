@@ -234,6 +234,65 @@ func (ki *keyIndex) put(lg *zap.Logger, main int64, sub int64) {
 }
 ```
 
+`Revisions` は range read 用に revision list を返し、total は limit を超えた件数も含む。
+
+[`server/storage/mvcc/index.go` L110-L133](https://github.com/etcd-io/etcd/blob/v3.6.12/server/storage/mvcc/index.go#L110-L133)
+
+```go
+// at the given rev. The returned slice is sorted in the order of key. There is no limit if limit <= 0.
+// The second return parameter isn't capped by the limit and reflects the total number of revisions.
+func (ti *treeIndex) Revisions(key, end []byte, atRev int64, limit int) (revs []Revision, total int) {
+	ti.RLock()
+	defer ti.RUnlock()
+
+	if end == nil {
+		rev, _, _, err := ti.unsafeGet(key, atRev)
+		if err != nil {
+			return nil, 0
+		}
+		return []Revision{rev}, 1
+	}
+	ti.unsafeVisit(key, end, func(ki *keyIndex) bool {
+		if rev, _, _, err := ki.get(ti.lg, atRev); err == nil {
+			if limit <= 0 || len(revs) < limit {
+				revs = append(revs, rev)
+			}
+			total++
+		}
+		return true
+	})
+	return revs, total
+}
+```
+
+`keyIndex.get` は指定 revision 時点で有効な modified、created、version を generation から選ぶ。
+
+[`server/storage/mvcc/key_index.go` L147-L167](https://github.com/etcd-io/etcd/blob/v3.6.12/server/storage/mvcc/key_index.go#L147-L167)
+
+```go
+// get gets the modified, created revision and version of the key that satisfies the given atRev.
+// Rev must be smaller than or equal to the given atRev.
+func (ki *keyIndex) get(lg *zap.Logger, atRev int64) (modified, created Revision, ver int64, err error) {
+	if ki.isEmpty() {
+		lg.Panic(
+			"'get' got an unexpected empty keyIndex",
+			zap.String("key", string(ki.key)),
+		)
+	}
+	g := ki.findGeneration(atRev)
+	if g.isEmpty() {
+		return Revision{}, Revision{}, 0, ErrRevisionNotFound
+	}
+
+	n := g.walk(func(rev Revision) bool { return rev.Main > atRev })
+	if n != -1 {
+		return g.revs[n], g.created, g.ver - int64(len(g.revs)-n-1), nil
+	}
+
+	return Revision{}, Revision{}, 0, ErrRevisionNotFound
+}
+```
+
 ## 最適化の工夫
 
 `treeIndex` は user key 順の B-tree なので、範囲 read は全 revision scan ではなく対象 key 範囲の `keyIndex` だけを訪問できる。

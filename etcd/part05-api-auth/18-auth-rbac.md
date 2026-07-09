@@ -320,6 +320,91 @@ func NewAuthStore(lg *zap.Logger, be AuthBackend, tp TokenProvider, bcryptCost i
 	if as.Revision() == 0 {
 ```
 
+## auth の有効化
+
+`AuthEnable` は root user と root role を確認してから auth を有効化し、range permission cache を更新する。
+
+[`server/auth/store.go` L266-L293](https://github.com/etcd-io/etcd/blob/v3.6.12/server/auth/store.go#L266-L293)
+
+```go
+func (as *authStore) AuthEnable() error {
+	as.enabledMu.Lock()
+	defer as.enabledMu.Unlock()
+	if as.enabled {
+		as.lg.Info("authentication is already enabled; ignored auth enable request")
+		return nil
+	}
+	tx := as.be.BatchTx()
+	tx.Lock()
+	defer func() {
+		tx.Unlock()
+		as.be.ForceCommit()
+	}()
+
+	u := tx.UnsafeGetUser(rootUser)
+	if u == nil {
+		return ErrRootUserNotExist
+	}
+
+	if !hasRootRole(u) {
+		return ErrRootRoleNotExist
+	}
+
+	tx.UnsafeSaveAuthEnabled(true)
+	as.enabled = true
+	as.tokenProvider.enable()
+
+	as.refreshRangePermCache(tx)
+```
+
+`isOpPermitted` は user の permission を cache から引き、range と point の両方を判定する。
+
+[`server/auth/store.go` L859-L899](https://github.com/etcd-io/etcd/blob/v3.6.12/server/auth/store.go#L859-L899)
+
+```go
+func (as *authStore) isOpPermitted(userName string, revision uint64, key, rangeEnd []byte, permTyp authpb.Permission_Type) error {
+	// TODO(mitake): this function would be costly so we need a caching mechanism
+	if !as.IsAuthEnabled() {
+		return nil
+	}
+
+	// only gets rev == 0 when passed AuthInfo{}; no user given
+	if revision == 0 {
+		return ErrUserEmpty
+	}
+	rev := as.Revision()
+	if revision < rev {
+		as.lg.Warn("request auth revision is less than current node auth revision",
+			zap.Uint64("current node auth revision", rev),
+			zap.Uint64("request auth revision", revision),
+			zap.ByteString("request key", key),
+			zap.Error(ErrAuthOldRevision))
+		return ErrAuthOldRevision
+	}
+
+	tx := as.be.ReadTx()
+	tx.RLock()
+	defer tx.RUnlock()
+
+	user := tx.UnsafeGetUser(userName)
+	if user == nil {
+		as.lg.Error("cannot find a user for permission check", zap.String("user-name", userName))
+		return ErrPermissionDenied
+	}
+
+	// root role should have permission on all ranges
+	if hasRootRole(user) {
+		return nil
+	}
+
+	if as.isRangeOpPermitted(userName, key, rangeEnd, permTyp) {
+		return nil
+	}
+
+	return ErrPermissionDenied
+}
+```
+
 ## 範囲権限を cache する
 
 range permission cache は user ごとの read interval と write interval をまとめ、KV request 時に interval containment を見る。

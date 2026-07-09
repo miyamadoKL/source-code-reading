@@ -255,6 +255,114 @@ func (tw *storeTxnWrite) put(key, value []byte, leaseID lease.LeaseID) {
 	d, err := kv.Marshal()
 ```
 
+`put` は backend へ revision key を書き、index と changes に反映する。
+
+[`server/storage/mvcc/kvstore_txn.go` L196-L235](https://github.com/etcd-io/etcd/blob/v3.6.12/server/storage/mvcc/kvstore_txn.go#L196-L235)
+
+```go
+func (tw *storeTxnWrite) put(key, value []byte, leaseID lease.LeaseID) {
+	rev := tw.beginRev + 1
+	c := rev
+	oldLease := lease.NoLease
+
+	// if the key exists before, use its previous created and
+	// get its previous leaseID
+	_, created, ver, err := tw.s.kvindex.Get(key, rev)
+	if err == nil {
+		c = created.Main
+		oldLease = tw.s.le.GetLease(lease.LeaseItem{Key: string(key)})
+		tw.trace.Step("get key's previous created_revision and leaseID")
+	}
+	ibytes := NewRevBytes()
+	idxRev := Revision{Main: rev, Sub: int64(len(tw.changes))}
+	ibytes = RevToBytes(idxRev, ibytes)
+
+	ver = ver + 1
+	kv := mvccpb.KeyValue{
+		Key:            key,
+		Value:          value,
+		CreateRevision: c,
+		ModRevision:    rev,
+		Version:        ver,
+		Lease:          int64(leaseID),
+	}
+
+	d, err := kv.Marshal()
+	if err != nil {
+		tw.storeTxnCommon.s.lg.Fatal(
+			"failed to marshal mvccpb.KeyValue",
+			zap.Error(err),
+		)
+	}
+
+	tw.trace.Step("marshal mvccpb.KeyValue")
+	tw.tx.UnsafeSeqPut(schema.Key, ibytes, d)
+	tw.s.kvindex.Put(key, idxRev)
+	tw.changes = append(tw.changes, kv)
+	tw.trace.Step("store kv pair into bolt db")
+```
+
+`deleteRange` は index から対象 key を集め、各 key を tombstone 付き revision として削除する。
+
+[`server/storage/mvcc/kvstore_txn.go` L266-L279](https://github.com/etcd-io/etcd/blob/v3.6.12/server/storage/mvcc/kvstore_txn.go#L266-L279)
+
+```go
+func (tw *storeTxnWrite) deleteRange(key, end []byte) int64 {
+	rrev := tw.beginRev
+	if len(tw.changes) > 0 {
+		rrev++
+	}
+	keys, _ := tw.s.kvindex.Range(key, end, rrev)
+	if len(keys) == 0 {
+		return 0
+	}
+	for _, key := range keys {
+		tw.delete(key)
+	}
+	return int64(len(keys))
+}
+```
+
+起動時の `restore` は finished compact revision を読み、key bucket を chunk 単位で index に戻す。
+
+[`server/storage/mvcc/kvstore.go` L316-L348](https://github.com/etcd-io/etcd/blob/v3.6.12/server/storage/mvcc/kvstore.go#L316-L348)
+
+```go
+func (s *store) restore() error {
+	s.setupMetricsReporter()
+
+	min, max := NewRevBytes(), NewRevBytes()
+	min = RevToBytes(Revision{Main: 1}, min)
+	max = RevToBytes(Revision{Main: math.MaxInt64, Sub: math.MaxInt64}, max)
+
+	keyToLease := make(map[string]lease.LeaseID)
+
+	// restore index
+	tx := s.b.ReadTx()
+	tx.RLock()
+
+	finishedCompact, found := UnsafeReadFinishedCompact(tx)
+	if found {
+		s.revMu.Lock()
+		s.compactMainRev = finishedCompact
+
+		s.lg.Info(
+			"restored last compact revision",
+			zap.String("meta-bucket-name-key", string(schema.FinishedCompactKeyName)),
+			zap.Int64("restored-compact-revision", s.compactMainRev),
+		)
+		s.revMu.Unlock()
+	}
+	scheduledCompact, _ := UnsafeReadScheduledCompact(tx)
+	// index keys concurrently as they're loaded in from tx
+	keysGauge.Set(0)
+	rkvc, revc := restoreIntoIndex(s.lg, s.kvindex)
+	for {
+		keys, vals := tx.UnsafeRange(schema.Key, min, max, int64(restoreChunkKeys))
+		if len(keys) == 0 {
+			break
+```
+
 ## 最適化の工夫
 
 read only workload では `ConcurrentReadTxMode` が transaction read buffer を copy して ongoing write と競合しにくくし、write を含む transaction では共有 buffer を使って余分な copy を避ける。

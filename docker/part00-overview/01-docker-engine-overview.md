@@ -4,6 +4,7 @@
 >
 > - [`daemon/daemon.go`](https://github.com/moby/moby/blob/docker-v29.6.1/daemon/daemon.go)
 > - [`cmd/dockerd/main.go`](https://github.com/moby/moby/blob/docker-v29.6.1/cmd/dockerd/main.go)
+> - [`daemon/events/events.go`](https://github.com/moby/moby/blob/docker-v29.6.1/daemon/events/events.go)
 
 ## この章の狙い
 
@@ -58,10 +59,67 @@ type Daemon struct {
 	containerd        libcontainerdtypes.Client
 ```
 
-## Moby v2 モジュール
+`StoreHosts` はデーモンが待ち受けるアドレスを map に記録する。
+シャットダウンや監査で「どのソケットが有効か」を後から参照できる。
+
+[`daemon/daemon.go` L165-L172](https://github.com/moby/moby/blob/docker-v29.6.1/daemon/daemon.go#L165-L172)
+
+```go
+func (daemon *Daemon) StoreHosts(hosts []string) {
+	if daemon.hosts == nil {
+		daemon.hosts = make(map[string]bool)
+	}
+	for _, h := range hosts {
+		daemon.hosts[h] = true
+	}
+}
+```
+
+## NewDaemon の入口
+
+`NewDaemon` はレジストリサービス作成と root key limit 調整から始まる。
+ここで失敗すると `daemonCLI.start` は HTTP サーバを立てる前に戻る。
+
+[`daemon/daemon.go` L849-L858](https://github.com/moby/moby/blob/docker-v29.6.1/daemon/daemon.go#L849-L858)
+
+```go
+func NewDaemon(ctx context.Context, config *config.Config, pluginStore *plugin.Store, authzMiddleware *authorization.Middleware) (_ *Daemon, retErr error) {
+	registryService, err := registry.NewService(config.ServiceOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := modifyRootKeyLimit(); err != nil {
+		log.G(ctx).Warnf("unable to modify root key limit, number of containers could be limited by this quota: %v", err)
+	}
+```
+
+## イベントバス
+
+`events.Events` は直近イベントのリングと pub/sub を持つ。
+`docker events` はここへ subscribe する。
+
+[`daemon/events/events.go` L18-L29](https://github.com/moby/moby/blob/docker-v29.6.1/daemon/events/events.go#L18-L29)
+
+```go
+type Events struct {
+	mu     sync.Mutex
+	events []eventtypes.Message
+	pub    *pubsub.Publisher
+}
+
+func New() *Events {
+	return &Events{
+		events: make([]eventtypes.Message, 0, eventsLimit),
+		pub:    pubsub.NewPublisher(100*time.Millisecond, bufferSize),
+	}
+}
+```
+
+## Moby v2 エントリポイント
 
 v29 系は `github.com/moby/moby/v2` モジュールに整理されている。
-エントリポイント `cmd/dockerd/main.go` は `daemon/command` へ委譲し、CLI 定義とデーモン起動を分離する。
+`cmd/dockerd/main.go` は `reexec.Init()` の後、`command.NewDaemonRunner` へ委譲する。
 
 [`cmd/dockerd/main.go` L16-L38](https://github.com/moby/moby/blob/docker-v29.6.1/cmd/dockerd/main.go#L16-L38)
 
@@ -88,9 +146,45 @@ func main() {
 }
 ```
 
+`NewDaemonRunner` はログ形式を整え、`newDaemonCommand` で cobra コマンドを組み立てる。
+
+[`daemon/command/docker.go` L102-L117](https://github.com/moby/moby/blob/docker-v29.6.1/daemon/command/docker.go#L102-L117)
+
+```go
+func NewDaemonRunner(stdout, stderr io.Writer) (Runner, error) {
+	err := log.SetFormat(log.TextFormat)
+	if err != nil {
+		return nil, err
+	}
+
+	initLogging(stdout, stderr)
+
+	cmd, err := newDaemonCommand()
+	if err != nil {
+		return nil, err
+	}
+	cmd.SetOut(stdout)
+	cmd.SetErr(stderr)
+
+	return daemonRunner{cmd}, nil
+}
+```
+
+## 責務の対応表
+
+| フィールド | 主な責務 | 後続章 |
+|---|---|---|
+| `containers` | 稼働中コンテナのメタデータ | 第7章 |
+| `imageService` | イメージとレイヤ | 第12〜13章 |
+| `netController` | ブリッジや overlay | 第15〜17章 |
+| `volumes` | 名前付き volume | 第14章 |
+| `containerd` | ランタイム委譲 | 第9〜11章 |
+| `EventsService` | ライフサイクル通知 | 第8章 |
+
 ## 高速化・最適化の工夫
 
 `configStore` を `atomic.Pointer` で持ち、設定リロード時に読み取り側がロックなしでスナップショットを参照できる。
+ディスク使用量 API は `singleflight.Group` で重複集計を1回にまとめ、並行リクエストの I/O を抑える。
 
 ## まとめ
 

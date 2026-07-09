@@ -324,6 +324,26 @@ func (s *EtcdServer) LeaseRenew(ctx context.Context, id lease.LeaseID) (int64, e
 		if err := s.checkLeaseRenew(ctx, id); err != nil {
 ```
 
+leader になった member は `Promote` で全 lease の期限を延長し、primary lessor として期限管理を再開する。
+
+[`server/lease/lessor.go` L480-L492](https://github.com/etcd-io/etcd/blob/v3.6.12/server/lease/lessor.go#L480-L492)
+
+```go
+func (le *lessor) Promote(extend time.Duration) {
+	le.mu.Lock()
+	defer le.mu.Unlock()
+
+	le.demotec = make(chan struct{})
+
+	// refresh the expiries of all leases.
+	for _, l := range le.leaseMap {
+		l.refresh(extend)
+		item := &LeaseWithTime{id: l.ID, time: l.expiry}
+		le.leaseExpiredNotifier.RegisterOrUpdate(item)
+		le.scheduleCheckpointIfNeeded(l)
+	}
+```
+
 ## 最適化の工夫
 
 `revokeExpiredLeases` は `leaseRevokeRate / 2` を上限に期限切れ lease を取り出し、期限切れの大量発生で apply pipeline を一度に詰まらせない。

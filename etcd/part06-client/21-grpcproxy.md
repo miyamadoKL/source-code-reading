@@ -321,6 +321,72 @@ func registerSession(lg *zap.Logger, c *clientv3.Client, prefix string, addr str
 }
 ```
 
+Range cache は mutation 後に交差する entry を LRU から削除する。
+
+[`server/proxy/grpcproxy/cache/store.go` L132-L155](https://github.com/etcd-io/etcd/blob/v3.6.12/server/proxy/grpcproxy/cache/store.go#L132-L155)
+
+```go
+// Invalidate invalidates the cache entries that intersecting with the given range from key to endkey.
+func (c *cache) Invalidate(key, endkey []byte) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	var (
+		ivs []*adt.IntervalValue
+		ivl adt.Interval
+	)
+	if len(endkey) == 0 {
+		ivl = adt.NewStringAffinePoint(string(key))
+	} else {
+		ivl = adt.NewStringAffineInterval(string(key), string(endkey))
+	}
+
+	ivs = c.cachedRanges.Stab(ivl)
+	for _, iv := range ivs {
+		keys := iv.Val.(map[string]struct{})
+		for key := range keys {
+			c.lru.Remove(key)
+		}
+	}
+	// delete after removing all keys since it is destructive to 'ivs'
+	c.cachedRanges.Delete(ivl)
+```
+
+proxy は `__lostleader` key の watch で upstream leader 喪失を検知する。
+
+[`server/proxy/grpcproxy/leader.go` L42-L67](https://github.com/etcd-io/etcd/blob/v3.6.12/server/proxy/grpcproxy/leader.go#L42-L67)
+
+```go
+func newLeader(ctx context.Context, w clientv3.Watcher) *leader {
+	l := &leader{
+		ctx:      clientv3.WithRequireLeader(ctx),
+		w:        w,
+		leaderc:  make(chan struct{}),
+		disconnc: make(chan struct{}),
+		donec:    make(chan struct{}),
+	}
+	// begin assuming leader is lost
+	close(l.leaderc)
+	go l.recvLoop()
+	return l
+}
+
+func (l *leader) recvLoop() {
+	defer close(l.donec)
+
+	limiter := rate.NewLimiter(rate.Limit(retryPerSecond), retryPerSecond)
+	rev := int64(math.MaxInt64 - 2)
+	for limiter.Wait(l.ctx) == nil {
+		wch := l.w.Watch(l.ctx, lostLeaderKey, clientv3.WithRev(rev), clientv3.WithCreatedNotify())
+		cresp, ok := <-wch
+		if !ok {
+			l.loseLeader()
+			continue
+		}
+		if cresp.Err() != nil {
+			l.loseLeader()
+```
+
 ## 最適化の工夫
 
 serializable Range cache は背後 cluster への read request を減らし、mutation のたびに対象範囲を invalidate して古い値の露出を抑える。

@@ -143,9 +143,85 @@ func StartEtcd(inCfg *Config) (e *Etcd, err error) {
 	backendFreelistType := parseBackendFreelistType(cfg.BackendFreelistType)
 ```
 
+## 停止処理
+
+`Close` はログを残しながらサーバを閉じ、defer で closed ログを出す。
+
+[`server/embed/etcd.go` L418-L439](https://github.com/etcd-io/etcd/blob/v3.6.12/server/embed/etcd.go#L418-L439)
+
+```go
+func (e *Etcd) Close() {
+	fields := []zap.Field{
+		zap.String("name", e.cfg.Name),
+		zap.String("data-dir", e.cfg.Dir),
+		zap.Strings("advertise-peer-urls", e.cfg.getAdvertisePeerURLs()),
+		zap.Strings("advertise-client-urls", e.cfg.getAdvertiseClientURLs()),
+	}
+	lg := e.GetLogger()
+	lg.Info("closing etcd server", fields...)
+	defer func() {
+		lg.Info("closed etcd server", fields...)
+		verify.MustVerifyIfEnabled(verify.Config{
+			Logger:     lg,
+			DataDir:    e.cfg.Dir,
+			ExactIndex: false,
+		})
+		lg.Sync()
+	}()
+
+	e.closeOnce.Do(func() {
+		close(e.stopc)
+	})
+```
+
+## EtcdServer の生成
+
+listener と cluster 設定が揃ったあと、`StartEtcd` は `etcdserver.NewServer` で `EtcdServer` を組み立てる。
+
+[`server/embed/etcd.go` L260-L264](https://github.com/etcd-io/etcd/blob/v3.6.12/server/embed/etcd.go#L260-L264)
+
+```go
+	if e.Server, err = etcdserver.NewServer(srvcfg); err != nil {
+		return e, err
+	}
+```
+
+## interrupt handler
+
+`startEtcd` は OS シグナルで `e.Close` を呼ぶ handler を登録する。
+
+[`server/etcdmain/etcd.go` L211-L216](https://github.com/etcd-io/etcd/blob/v3.6.12/server/etcdmain/etcd.go#L211-L216)
+
+```go
+	osutil.RegisterInterruptHandler(e.Close)
+	select {
+	case <-e.Server.ReadyNotify(): // wait for e.Server to join the cluster
+	case <-e.Server.StopNotify(): // publish aborted from 'ErrStopped'
+	}
+```
+
 ## 最適化の工夫
 
 `InitialElectionTickAdvance` は起動直後の election tick を前に進め、長い election timeout を使う環境でも初回 leader election の待ち時間を短くできる。
+
+起動時の optional corruption check は transport 開始前に hash を照合し、壊れた member を早期に落とす。
+
+[`server/embed/etcd.go` L271-L281](https://github.com/etcd-io/etcd/blob/v3.6.12/server/embed/etcd.go#L271-L281)
+
+```go
+	if memberInitialized && srvcfg.ServerFeatureGate.Enabled(features.InitialCorruptCheck) {
+		if err = e.Server.CorruptionChecker().InitialCheck(); err != nil {
+			// set "EtcdServer" to nil, so that it does not block on "EtcdServer.Close()"
+			// (nothing to close since rafthttp transports have not been started)
+
+			e.cfg.logger.Error("checkInitialHashKV failed", zap.Error(err))
+			e.Server.Cleanup()
+			e.Server = nil
+			return e, err
+		}
+	}
+	e.Server.Start()
+```
 
 ## まとめ
 
