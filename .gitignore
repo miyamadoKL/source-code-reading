@@ -1,6 +1,8 @@
 .claude/
+.agents/
 .wiki/
 AGENTS.md
 WRITING_GUIDE.md
 .writing-guide.md
 **/.writing-guide.md
+.codex/
