@@ -5,6 +5,10 @@
 > - [`sql/handler.h`](https://github.com/mysql/mysql-server/blob/mysql-8.4.10/sql/handler.h)
 > - [`sql/sql_class.h`](https://github.com/mysql/mysql-server/blob/mysql-8.4.10/sql/sql_class.h)
 > - [`storage/innobase/handler/ha_innodb.h`](https://github.com/mysql/mysql-server/blob/mysql-8.4.10/storage/innobase/handler/ha_innodb.h)
+> - [`sql/main.cc`](https://github.com/mysql/mysql-server/blob/mysql-8.4.10/sql/main.cc)
+> - [`sql/mysqld.cc`](https://github.com/mysql/mysql-server/blob/mysql-8.4.10/sql/mysqld.cc)
+> - [`include/mysql/plugin.h`](https://github.com/mysql/mysql-server/blob/mysql-8.4.10/include/mysql/plugin.h)
+> - [`storage/innobase/handler/ha_innodb.cc`](https://github.com/mysql/mysql-server/blob/mysql-8.4.10/storage/innobase/handler/ha_innodb.cc)
 
 ## この章の狙い
 
@@ -169,6 +173,62 @@ enum legacy_db_type {
 末尾の `DB_TYPE_FIRST_DYNAMIC = 42` から先は、動的にロードされるプラグインエンジンに動的な番号を割り当てるために予約されている。
 固定の番号を持つ組み込みエンジンと、後から追加されるプラグインエンジンが、同じ `handler` の枠組みで共存することがここから読み取れる。
 
+「後から追加されるプラグインエンジン」という言い方が指すのは、`handler` や `handlerton` よりもう一段外側にある登録機構である。
+サーバはストレージエンジンだけでなく、認証プラグインや監査プラグインなど動的に組み込める機能全般を、共通の記述構造で受け付ける。
+その共通構造が `st_mysql_plugin` である。
+
+[`include/mysql/plugin.h` L635-L653](https://github.com/mysql/mysql-server/blob/mysql-8.4.10/include/mysql/plugin.h#L635-L653)
+
+```cpp
+struct st_mysql_plugin {
+  int type;           /* the plugin type (a MYSQL_XXX_PLUGIN value)   */
+  void *info;         /* pointer to type-specific plugin descriptor   */
+  const char *name;   /* plugin name                                  */
+  const char *author; /* plugin author (for I_S.PLUGINS)              */
+  const char *descr;  /* general descriptive text (for I_S.PLUGINS)   */
+  int license;        /* the plugin license (PLUGIN_LICENSE_XXX)      */
+  /** Function to invoke when plugin is loaded. */
+  int (*init)(MYSQL_PLUGIN);
+  /** Function to invoke when plugin is uninstalled. */
+  int (*check_uninstall)(MYSQL_PLUGIN);
+  /** Function to invoke when plugin is unloaded. */
+  int (*deinit)(MYSQL_PLUGIN);
+  unsigned int version; /* plugin version (for I_S.PLUGINS)             */
+  SHOW_VAR *status_vars;
+  SYS_VAR **system_vars;
+  void *__reserved1;   /* reserved for dependency checking             */
+  unsigned long flags; /* flags for plugin */
+};
+```
+
+`type` フィールドがプラグインの種類を表し、ストレージエンジンなら `MYSQL_STORAGE_ENGINE_PLUGIN` が入る。
+InnoDB はこの形式に従って自身を登録しており、その宣言の先頭を見ると `handler`、`handlerton` に続く三つ目の抽象がどう組み合わさるかがわかる。
+
+[`storage/innobase/handler/ha_innodb.cc` L23655-L23670](https://github.com/mysql/mysql-server/blob/mysql-8.4.10/storage/innobase/handler/ha_innodb.cc#L23655-L23670)
+
+```cpp
+mysql_declare_plugin(innobase){
+    MYSQL_STORAGE_ENGINE_PLUGIN,
+    &innobase_storage_engine,
+    innobase_hton_name,
+    PLUGIN_AUTHOR_ORACLE,
+    "Supports transactions, row-level locking, and foreign keys",
+    PLUGIN_LICENSE_GPL,
+    innodb_init,   /* Plugin Init */
+    nullptr,       /* Plugin Check uninstall */
+    innodb_deinit, /* Plugin Deinit */
+    INNODB_VERSION_SHORT,
+    innodb_status_variables_export, /* status variables */
+    innobase_system_variables,      /* system variables */
+    nullptr,                        /* reserved */
+    0,                              /* flags */
+},
+```
+
+`type` に `MYSQL_STORAGE_ENGINE_PLUGIN` を、`init` にストレージエンジン固有の初期化関数 `innodb_init` を渡している点に、`st_mysql_plugin` という汎用の型と InnoDB 固有の初期化処理がどこで分かれるかが表れている。
+`st_mysql_plugin` がプラグインという概念そのものの共通部分を扱い、`init` の先で呼ばれる処理が `handlerton` を実際に組み立てる。
+プラグインの登録機構そのものの詳細は第15章で扱う。
+
 ## 既定のストレージエンジン InnoDB
 
 MySQL 8.4.10 の既定のストレージエンジンは InnoDB である。
@@ -215,6 +275,85 @@ class THD : public MDL_context_owner,
 先の `handlerton` の関数ポインタの多くが引数に `THD *thd` を取るのは、どの接続のトランザクションをコミットするのか、といった文脈を `THD` 経由で受け取るためである。
 接続とスレッドとセッションの関係は第3章で詳しく扱う。
 
+## 起動から接続受付までの流れ
+
+ここまで見てきた `handler`、`handlerton`、`THD` が実際にどう組み上がるかを、`mysqld` プロセスの起動から追う。
+
+`mysqld` プロセスの入口は、多くの C++ プログラムと同じく `main` 関数である。
+その中身は、処理をすぐ `mysqld_main` へ委譲するだけになっている。
+
+[`sql/main.cc` L24-L26](https://github.com/mysql/mysql-server/blob/mysql-8.4.10/sql/main.cc#L24-L26)
+
+```cpp
+extern int mysqld_main(int argc, char **argv);
+
+int main(int argc, char **argv) { return mysqld_main(argc, argv); }
+```
+
+`mysqld_main` 自体は、Windows と Unix 系 OS で同じ本体を共有する。
+
+[`sql/mysqld.cc` L8897-L8902](https://github.com/mysql/mysql-server/blob/mysql-8.4.10/sql/mysqld.cc#L8897-L8902)
+
+```cpp
+#ifdef _WIN32
+int win_main(int argc, char **argv)
+#else
+int mysqld_main(int argc, char **argv)
+#endif
+{
+```
+
+`mysqld_main` は数千行にわたる長い関数であり、その大半は起動オプションの解析や各種サブシステムの初期化に費やされる。
+本章で追うのはその中でも三つの節目、すなわちストレージエンジンの初期化、ネットワークの初期化、接続受付ループの開始である。
+
+最初の節目が、組み込みストレージエンジンの初期化である。
+これは `handler` の話題で触れた `handlerton` が実際に生成される場所でもある。
+
+[`sql/mysqld.cc` L8183-L8185](https://github.com/mysql/mysql-server/blob/mysql-8.4.10/sql/mysqld.cc#L8183-L8185)
+
+```cpp
+  /* Load builtin plugins, initialize MyISAM, CSV and InnoDB */
+  if (plugin_register_builtin_and_init_core_se(&remaining_argc,
+                                               remaining_argv)) {
+```
+
+ここで MyISAM、CSV、InnoDB という組み込みのストレージエンジンが初期化される。
+`legacy_db_type` に列挙されていた各エンジンが、この時点でそれぞれの `handlerton` を持つ実体になる。
+
+続く節目がネットワークの初期化であり、`network_init` がリスニングソケットを用意する。
+その後、`mysqld_main` は接続受付ループへ入り、以後はこのループが接続を待ち受け続ける。
+
+[`sql/mysqld.cc` L9942-L9943](https://github.com/mysql/mysql-server/blob/mysql-8.4.10/sql/mysqld.cc#L9942-L9943)
+
+```cpp
+  mysqld_socket_acceptor->check_and_spawn_admin_connection_handler_thread();
+  mysqld_socket_acceptor->connection_event_loop();
+```
+
+このループが1本の接続を受理するたびに、その接続のための `THD` が作られる。
+そこから先は、この章の冒頭で見た二層アーキテクチャの出番である。
+`THD` を文脈として、パーサ、オプティマイザ、エグゼキュータが SQL 文を処理し、`handler` を介してストレージエンジンへ届く。
+
+```mermaid
+flowchart TD
+    proc["プロセス起動 (main)"]
+    entry["mysqld_main"]
+    engine["組み込みエンジンの初期化<br/>plugin_register_builtin_and_init_core_se"]
+    net["ネットワークの初期化 (network_init)"]
+    loop["接続受付ループ (connection_event_loop)"]
+    thd["接続ごとに THD を生成"]
+    layer["二層アーキテクチャ (サーバ層 → handler → ストレージエンジン)"]
+
+    proc --> entry
+    entry --> engine
+    engine --> net
+    net --> loop
+    loop -->|"接続を受理"| thd
+    thd --> layer
+```
+
+1本の SQL 文がこのパイプラインの中をどの関数を通って流れるかは、第2章で改めて俯瞰する。
+
 ## まとめ
 
 MySQL 8.4.10 は、SQL を解釈するサーバ層と、データ格納を担うプラガブルなストレージエンジンの二層からなる。
@@ -222,9 +361,11 @@ MySQL 8.4.10 は、SQL を解釈するサーバ層と、データ格納を担う
 エンジン全体を代表する `handlerton` がテーブルをまたぐ操作を、テーブルごとの `handler` が行単位の操作を受け持つ。
 この分離により、SQL の意味論を共通化したままデータの持ち方だけを差し替えられる。
 既定のストレージエンジンである InnoDB は `handler` を継承した `ha_innobase` として実装されており、本書はこの InnoDB の内部を中心に読み解いていく。
+プロセスとしての `mysqld` は `main` から `mysqld_main` へ入り、組み込みストレージエンジンとネットワークを初期化したうえで接続受付ループに至り、そこで受理した接続ごとにこの二層構造が動き出す。
 
 ## 関連する章
 
+- 1本の SQL 文がサーバ内をたどる詳しい経路は[第2章 ソースツリーとビルド、クエリ処理の俯瞰](02-source-tree-and-build.md)で扱う。
 - ハンドラ API とストレージエンジンプラグインの詳細は[第15章 ハンドラ API とストレージエンジンプラグイン](../part01-sql-layer/15-handler-api.md)で扱う。
 - InnoDB の全体構成は[第17章 InnoDB アーキテクチャ概観](../part02-innodb-foundation/17-innodb-architecture.md)で扱う。
 - 接続、スレッド、セッションと `THD` は[第3章 接続、スレッド、セッション](03-connection-thread-session.md)で扱う。
