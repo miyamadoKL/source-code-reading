@@ -247,6 +247,69 @@ func (s *hashStorage) Store(hash KeyValueHash) {
 	}
 ```
 
+`InitialCheck` は起動直後に local hash と peer hash を比較する。
+
+[`server/etcdserver/corrupt.go` L90-L110](https://github.com/etcd-io/etcd/blob/v3.6.12/server/etcdserver/corrupt.go#L90-L110)
+
+```go
+func (cm *corruptionChecker) InitialCheck() error {
+	cm.lg.Info(
+		"starting initial corruption check",
+		zap.String("local-member-id", cm.hasher.MemberID().String()),
+		zap.Duration("timeout", cm.hasher.ReqTimeout()),
+	)
+
+	h, _, err := cm.hasher.HashByRev(0)
+	if err != nil {
+		return fmt.Errorf("%s failed to fetch hash (%w)", cm.hasher.MemberID(), err)
+	}
+	peers := cm.hasher.PeerHashByRev(h.Revision)
+	mismatch := 0
+	for _, p := range peers {
+		if p.resp != nil {
+			peerID := types.ID(p.resp.Header.MemberId)
+			fields := []zap.Field{
+				zap.String("local-member-id", cm.hasher.MemberID().String()),
+				zap.Int64("local-member-revision", h.Revision),
+				zap.Int64("local-member-compact-revision", h.CompactRevision),
+				zap.Uint32("local-member-hash", h.Hash),
+				zap.String("remote-peer-id", peerID.String()),
+				zap.Strings("remote-peer-endpoints", p.eps),
+```
+
+MVCC store の `hashByRev` は compact revision と future revision を検査してから hash を計算する。
+
+[`server/storage/mvcc/kvstore.go` L166-L191](https://github.com/etcd-io/etcd/blob/v3.6.12/server/storage/mvcc/kvstore.go#L166-L191)
+
+```go
+func (s *store) hashByRev(rev int64) (hash KeyValueHash, currentRev int64, err error) {
+	var compactRev int64
+	start := time.Now()
+
+	s.mu.RLock()
+	s.revMu.RLock()
+	compactRev, currentRev = s.compactMainRev, s.currentRev
+	s.revMu.RUnlock()
+
+	if rev > 0 && rev < compactRev {
+		s.mu.RUnlock()
+		return KeyValueHash{}, 0, ErrCompacted
+	} else if rev > 0 && rev > currentRev {
+		s.mu.RUnlock()
+		return KeyValueHash{}, currentRev, ErrFutureRev
+	}
+	if rev == 0 {
+		rev = currentRev
+	}
+	keep := s.kvindex.Keep(rev)
+
+	tx := s.b.ReadTx()
+	tx.RLock()
+	defer tx.RUnlock()
+	s.mu.RUnlock()
+	hash, err = unsafeHashByRev(tx, compactRev, rev, keep)
+```
+
 ## 最適化の工夫
 
 compaction hash を保存しておくことで、破損検査のたびに古い revision 範囲を再 hash せず、既に compaction 時に計算した hash を再利用できる。

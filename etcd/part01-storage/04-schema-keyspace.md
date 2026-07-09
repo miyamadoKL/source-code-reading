@@ -163,6 +163,64 @@ func UnsafeMigrate(lg *zap.Logger, tx backend.UnsafeReadWriter, w wal.Version, t
 }
 ```
 
+## meta bucket の作成
+
+MVCC や membership の前に、`meta` bucket を backend 上に用意する。
+
+[`server/storage/schema/cindex.go` L25-L28](https://github.com/etcd-io/etcd/blob/v3.6.12/server/storage/schema/cindex.go#L25-L28)
+
+```go
+// UnsafeCreateMetaBucket creates the `meta` bucket (if it does not exist yet).
+func UnsafeCreateMetaBucket(tx backend.UnsafeWriter) {
+	tx.UnsafeCreateBucket(Meta)
+}
+```
+
+storage version が無い古いデータでは、consistent index の term から schema version を推定する。
+
+[`server/storage/schema/schema.go` L91-L108](https://github.com/etcd-io/etcd/blob/v3.6.12/server/storage/schema/schema.go#L91-L108)
+
+```go
+// UnsafeDetectSchemaVersion non-threadsafe version of DetectSchemaVersion.
+func UnsafeDetectSchemaVersion(lg *zap.Logger, tx backend.UnsafeReader) (v semver.Version, err error) {
+	vp := UnsafeReadStorageVersion(tx)
+	if vp != nil {
+		return *vp, nil
+	}
+
+	// TODO: remove the operations of reading the field `term`
+	// in 3.7. We only need to be back-compatible with 3.6 when
+	// we are running 3.7, and the `storageVersion` already exists
+	// in all versions >= 3.6, so we don't need to use any other
+	// fields to identify the etcd's storage version.
+	_, term := UnsafeReadConsistentIndex(tx)
+	if term == 0 {
+		return v, fmt.Errorf("missing term information")
+	}
+	return version.V3_5, nil
+}
+```
+
+storage version は `meta` bucket の専用 key に semver 文字列として保存される。
+
+[`server/storage/schema/version.go` L32-L44](https://github.com/etcd-io/etcd/blob/v3.6.12/server/storage/schema/version.go#L32-L44)
+
+```go
+// UnsafeReadStorageVersion loads storage version from given backend transaction.
+// Populated since v3.6
+func UnsafeReadStorageVersion(tx backend.UnsafeReader) *semver.Version {
+	_, vs := tx.UnsafeRange(Meta, MetaStorageVersionName, nil, 1)
+	if len(vs) == 0 {
+		return nil
+	}
+	v, err := semver.NewVersion(string(vs[0]))
+	if err != nil {
+		return nil
+	}
+	return v
+}
+```
+
 ## 最適化の工夫
 
 bucket を用途別に分けることで、MVCC の大量 key scan と membership や auth の小さな key lookup が同じ bucket 内で混ざらず、範囲読み取りの探索対象を小さく保てる。

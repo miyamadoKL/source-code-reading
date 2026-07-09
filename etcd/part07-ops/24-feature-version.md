@@ -304,6 +304,46 @@ func UnsafeMigrate(lg *zap.Logger, tx backend.UnsafeReadWriter, w wal.Version, t
 }
 ```
 
+cluster version monitor は member の最小 version から cluster version 更新要否を決める。
+
+[`server/etcdserver/version/monitor.go` L54-L75](https://github.com/etcd-io/etcd/blob/v3.6.12/server/etcdserver/version/monitor.go#L54-L75)
+
+```go
+// UpdateClusterVersionIfNeeded updates the cluster version.
+func (m *Monitor) UpdateClusterVersionIfNeeded() error {
+	newClusterVersion, err := m.decideClusterVersion()
+	if newClusterVersion != nil {
+		newClusterVersion = &semver.Version{Major: newClusterVersion.Major, Minor: newClusterVersion.Minor}
+		m.s.UpdateClusterVersion(newClusterVersion.String())
+	}
+	return err
+}
+
+// decideClusterVersion decides whether to change cluster version and its next value.
+// New cluster version is based on the members versions server and whether cluster is downgrading.
+// Returns nil if cluster version should be left unchanged.
+func (m *Monitor) decideClusterVersion() (*semver.Version, error) {
+	clusterVersion := m.s.GetClusterVersion()
+	minimalServerVersion := m.membersMinimalServerVersion()
+	if clusterVersion == nil {
+		if minimalServerVersion != nil {
+			return minimalServerVersion, nil
+		}
+		return semver.New(version.MinClusterVersion), nil
+	}
+```
+
+downgrade は major.minor だけを比較し、許可された一段階下げかを検証する。
+
+[`server/etcdserver/version/downgrade.go` L36-L39](https://github.com/etcd-io/etcd/blob/v3.6.12/server/etcdserver/version/downgrade.go#L36-L39)
+
+```go
+// isValidDowngrade verifies whether the cluster can be downgraded from verFrom to verTo
+func isValidDowngrade(verFrom *semver.Version, verTo *semver.Version) bool {
+	return verTo.Equal(*allowedDowngradeVersion(verFrom))
+}
+```
+
 ## 最適化の工夫
 
 cluster version と storage version を major と minor に丸めて比較するため、patch version の違いで schema migration や feature 判定を不要に揺らさない。

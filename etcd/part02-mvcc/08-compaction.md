@@ -249,6 +249,47 @@ func (rc *Revision) Run() {
 			if err == nil || errors.Is(err, mvcc.ErrCompacted) {
 ```
 
+前回 compaction の完了可否は scheduled と finished compact revision の一致で判定する。
+
+[`server/storage/mvcc/kvstore.go` L223-L231](https://github.com/etcd-io/etcd/blob/v3.6.12/server/storage/mvcc/kvstore.go#L223-L231)
+
+```go
+// checkPrevCompactionCompleted checks whether the previous scheduled compaction is completed.
+func (s *store) checkPrevCompactionCompleted() bool {
+	tx := s.b.ReadTx()
+	tx.RLock()
+	defer tx.RUnlock()
+	scheduledCompact, scheduledCompactFound := UnsafeReadScheduledCompact(tx)
+	finishedCompact, finishedCompactFound := UnsafeReadFinishedCompact(tx)
+	return scheduledCompact == finishedCompact && scheduledCompactFound == finishedCompactFound
+}
+```
+
+compaction 待ちの caller には `compactBarrier` が channel close で完了を通知する。
+
+[`server/storage/mvcc/kvstore.go` L136-L153](https://github.com/etcd-io/etcd/blob/v3.6.12/server/storage/mvcc/kvstore.go#L136-L153)
+
+```go
+func (s *store) compactBarrier(ctx context.Context, ch chan struct{}) {
+	if ctx == nil || ctx.Err() != nil {
+		select {
+		case <-s.stopc:
+		default:
+			// fix deadlock in mvcc, for more information, please refer to pr 11817.
+			// s.stopc is only updated in restore operation, which is called by apply
+			// snapshot call, compaction and apply snapshot requests are serialized by
+			// raft, and do not happen at the same time.
+			s.mu.Lock()
+			f := schedule.NewJob("kvstore_compactBarrier", func(ctx context.Context) { s.compactBarrier(ctx, ch) })
+			s.fifoSched.Schedule(f)
+			s.mu.Unlock()
+		}
+		return
+	}
+	close(ch)
+}
+```
+
 ## 最適化の工夫
 
 `scheduleCompaction` は `CompactionBatchLimit` ごとに削除して `ForceCommit` と sleep を挟むため、大きな履歴削除でも長時間 backend lock を握り続けにくい。

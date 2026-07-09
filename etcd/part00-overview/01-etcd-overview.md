@@ -143,6 +143,67 @@ func NewServer(cfg config.ServerConfig) (srv *EtcdServer, err error) {
 		reqIDGen:              idutil.NewGenerator(uint16(b.cluster.nodeID), time.Now()),
 ```
 
+## run ループ
+
+`run` は Raft storage から snapshot を読み、apply パケットを非同期に受け付ける。
+
+[`server/etcdserver/server.go` L767-L775](https://github.com/etcd-io/etcd/blob/v3.6.12/server/etcdserver/server.go#L767-L775)
+
+```go
+func (s *EtcdServer) run() {
+	lg := s.Logger()
+
+	sn, err := s.r.raftStorage.Snapshot()
+	if err != nil {
+		lg.Panic("failed to get snapshot from Raft storage", zap.Error(err))
+	}
+
+	// asynchronously accept toApply packets, dispatch progress in-order
+```
+
+## 認可ストア
+
+`authStore` は backend 上に構築され、リース失効時の revoke にも使われる。
+
+[`server/etcdserver/server.go` L265-L266](https://github.com/etcd-io/etcd/blob/v3.6.12/server/etcdserver/server.go#L265-L266)
+
+```go
+	authStore  auth.AuthStore
+	alarmStore *v3alarm.AlarmStore
+```
+
+[`server/etcdserver/server.go` L382-L382](https://github.com/etcd-io/etcd/blob/v3.6.12/server/etcdserver/server.go#L382)
+
+```go
+	srv.authStore = auth.NewAuthStore(srv.Logger(), schema.NewAuthBackend(srv.Logger(), srv.be), tp, int(cfg.BcryptCost))
+```
+
+## リーダー変更
+
+リーダー交代時は compactor の Pause/Resume と `leaderChanged` 通知が走る。
+
+[`server/etcdserver/server.go` L781-L801](https://github.com/etcd-io/etcd/blob/v3.6.12/server/etcdserver/server.go#L781-L801)
+
+```go
+		updateLeadership: func(newLeader bool) {
+			if !s.isLeader() {
+				if s.lessor != nil {
+					s.lessor.Demote()
+				}
+				if s.compactor != nil {
+					s.compactor.Pause()
+				}
+			} else {
+				// ... (中略) ...
+				if s.compactor != nil {
+					s.compactor.Resume()
+				}
+			}
+			if newLeader {
+				s.leaderChanged.Notify()
+			}
+```
+
 ## 最適化の工夫
 
 `EtcdServer` は read path の `readwaitc` と `readNotifier` をサーバー内で共有し、複数のリニアライザブル read を一つの ReadIndex 確認でまとめて解放できる。

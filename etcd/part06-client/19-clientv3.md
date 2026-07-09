@@ -337,6 +337,52 @@ unary retry interceptor は retry 回数、context error、auth token refresh、
 		return lastErr
 ```
 
+`New` は endpoint 検証後に `newClient` で接続と service stub を組み立てる。
+
+[`client/v3/client.go` L81-L88](https://github.com/etcd-io/etcd/blob/v3.6.12/client/v3/client.go#L81-L88)
+
+```go
+// New creates a new etcdv3 client from a given configuration.
+func New(cfg Config) (*Client, error) {
+	if len(cfg.Endpoints) == 0 {
+		return nil, ErrNoAvailableEndpoints
+	}
+
+	return newClient(&cfg)
+}
+```
+
+client 側 watch は `watchRequest` を組み立て、server との gRPC stream へ送る。
+
+[`client/v3/watch.go` L297-L320](https://github.com/etcd-io/etcd/blob/v3.6.12/client/v3/watch.go#L297-L320)
+
+```go
+// Watch posts a watch request to run() and waits for a new watcher channel
+func (w *watcher) Watch(ctx context.Context, key string, opts ...OpOption) WatchChan {
+	ow := opWatch(key, opts...)
+
+	var filters []pb.WatchCreateRequest_FilterType
+	if ow.filterPut {
+		filters = append(filters, pb.WatchCreateRequest_NOPUT)
+	}
+	if ow.filterDelete {
+		filters = append(filters, pb.WatchCreateRequest_NODELETE)
+	}
+
+	wr := &watchRequest{
+		ctx:            ctx,
+		createdNotify:  ow.createdNotify,
+		key:            string(ow.key),
+		end:            string(ow.end),
+		rev:            ow.rev,
+		progressNotify: ow.progressNotify,
+		fragment:       ow.fragment,
+		filters:        filters,
+		prevKV:         ow.prevKV,
+		retc:           make(chan chan WatchResponse, 1),
+	}
+```
+
 ## 最適化の工夫
 
 retry interceptor は `max == 0` の場合に option 処理後すぐ invoker を呼ぶため、通常の retry 無効経路で loop と backoff の余分な処理を避ける。

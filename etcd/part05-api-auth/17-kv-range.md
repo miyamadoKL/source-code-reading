@@ -296,6 +296,48 @@ func (tr *storeTxnCommon) rangeKeys(ctx context.Context, key, end []byte, curRev
 		if len(vs) != 1 {
 ```
 
+Range request は handler 入口で key と sort option を検証する。
+
+[`server/etcdserver/api/v3rpc/key.go` L119-L133](https://github.com/etcd-io/etcd/blob/v3.6.12/server/etcdserver/api/v3rpc/key.go#L119-L133)
+
+```go
+func checkRangeRequest(r *pb.RangeRequest) error {
+	if len(r.Key) == 0 {
+		return rpctypes.ErrGRPCEmptyKey
+	}
+
+	if _, ok := pb.RangeRequest_SortOrder_name[int32(r.SortOrder)]; !ok {
+		return rpctypes.ErrGRPCInvalidSortOption
+	}
+
+	if _, ok := pb.RangeRequest_SortTarget_name[int32(r.SortTarget)]; !ok {
+		return rpctypes.ErrGRPCInvalidSortOption
+	}
+
+	return nil
+}
+```
+
+`Put` も validation 後に `EtcdServer` へ委譲し、response header を補完する。
+
+[`server/etcdserver/api/v3rpc/key.go` L56-L67](https://github.com/etcd-io/etcd/blob/v3.6.12/server/etcdserver/api/v3rpc/key.go#L56-L67)
+
+```go
+func (s *kvServer) Put(ctx context.Context, r *pb.PutRequest) (*pb.PutResponse, error) {
+	if err := checkPutRequest(r); err != nil {
+		return nil, err
+	}
+
+	resp, err := s.kv.Put(ctx, r)
+	if err != nil {
+		return nil, togRPCError(err)
+	}
+
+	s.hdr.fill(resp.Header)
+	return resp, nil
+}
+```
+
 ## 最適化の工夫
 
 `txn.Range` は sort target が `KEY` で昇順のとき、MVCC が返す key 昇順をそのまま使い、追加 sort を行わない。

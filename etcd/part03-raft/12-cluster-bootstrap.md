@@ -322,6 +322,76 @@ func raftConfig(cfg config.ServerConfig, id uint64, s *raft.MemoryStorage) *raft
 	}
 ```
 
+`bootstrapBackend` は backend を開き、WAL がある場合は snapshot から backend を復元する。
+
+[`server/etcdserver/bootstrap.go` L202-L228](https://github.com/etcd-io/etcd/blob/v3.6.12/server/etcdserver/bootstrap.go#L202-L228)
+
+```go
+func bootstrapBackend(cfg config.ServerConfig, haveWAL bool, st v2store.Store, ss *snap.Snapshotter) (backend *bootstrappedBackend, err error) {
+	beExist := fileutil.Exist(cfg.BackendPath())
+	ci := cindex.NewConsistentIndex(nil)
+	beHooks := serverstorage.NewBackendHooks(cfg.Logger, ci)
+	be := serverstorage.OpenBackend(cfg, beHooks)
+	defer func() {
+		if err != nil && be != nil {
+			be.Close()
+		}
+	}()
+	ci.SetBackend(be)
+	schema.CreateMetaBucket(be.BatchTx())
+	if cfg.BootstrapDefragThresholdMegabytes != 0 {
+		err = maybeDefragBackend(cfg, be)
+		if err != nil {
+			return nil, err
+		}
+	}
+	cfg.Logger.Info("restore consistentIndex", zap.Uint64("index", ci.ConsistentIndex()))
+
+	// TODO(serathius): Implement schema setup in fresh storage
+	var snapshot *raftpb.Snapshot
+	if haveWAL {
+		snapshot, be, err = recoverSnapshot(cfg, st, be, beExist, beHooks, ci, ss)
+		if err != nil {
+			return nil, err
+		}
+	}
+```
+
+WAL 復旧では snapshot と open WAL 結果を `bootstrappedWAL` に束ねる。
+
+[`server/etcdserver/bootstrap.go` L560-L587](https://github.com/etcd-io/etcd/blob/v3.6.12/server/etcdserver/bootstrap.go#L560-L587)
+
+```go
+func bootstrapWALFromSnapshot(cfg config.ServerConfig, snapshot *raftpb.Snapshot, ci cindex.ConsistentIndexer) *bootstrappedWAL {
+	wal, st, ents, snap, meta := openWALFromSnapshot(cfg, snapshot)
+	bwal := &bootstrappedWAL{
+		lg:       cfg.Logger,
+		w:        wal,
+		st:       st,
+		ents:     ents,
+		snapshot: snap,
+		meta:     meta,
+		haveWAL:  true,
+	}
+
+	if cfg.ForceNewCluster {
+		consistentIndex := ci.ConsistentIndex()
+		oldCommitIndex := bwal.st.Commit
+		// If only `HardState.Commit` increases, HardState won't be persisted
+		// to disk, even though the committed entries might have already been
+		// applied. This can result in consistent_index > CommitIndex.
+		//
+		// When restarting etcd with `--force-new-cluster`, all uncommitted
+		// entries are dropped. To avoid losing entries that were actually
+		// committed, we reset Commit to max(HardState.Commit, consistent_index).
+		//
+		// See: https://github.com/etcd-io/raft/pull/300 for more details.
+		bwal.st.Commit = max(oldCommitIndex, consistentIndex)
+
+		// discard the previously uncommitted entries
+		bwal.ents = bwal.CommitedEntries()
+```
+
 ## 最適化の工夫
 
 WAL がある場合は remote peer への cluster fetch を省き、WAL metadata と snapshot から local 状態を復旧するため、通常再起動の critical path を短くできる。

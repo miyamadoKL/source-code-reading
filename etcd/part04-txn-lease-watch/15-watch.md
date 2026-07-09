@@ -252,6 +252,80 @@ func (s *watchableStore) addVictim(victim watcherBatch) {
 }
 ```
 
+新規 watcher は start revision と current revision の関係で synced か unsynced に振り分ける。
+
+[`server/storage/mvcc/watchable_store.go` L128-L157](https://github.com/etcd-io/etcd/blob/v3.6.12/server/storage/mvcc/watchable_store.go#L128-L157)
+
+```go
+func (s *watchableStore) watch(key, end []byte, startRev int64, id WatchID, ch chan<- WatchResponse, fcs ...FilterFunc) (*watcher, cancelFunc) {
+	wa := &watcher{
+		key:      key,
+		end:      end,
+		startRev: startRev,
+		minRev:   startRev,
+		id:       id,
+		ch:       ch,
+		fcs:      fcs,
+	}
+
+	s.mu.Lock()
+	s.revMu.RLock()
+	synced := startRev > s.store.currentRev || startRev == 0
+	if synced {
+		wa.minRev = s.store.currentRev + 1
+		if startRev > wa.minRev {
+			wa.minRev = startRev
+		}
+		s.synced.add(wa)
+	} else {
+		slowWatcherGauge.Inc()
+		s.unsynced.add(wa)
+	}
+	s.revMu.RUnlock()
+	s.mu.Unlock()
+
+	watcherGauge.Inc()
+
+	return wa, func() { s.cancelWatcher(wa) }
+}
+```
+
+`syncWatchersLoop` は 100ms 周期で unsynced watcher の backlog 同期を進める。
+
+[`server/storage/mvcc/watchable_store.go` L223-L252](https://github.com/etcd-io/etcd/blob/v3.6.12/server/storage/mvcc/watchable_store.go#L223-L252)
+
+```go
+// syncWatchersLoop syncs the watcher in the unsynced map every 100ms.
+func (s *watchableStore) syncWatchersLoop() {
+	defer s.wg.Done()
+
+	delayTicker := time.NewTicker(watchResyncPeriod)
+	defer delayTicker.Stop()
+
+	for {
+		s.mu.RLock()
+		st := time.Now()
+		lastUnsyncedWatchers := s.unsynced.size()
+		s.mu.RUnlock()
+
+		unsyncedWatchers := 0
+		if lastUnsyncedWatchers > 0 {
+			unsyncedWatchers = s.syncWatchers()
+		}
+		syncDuration := time.Since(st)
+
+		delayTicker.Reset(watchResyncPeriod)
+		// more work pending?
+		if unsyncedWatchers != 0 && lastUnsyncedWatchers > unsyncedWatchers {
+			// be fair to other store operations by yielding time taken
+			delayTicker.Reset(syncDuration)
+		}
+
+		select {
+		case <-delayTicker.C:
+		case <-s.stopc:
+```
+
 ## 最適化の工夫
 
 遅い watcher を `victims` に分離することで、ある client の受信 channel 詰まりが他の watcher への通知処理を直接止めない。

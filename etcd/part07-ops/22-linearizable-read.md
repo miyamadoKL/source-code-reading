@@ -273,6 +273,52 @@ func (s *EtcdServer) linearizableReadNotify(ctx context.Context) error {
 }
 ```
 
+`requestCurrentIndex` は ReadIndex を送り、`readStateC` から confirmed index を受け取る。
+
+[`server/etcdserver/v3_server.go` L958-L984](https://github.com/etcd-io/etcd/blob/v3.6.12/server/etcdserver/v3_server.go#L958-L984)
+
+```go
+func (s *EtcdServer) requestCurrentIndex(leaderChangedNotifier <-chan struct{}) (uint64, error) {
+	requestIDs := map[uint64]struct{}{}
+	requestID := s.reqIDGen.Next()
+	requestIDs[requestID] = struct{}{}
+	err := s.sendReadIndex(requestID)
+	if err != nil {
+		return 0, err
+	}
+
+	lg := s.Logger()
+	errorTimer := time.NewTimer(s.Cfg.ReqTimeout())
+	defer errorTimer.Stop()
+	retryTimer := time.NewTimer(readIndexRetryTime)
+	defer retryTimer.Stop()
+
+	firstCommitInTermNotifier := s.firstCommitInTerm.Receive()
+
+	for {
+		select {
+		case rs := <-s.r.readStateC:
+			// Check again if leader changed as when multiple channels are ready, select picks randomly.
+			select {
+			case <-leaderChangedNotifier:
+				readIndexFailed.Inc()
+				return 0, errors.ErrLeaderChanged
+			default:
+			}
+			responseID := uint64(0)
+```
+
+`Authenticate` も KV Range と同様に `linearizableReadNotify` を先に呼ぶ。
+
+[`server/etcdserver/v3_server.go` L611-L614](https://github.com/etcd-io/etcd/blob/v3.6.12/server/etcdserver/v3_server.go#L611-L614)
+
+```go
+func (s *EtcdServer) Authenticate(ctx context.Context, r *pb.AuthenticateRequest) (*pb.AuthenticateResponse, error) {
+	if err := s.linearizableReadNotify(ctx); err != nil {
+		return nil, err
+	}
+```
+
 ## 最適化の工夫
 
 `readwaitc` は buffer size 1 で、送信側は default branch を持つため、read request の急増時に ReadIndex request を request 数だけ発行せず、同じ notifier にまとめられる。

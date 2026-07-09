@@ -173,6 +173,107 @@ func (e *encoder) encode(rec *walpb.Record) error {
 	return write(e.bw, e.uint64buf, data, lenField)
 ```
 
+## WAL を先頭から再生する
+
+`ReadAll` は segment を順に decode し、HardState と entry を復元する。
+snapshot 以降の entry だけを slice に載せ、破損時は panic 前にエラーを返す。
+
+[`server/storage/wal/wal.go` L467-L499](https://github.com/etcd-io/etcd/blob/v3.6.12/server/storage/wal/wal.go#L467-L499)
+
+```go
+// ReadAll may return uncommitted yet entries, that are subject to be overridden.
+// Do not apply entries that have index > state.commit, as they are subject to change.
+func (w *WAL) ReadAll() (metadata []byte, state raftpb.HardState, ents []raftpb.Entry, err error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	rec := &walpb.Record{}
+
+	if w.decoder == nil {
+		return nil, state, nil, ErrDecoderNotFound
+	}
+	decoder := w.decoder
+
+	var match bool
+	for err = decoder.Decode(rec); err == nil; err = decoder.Decode(rec) {
+		switch rec.Type {
+		case EntryType:
+			e := MustUnmarshalEntry(rec.Data)
+			// 0 <= e.Index-w.start.Index - 1 < len(ents)
+			if e.Index > w.start.Index {
+				// prevent "panic: runtime error: slice bounds out of range [:13038096702221461992] with capacity 0"
+				offset := e.Index - w.start.Index - 1
+				if offset > uint64(len(ents)) {
+					// return error before append call causes runtime panic.
+					// We still return the continuous WAL entries that have already been read.
+					// Refer to https://github.com/etcd-io/etcd/pull/19038#issuecomment-2557414292.
+					return nil, state, ents, fmt.Errorf("%w, snapshot[Index: %d, Term: %d], current entry[Index: %d, Term: %d], len(ents): %d",
+						ErrSliceOutOfRange, w.start.Index, w.start.Term, e.Index, e.Term, len(ents))
+				}
+				// The line below is potentially overriding some 'uncommitted' entries.
+				ents = append(ents[:offset], e)
+			}
+			w.enti = e.Index
+```
+
+segment サイズを超えたあとは `cut` で次の WAL file へ切り替える。
+
+[`server/storage/wal/wal.go` L743-L766](https://github.com/etcd-io/etcd/blob/v3.6.12/server/storage/wal/wal.go#L743-L766)
+
+```go
+// cut first creates a temp wal file and writes necessary headers into it.
+// Then cut atomically rename temp wal file to a wal file.
+func (w *WAL) cut() error {
+	// close old wal file; truncate to avoid wasting space if an early cut
+	off, serr := w.tail().Seek(0, io.SeekCurrent)
+	if serr != nil {
+		return serr
+	}
+
+	if err := w.tail().Truncate(off); err != nil {
+		return err
+	}
+
+	if err := w.sync(); err != nil {
+		return err
+	}
+
+	fpath := filepath.Join(w.dir, walName(w.seq()+1, w.enti+1))
+
+	// create a temp wal file with name sequence + 1, or truncate the existing one
+	newTail, err := w.fp.Open()
+	if err != nil {
+		return err
+	}
+```
+
+snapshot marker は WAL へ `SnapshotType` record として書き、index を `enti` に反映する。
+
+[`server/storage/wal/wal.go` L993-L1011](https://github.com/etcd-io/etcd/blob/v3.6.12/server/storage/wal/wal.go#L993-L1011)
+
+```go
+func (w *WAL) SaveSnapshot(e walpb.Snapshot) error {
+	if err := walpb.ValidateSnapshotForWrite(&e); err != nil {
+		return err
+	}
+
+	b := pbutil.MustMarshal(&e)
+
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	rec := &walpb.Record{Type: SnapshotType, Data: b}
+	if err := w.encoder.encode(rec); err != nil {
+		return err
+	}
+	// update enti only when snapshot is ahead of last index
+	if w.enti < e.Index {
+		w.enti = e.Index
+	}
+	return w.sync()
+}
+```
+
 ## 最適化の工夫
 
 `Save` は `raft.IsEmptyHardState` かつ entry なしの呼び出しを即時 return し、心拍中心の Ready 処理で不要な sync 判定を避ける。

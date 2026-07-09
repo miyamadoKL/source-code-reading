@@ -3,21 +3,21 @@
 > 本章で読むソース
 >
 > - [`daemon/exec.go`](https://github.com/moby/moby/blob/docker-v29.6.1/daemon/exec.go)
-> - [`daemon/attach.go`](https://github.com/moby/moby/blob/docker-v29.6.1/daemon/attach.go)
+> - [`daemon/container/store.go`](https://github.com/moby/moby/blob/docker-v29.6.1/daemon/container/store.go)
 
 ## この章の狙い
 
-追加プロセス実行と標準入出力アタッチの入口を理解する。
+稼働中コンテナへの追加プロセス `exec` がどう登録され、stdio がアタッチされるかを読む。
 
 ## 前提
 
-TTY とデタッチキーを知っていること。
+[第7章](../part02-core/07-container-store.md)の `ExecStore` を理解していること。
 
 ## ContainerExecCreate
 
-`ContainerExecCreate` は稼働中コンテナを取得し、ユーザー指定があればコンテナ内で先に解決する。
+`ContainerExecCreate` は稼働中コンテナを取得し、ユーザー指定があればコンテナ内で名前解決する。
 
-[`daemon/exec.go` L95-L115](https://github.com/moby/moby/blob/docker-v29.6.1/daemon/exec.go#L95-L115)
+[`daemon/exec.go` L96-L106](https://github.com/moby/moby/blob/docker-v29.6.1/daemon/exec.go#L96-L106)
 
 ```go
 func (daemon *Daemon) ContainerExecCreate(name string, options *containertypes.ExecCreateRequest) (string, error) {
@@ -26,46 +26,130 @@ func (daemon *Daemon) ContainerExecCreate(name string, options *containertypes.E
 		return "", err
 	}
 	if user := options.User; user != "" {
-		if _, err := getUser(cntr, user); err != nil {
-			return "", errdefs.InvalidParameter(err)
-		}
-	}
+		// Lookup the user inside the container before starting the exec to
+		// allow for an early exit.
 ```
 
-## ContainerAttach
+## ExecConfig 生成
 
-`ContainerAttach` はログ追従またはストリーム接続を `stream.AttachConfig` へ委譲する。
+`NewExecConfig` で attach フラグとコマンドを載せ、`ExecStore` へ登録する（同一ファイル後半）。
 
-[`daemon/attach.go` L22-L38](https://github.com/moby/moby/blob/docker-v29.6.1/daemon/attach.go#L22-L38)
+[`daemon/exec.go` L127-L132](https://github.com/moby/moby/blob/docker-v29.6.1/daemon/exec.go#L127-L132)
 
 ```go
-func (daemon *Daemon) ContainerAttach(prefixOrName string, req *backend.ContainerAttachConfig) error {
-	keys := []byte{}
-	var err error
-	if req.DetachKeys != "" {
-		keys, err = term.ToBytes(req.DetachKeys)
-		if err != nil {
-			return errdefs.InvalidParameter(errors.Errorf("Invalid detach keys (%s) provided", req.DetachKeys))
-		}
-	}
+	execConfig := container.NewExecConfig(cntr)
+	execConfig.OpenStdin = options.AttachStdin
+	execConfig.OpenStdout = options.AttachStdout
+	execConfig.OpenStderr = options.AttachStderr
+	execConfig.DetachKeys = keys
+	execConfig.Entrypoint, execConfig.Args = options.Cmd[0], options.Cmd[1:]
+```
 
-	ctr, err := daemon.GetContainer(prefixOrName)
-	if err != nil {
-		return err
-	}
-	if ctr.State.IsPaused() {
-		return errdefs.Conflict(fmt.Errorf("container %s is paused, unpause the container before attach", prefixOrName))
-	}
+## Daemon の ExecStore
+
+`NewDaemon` は `container.NewExecStore()` で exec ID を管理する（第6章）。
+
+[`daemon/daemon.go` L1105-L1106](https://github.com/moby/moby/blob/docker-v29.6.1/daemon/daemon.go#L1105-L1106)
+
+```go
+	d.execCommands = container.NewExecStore()
+	d.statsCollector = d.newStatsCollector(1 * time.Second)
+```
+
+## ヘルスチェック exec
+
+ヘルスプローブも同じ `NewExecConfig` パターンで stdout のみを開く。
+
+[`daemon/health.go` L77-L82](https://github.com/moby/moby/blob/docker-v29.6.1/daemon/health.go#L77-L82)
+
+```go
+	execConfig := container.NewExecConfig(cntr)
+	execConfig.OpenStdin = false
+	execConfig.OpenStdout = true
+	execConfig.OpenStderr = true
+	execConfig.DetachKeys = []byte{}
+	execConfig.Entrypoint, execConfig.Args = cmd[0], cmd[1:]
+```
+
+```mermaid
+sequenceDiagram
+  participant API as POST /containers/exec
+  participant D as Daemon
+  participant S as ExecStore
+  participant CTRD as containerd
+  API->>D: ContainerExecCreate
+  D->>S: exec ID 登録
+  API->>D: exec start attach
+  D->>CTRD: 追加プロセス起動
 ```
 
 ## 高速化・最適化の工夫
 
-attach はコンテナの `StreamConfig` を再利用し、毎回新しいパイプを最小限だけ確保する。
+exec 前にユーザー名をコンテナ内で解決し、起動後の失敗を減らす。
+attach フラグは exec ごとに独立し、不要な stdio パイプを開かない。
+
+`getActiveContainer` は Running/Paused のみ exec 対象とする。
+
+[`daemon/exec.go` L96-L100](https://github.com/moby/moby/blob/docker-v29.6.1/daemon/exec.go#L96-L100)
+
+```go
+func (daemon *Daemon) ContainerExecCreate(name string, options *containertypes.ExecCreateRequest) (string, error) {
+	cntr, err := daemon.getActiveContainer(name)
+	if err != nil {
+		return "", err
+	}
+```
+
+exec ID は `ExecStore` に登録され、attach API が同じ ID を参照する。
+
+[`daemon/exec.go` L127-L132](https://github.com/moby/moby/blob/docker-v29.6.1/daemon/exec.go#L127-L132)
+
+```go
+	execConfig := container.NewExecConfig(cntr)
+	execConfig.OpenStdin = options.AttachStdin
+	execConfig.OpenStdout = options.AttachStdout
+	execConfig.OpenStderr = options.AttachStderr
+	execConfig.DetachKeys = keys
+	execConfig.Entrypoint, execConfig.Args = options.Cmd[0], options.Cmd[1:]
+```
+
+## exec 開始
+
+`ContainerExecStart` は二重実行を拒否し、実行中フラグを立ててから containerd へ渡す。
+
+[`daemon/exec.go` L162-L184](https://github.com/moby/moby/blob/docker-v29.6.1/daemon/exec.go#L162-L184)
+
+```go
+func (daemon *Daemon) ContainerExecStart(ctx context.Context, name string, options backend.ExecStartConfig) (retErr error) {
+	var (
+		cStdin           io.ReadCloser
+		cStdout, cStderr io.Writer
+	)
+
+	ec, err := daemon.getExecConfig(name)
+	if err != nil {
+		return err
+	}
+
+	ec.Lock()
+	if ec.ExitCode != nil {
+		ec.Unlock()
+		return errdefs.Conflict(fmt.Errorf("exec command %s has already run", ec.ID))
+	}
+
+	if ec.Running {
+		ec.Unlock()
+		return errdefs.Conflict(fmt.Errorf("exec command %s is already running", ec.ID))
+	}
+	ec.Running = true
+	ec.Unlock()
+```
 
 ## まとめ
 
-exec/attach はメインプロセスとは別経路で containerd タスクを操作する。
+exec はメインコンテナプロセスとは別の短命タスクとして containerd へ渡される。
 
 ## 関連する章
 
-- [第20章 logging](20-logging-drivers.md)
+- [第11章 実行監視](../part03-containerd/11-container-monitor.md)
+- [第18章 start/stop](18-start-stop.md)
