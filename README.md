@@ -24,6 +24,7 @@
 | [Prometheus](prometheus/README.md) | v3.12.0 | プル型監視システムと時系列データベース。スクレイプ、TSDB、PromQL、アラート、リモート連携まで全6部16章。 | [目次](prometheus/README.md) |
 | [ProxySQL](proxysql/README.md) | 3.0.9 | MySQL/PostgreSQL 向け高性能プロキシ。スレッドモデル、プロトコル、セッションとクエリ処理、コネクションプール、高可用性、Admin/Cluster まで全8部25章。 | [目次](proxysql/README.md) |
 | [RocksDB](rocksdb/README.md) | v11.1.1 | LSM-tree ベースの組み込み永続キーバリューストア。全11部・52章。 | [目次](rocksdb/README.md) |
+| [SELinux userspace](selinux/README.md) | 3.10 | MAC ポリシーのコンパイルと運用。libsepol、libselinux、libsemanage、checkpolicy、policycoreutils まで全8部24章。 | [目次](selinux/README.md) |
 | [Apache Spark](spark/README.md) | v4.1.2 | 分散データ処理フレームワーク。RDD、スケジューリング、Catalyst/Tungsten、Structured Streaming、PySpark、Kubernetes/YuniKorn 連携まで全10部28章。 | [目次](spark/README.md) |
 | [StarRocks](starrocks/README.md) | 4.1.1 | MPP 分散分析データベース。Cascades CBO、ベクトル化パイプライン実行、列指向ストレージ、Lake モードまで全10部27章。 | [目次](starrocks/README.md) |
 | [systemd](systemd/README.md) | 261.1 | Linux の init システムとサービス管理。PID 1 コア、sd-event/sd-bus、cgroup、BPF、journald、udev、logind、networkd、resolved まで全9部24章。 | [目次](systemd/README.md) |
