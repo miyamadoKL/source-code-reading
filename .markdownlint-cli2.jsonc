@@ -23,7 +23,8 @@
     "kafka/**/*.md",
     "keepalived/**/*.md",
     "selinux/**/*.md",
-    "flink/**/*.md"
+    "flink/**/*.md",
+    "linux/**/*.md"
   ],
   "config": {
     "default": true,
