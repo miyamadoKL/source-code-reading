@@ -22,6 +22,7 @@
     "docker/**/*.md",
     "kafka/**/*.md",
     "keepalived/**/*.md",
+    "selinux/**/*.md",
     "flink/**/*.md"
   ],
   "config": {
