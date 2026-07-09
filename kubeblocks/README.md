@@ -3,6 +3,7 @@
 KubeBlocks（[apecloud/kubeblocks](https://github.com/apecloud/kubeblocks)）のソースコードを読み解き、Kubernetes 上のデータベースオーケストレーションシステムが「何のために、どういう処理を行うか」を、ソースコードを引用しながら日本語で解説するドキュメントである。
 
 - **対象バージョン**：v1.0.2（コード引用はすべて [`v1.0.2` タグ](https://github.com/apecloud/kubeblocks/tree/v1.0.2)に固定）
+- **ライセンス**：AGPL-3.0-or-later で、apis 配下など一部ファイルは Apache-2.0（引用の方針はリポジトリルートの[引用とライセンス](../README.md#引用とライセンス)を参照）。
 - **想定読者**：Go と Kubernetes の基礎がある中級エンジニア
 - **読み方**：CRD 階層からコントローラ基盤、主要コントローラ、データ保護、運用拡張まで積み上げる構成で、第0部から順に読むことを想定する。
 

@@ -3,6 +3,7 @@
 keepalived（[acassen/keepalived](https://github.com/acassen/keepalived)）のソースコードを読み解き、VRRP、ヘルスチェック、IPVS、BFD を支えるプロセスモデルとイベント駆動基盤を日本語で解説するドキュメントである。
 
 - **対象バージョン**：v2.4.1（コード引用はすべて [`v2.4.1` タグ](https://github.com/acassen/keepalived/tree/v2.4.1)に固定）
+- **ライセンス**：GPL-2.0-or-later（引用の方針はリポジトリルートの[引用とライセンス](../README.md#引用とライセンス)を参照）。
 - **想定読者**：Linux ネットワーク、C、epoll の基礎があり、高可用性構成の実装をソースから追いたい中級エンジニア。
 - **読み方**：第0部から順に読むと、起動、スケジューラ、VRRP、チェッカー、BFD、運用機能へ段階的に積み上がる。
 
