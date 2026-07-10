@@ -1,4 +1,4 @@
-# 第4章 softirq と tasklet
+# 第5章 softirq と tasklet
 
 > **本章で読むソース**
 >
@@ -270,7 +270,7 @@ static void tasklet_action_common(struct tasklet_head *tl_head,
 
 ## TIMER_SOFTIRQ との接続
 
-従来の `timer_list` は満了時に `TIMER_SOFTIRQ` を raise し、`run_timer_softirq()` がタイマーホイールを処理する（第7章）。
+従来の `timer_list` は満了時に `TIMER_SOFTIRQ` を raise し、`run_timer_softirq()` がタイマーホイールを処理する（第8章）。
 
 [`kernel/time/timer.c` L2400-L2410](https://github.com/gregkh/linux/blob/v6.18.38/kernel/time/timer.c#L2400-L2410)
 
@@ -315,5 +315,5 @@ flowchart TD
 ## 関連する章
 
 - [第3章 request_irq からハンドラ実行まで](../part00-genirq/03-request-irq-handler.md)
-- [第5章 workqueue の構造](../part01-deferred/05-workqueue-structure.md)
-- [第7章 タイマーホイール](../part02-timer/07-timer-wheel.md)
+- [第6章 workqueue の構造](../part01-deferred/06-workqueue-structure.md)
+- [第8章 タイマーホイール](../part02-timer/08-timer-wheel.md)

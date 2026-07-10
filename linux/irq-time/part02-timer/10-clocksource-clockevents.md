@@ -1,4 +1,4 @@
-# 第9章 clocksource と clockevents
+# 第10章 clocksource と clockevents
 
 > **本章で読むソース**
 >
@@ -17,7 +17,7 @@ clocksource は hardware cycle を ns へ、clockevent は expiry の ns を dev
 
 ## 前提
 
-- [第8章 hrtimer](08-hrtimer.md) で `hrtimer_interrupt()` が clockevent に依存することを読んでいること。
+- [第9章 hrtimer](09-hrtimer.md) で `hrtimer_interrupt()` が clockevent に依存することを読んでいること。
 
 ## clocks_calc_mult_shift：scaled math の共通基盤
 
@@ -190,7 +190,7 @@ int __clocksource_register_scale(struct clocksource *cs, u32 scale, u32 freq)
 }
 ```
 
-`vdso_clock_mode` が無効なソースは vDSO 更新から外され、ユーザー空間 fast path が TSC 読み取りできなくなる（第14章）。
+`vdso_clock_mode` が無効なソースは vDSO 更新から外され、ユーザー空間 fast path が TSC 読み取りできなくなる（第20章）。
 
 ## clockevent の登録
 
@@ -290,6 +290,6 @@ flowchart TD
 
 ## 関連する章
 
-- [第8章 hrtimer](08-hrtimer.md)
-- [第10章 timekeeping](10-timekeeping.md)
-- [第11章 tick デバイスと周期 tick](../part03-tick/11-tick-device.md)
+- [第9章 hrtimer](09-hrtimer.md)
+- [第12章 timekeeping](12-timekeeping.md)
+- [第13章 tick デバイスと周期 tick](../part03-tick/13-tick-device.md)

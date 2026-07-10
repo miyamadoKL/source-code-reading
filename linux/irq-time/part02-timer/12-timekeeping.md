@@ -1,4 +1,4 @@
-# 第10章 timekeeping
+# 第12章 timekeeping
 
 > **本章で読むソース**
 >
@@ -17,7 +17,7 @@ seqcount による読み取り側の無ロックパスと、`update_wall_time()`
 
 ## 前提
 
-- [第9章 clocksource と clockevents](09-clocksource-clockevents.md) で clocksource 選択と `timekeeping_notify()` を読んでいること。
+- [第10章 clocksource と clockevents](10-clocksource-clockevents.md) で clocksource 選択と `timekeeping_notify()` を読んでいること。
 
 ## timekeeper と tk_read_base
 
@@ -125,7 +125,7 @@ ktime_t ktime_get(void)
 ```
 
 **最適化の工夫**：`ktime_get_mono_fast_ns()` 等は `tk_fast` の seqcount と cycle 読み取りだけで NMI 安全な fast path を提供する（同ファイル内）。
-vDSO はこの fast path と同型のデータをユーザー空間へ公開する（第14章）。
+vDSO はこの fast path と同型のデータをユーザー空間へ公開する（第20章）。
 
 ## update_wall_time：tick からの更新
 
@@ -285,6 +285,6 @@ flowchart TD
 
 ## 関連する章
 
-- [第9章 clocksource と clockevents](09-clocksource-clockevents.md)
-- [第11章 tick デバイスと周期 tick](../part03-tick/11-tick-device.md)
-- [第14章 ユーザー空間への時刻提供](../part04-ipc-time/14-userspace-time-vdso.md)
+- [第10章 clocksource と clockevents](10-clocksource-clockevents.md)
+- [第13章 tick デバイスと周期 tick](../part03-tick/13-tick-device.md)
+- [第20章 ユーザー空間への時刻提供](../part05-ipc-time/20-userspace-time-vdso.md)
