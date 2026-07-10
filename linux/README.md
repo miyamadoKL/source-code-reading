@@ -45,7 +45,7 @@ graph TD
 | [全体像と横断基盤](foundation/README.md) | ソースツリーの地図、Kconfig と Kbuild、起動シーケンス、システムコール入口、主要データ構造（リスト、赤黒木、XArray、Maple Tree） | init/、kernel/entry/、lib/、include/linux/ | 公開 |
 | [プロセスとスケジューラ](sched/README.md) | task_struct、fork と exec、EEVDF スケジューラ、RT と deadline クラス、プリエンプションモデル、PSI | kernel/sched/、kernel/fork.c、fs/exec.c | 公開 |
 | [同期と RCU](locking/README.md) | アトミック操作、スピンロック、mutex と rwsem、seqlock、lockdep、RCU、per-CPU 変数 | kernel/locking/、kernel/rcu/ | 公開 |
-| 割り込みと時間 | genirq、softirq、workqueue、タイマーホイール、hrtimer、tick と NO_HZ、クロックソース | kernel/irq/、kernel/time/、kernel/softirq.c、kernel/workqueue.c | 計画 |
+| [割り込みと時間](irq-time/README.md) | genirq、softirq、workqueue、タイマーホイール、hrtimer、tick と NO_HZ、クロックソース | kernel/irq/、kernel/time/、kernel/softirq.c、kernel/workqueue.c | 公開 |
 | メモリ管理 | バディアロケータ、SLUB、folio、VMA と Maple Tree、ページフォールト、rmap、LRU と MGLRU、回収とコンパクション、THP、memcg、swap | mm/ | 計画 |
 | VFS とページキャッシュ | パス解決と dcache、inode、マウント、ページキャッシュ、writeback、読み書きの経路 | fs/（コア部分）、mm/filemap.c | 計画 |
 | 個別ファイルシステム | ext4、btrfs、XFS 概観、overlayfs、tmpfs、procfs と sysfs | fs/ext4/、fs/btrfs/ ほか | 計画 |
