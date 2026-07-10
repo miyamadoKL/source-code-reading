@@ -1,4 +1,4 @@
-# 第14章 expedited と nocb などの発展
+# 第16章 expedited と nocb などの発展
 
 > **本章で読むソース**
 >
@@ -23,7 +23,7 @@
 
 ## 前提
 
-- [Tree RCU と grace period](11-tree-rcu-gp.md) と [call_rcu と callback 処理](13-call-rcu-callback.md) を読んでいること。
+- [Tree RCU と grace period](12-tree-rcu-gp.md) と [call_rcu と callback 処理](15-call-rcu-callback.md) を読んでいること。
 
 ## synchronize_rcu_expedited
 
@@ -505,6 +505,6 @@ runtime の `rcu_nocb_cpu_offload` は offline CPU だけを受け付ける。
 
 ## 関連する章
 
-- [Tree RCU と grace period](11-tree-rcu-gp.md)
-- [call_rcu と callback 処理](13-call-rcu-callback.md)
+- [Tree RCU と grace period](12-tree-rcu-gp.md)
+- [call_rcu と callback 処理](15-call-rcu-callback.md)
 - [プロセスとスケジューラのプリエンプション](../../sched/part01-core/08-preemption-model.md)

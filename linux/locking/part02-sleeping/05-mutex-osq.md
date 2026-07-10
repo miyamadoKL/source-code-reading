@@ -306,5 +306,5 @@ flowchart TD
 ## 関連する章
 
 - [rwsem](06-rwsem.md)
-- [rt_mutex と priority inheritance](../part03-correctness/09-rt-mutex-pi.md)
-- [lockdep](../part03-correctness/08-lockdep.md)
+- [rt_mutex と priority inheritance](../part03-correctness/10-rt-mutex-pi.md)
+- [lockdep](../part03-correctness/09-lockdep.md)

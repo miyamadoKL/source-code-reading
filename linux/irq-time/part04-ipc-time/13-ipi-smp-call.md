@@ -333,5 +333,5 @@ flowchart TD
 ## 関連する章
 
 - [第1章 irq_desc と irq_domain](../part00-genirq/01-irq-desc-domain.md)
-- [同期と RCU 第4部](../../locking/part04-rcu/10-rcu-basics.md)
+- [同期と RCU 第4部](../../locking/part04-rcu/11-rcu-basics.md)
 - [x86-64 アーキテクチャ分冊（計画）](../../README.md)

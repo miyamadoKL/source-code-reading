@@ -193,4 +193,4 @@ per-CPU データをロックなしで更新できるのは、更新がその CP
 
 - [アトミック操作とメモリバリア](01-atomic-barrier.md)
 - [spinlock と qspinlock](../part01-spinning/03-spinlock-qspinlock.md)
-- [Tree RCU と grace period](../part04-rcu/11-tree-rcu-gp.md)
+- [Tree RCU と grace period](../part04-rcu/12-tree-rcu-gp.md)
