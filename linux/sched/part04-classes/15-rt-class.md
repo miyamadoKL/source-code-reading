@@ -1,4 +1,4 @@
-# 第11章 RT クラス
+# 第15章 RT クラス
 
 > **本章で読むソース**
 >
@@ -233,5 +233,5 @@ RT クラスは EEVDF より厳格に優先される。
 
 ## 関連する章
 
-- [deadline クラス](12-deadline-class.md)
-- [ロードバランスと NUMA](../part04-smp-obs/13-load-balance-numa.md)
+- [deadline クラス](16-deadline-class.md)
+- [ロードバランスと NUMA](../part05-smp-obs/17-load-balance-numa.md)

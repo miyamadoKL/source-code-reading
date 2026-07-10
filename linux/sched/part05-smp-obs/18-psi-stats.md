@@ -1,4 +1,4 @@
-# 第14章 PSI と統計
+# 第18章 PSI と統計
 
 > **本章で読むソース**
 >
@@ -16,7 +16,7 @@
 
 ## 前提
 
-[ロードバランスと NUMA](13-load-balance-numa.md) を読んでいること。
+[ロードバランスと NUMA](17-load-balance-numa.md) を読んでいること。
 
 ## seqcount による per-CPU 更新
 

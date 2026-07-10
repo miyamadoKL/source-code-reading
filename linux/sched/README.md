@@ -1,13 +1,13 @@
 # Linux カーネル プロセスとスケジューラ
 
-Linux カーネル（[gregkh/linux](https://github.com/gregkh/linux)）のプロセス表現、ライフサイクル、EEVDF スケジューラ、RT と deadline クラス、プリエンプション、PSI を読み解く分冊である。
+Linux カーネル（[gregkh/linux](https://github.com/gregkh/linux)）のプロセス表現、ライフサイクル、EEVDF スケジューラ、sched_ext、RT と deadline クラス、プリエンプション、PSI を読み解く分冊である。
 ユーザー空間の「プロセス」がカーネル内部でどう表現され、いつどの CPU で走るかをソースから追う。
 
 - **対象バージョン**：6.18.38（コード引用はすべて [`v6.18.38` タグ](https://github.com/gregkh/linux/tree/v6.18.38)に固定）
 - **対比バージョン**：7.1.3（大きな変更は [`v7.1.3` タグ](https://github.com/gregkh/linux/tree/v7.1.3)への固定リンク付き注釈）
 - **想定読者**：[全体像と横断基盤](../foundation/README.md) を読み、C とオペレーティングシステムの基礎がある中級エンジニア
 - **読み方**：第0部から順に読む。
-  プロセス表現と fork、exec、exit を押さえてからスケジューラコア、EEVDF、特殊クラス、SMP 可観測性へ進む。
+  プロセス表現と fork、exec、exit を押さえてからスケジューラコア、EEVDF、sched_ext、特殊クラス、SMP 可観測性へ進む。
 
 コード引用は `[path L開始-L終了](https://github.com/gregkh/linux/blob/v6.18.38/...)` 形式のリンクとコードブロックの2点セットで示す。
 アーキテクチャ依存の記述は x86-64 を既定とする。
@@ -23,23 +23,30 @@ Linux カーネル（[gregkh/linux](https://github.com/gregkh/linux)）のプロ
 
 5. [ランキューとスケジューリングクラスの階層](part01-core/05-runqueue-sched-class.md)
 6. [__schedule とコンテキストスイッチ](part01-core/06-schedule-context-switch.md)
-7. [プリエンプションモデル（PREEMPT_NONE から PREEMPT_LAZY まで）](part01-core/07-preemption-model.md)
+7. [try_to_wake_up と wakeup の中核](part01-core/07-try-to-wake-up.md)
+8. [プリエンプションモデル（PREEMPT_NONE から PREEMPT_LAZY まで）](part01-core/08-preemption-model.md)
 
 ## 第2部　EEVDF スケジューラ
 
-8. [vruntime と eligibility（CFS から EEVDF への転換）](part02-eevdf/08-vruntime-eligibility.md)
-9. [enqueue と dequeue と pick_next_task](part02-eevdf/09-enqueue-dequeue-pick.md)
-10. [group scheduling と cgroup 階層](part02-eevdf/10-group-scheduling-cgroup.md)
+9. [vruntime と eligibility（CFS から EEVDF への転換）](part02-eevdf/09-vruntime-eligibility.md)
+10. [enqueue と dequeue と pick_next_task](part02-eevdf/10-enqueue-dequeue-pick.md)
+11. [group scheduling と cgroup 階層](part02-eevdf/11-group-scheduling-cgroup.md)
 
-## 第3部　RT と deadline
+## 第3部　sched_ext
 
-11. [RT クラス](part03-classes/11-rt-class.md)
-12. [deadline クラス](part03-classes/12-deadline-class.md)
+12. [ext_sched_class と sched_ext_ops](part03-sched-ext/12-ext-sched-class-ops.md)
+13. [DSQ とディスパッチ実行の流れ](part03-sched-ext/13-dsq-dispatch-flow.md)
+14. [有効化と bypass、ext_idle](part03-sched-ext/14-enable-bypass-idle.md)
 
-## 第4部　マルチコアと可観測性
+## 第4部　RT と deadline
 
-13. [ロードバランスと NUMA](part04-smp-obs/13-load-balance-numa.md)
-14. [PSI と統計](part04-smp-obs/14-psi-stats.md)
+15. [RT クラス](part04-classes/15-rt-class.md)
+16. [deadline クラス](part04-classes/16-deadline-class.md)
+
+## 第5部　マルチコアと可観測性
+
+17. [ロードバランスと NUMA](part05-smp-obs/17-load-balance-numa.md)
+18. [PSI と統計](part05-smp-obs/18-psi-stats.md)
 
 ---
 

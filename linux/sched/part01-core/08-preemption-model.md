@@ -1,4 +1,4 @@
-# 第7章 プリエンプションモデル（PREEMPT_NONE から PREEMPT_LAZY まで）
+# 第8章 プリエンプションモデル（PREEMPT_NONE から PREEMPT_LAZY まで）
 
 > **本章で読むソース**
 >
@@ -15,7 +15,7 @@
 
 ## 前提
 
-[__schedule とコンテキストスイッチ](06-schedule-context-switch.md) を読んでいること。
+[__schedule とコンテキストスイッチ](06-schedule-context-switch.md) と [try_to_wake_up と wakeup の中核](07-try-to-wake-up.md) を読んでいること。
 
 ## Kconfig の四モデル
 
@@ -170,5 +170,6 @@ flowchart TD
 ## 関連する章
 
 - [__schedule とコンテキストスイッチ](06-schedule-context-switch.md)
-- [vruntime と eligibility](../part02-eevdf/08-vruntime-eligibility.md)
+- [try_to_wake_up と wakeup の中核](07-try-to-wake-up.md)
+- [vruntime と eligibility](../part02-eevdf/09-vruntime-eligibility.md)
 - [全体像と横断基盤：entry_64.S の入口と出口](../../foundation/part02-syscall/07-entry-64-syscall-entry-exit.md)
