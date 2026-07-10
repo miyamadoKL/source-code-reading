@@ -33,6 +33,8 @@ graph TD
     LOCK[同期と RCU] -.横断.- SCHED
     LOCK -.横断.- MM
     IRQ[割り込みと時間] -.横断.- SCHED
+    PM[電源管理と CPU ライフサイクル] -.横断.- SCHED
+    PM -.横断.- DRV
     SEC[セキュリティ LSM] -.横断.- VFS
     BPF[BPF とトレーシング] -.横断.- NET
     RUST[Rust for Linux] -.横断.- DRV
@@ -42,24 +44,37 @@ graph TD
 
 | 分冊 | 範囲 | 主要ソースディレクトリ | 状態 |
 |---|---|---|---|
-| [全体像と横断基盤](foundation/README.md) | ソースツリーの地図、Kconfig と Kbuild、起動シーケンス、システムコール入口、主要データ構造（リスト、赤黒木、XArray、Maple Tree） | init/、kernel/entry/、lib/、include/linux/ | 公開 |
-| [プロセスとスケジューラ](sched/README.md) | task_struct、fork と exec、EEVDF スケジューラ、RT と deadline クラス、プリエンプションモデル、PSI | kernel/sched/、kernel/fork.c、fs/exec.c | 公開 |
-| [同期と RCU](locking/README.md) | アトミック操作、スピンロック、mutex と rwsem、seqlock、lockdep、RCU、per-CPU 変数 | kernel/locking/、kernel/rcu/ | 公開 |
-| [割り込みと時間](irq-time/README.md) | genirq、softirq、workqueue、タイマーホイール、hrtimer、tick と NO_HZ、クロックソース | kernel/irq/、kernel/time/、kernel/softirq.c、kernel/workqueue.c | 公開 |
-| メモリ管理 | バディアロケータ、SLUB、folio、VMA と Maple Tree、ページフォールト、rmap、LRU と MGLRU、回収とコンパクション、THP、memcg、swap | mm/ | 計画 |
+| [全体像と横断基盤](foundation/README.md) | ソースツリーの地図、Kconfig と Kbuild、起動シーケンス、システムコール入口、主要データ構造（リスト、赤黒木、XArray、Maple Tree、rhashtable、IDR）、モジュールローダと livepatch、sysctl とカーネルパラメータ、panic と reboot | init/、kernel/entry/、kernel/module/、kernel/livepatch/、kernel/params.c、kernel/sysctl.c、kernel/panic.c、kernel/reboot.c、lib/、include/linux/ | 公開（補強中） |
+| [プロセスとスケジューラ](sched/README.md) | task_struct、fork と exec、シグナル配送、sleep と wakeup、kthread、EEVDF スケジューラ、sched_ext、RT と deadline クラス、プリエンプションモデル、topology と PELT、PSI、ptrace | kernel/sched/、kernel/fork.c、kernel/signal.c、kernel/kthread.c、kernel/ptrace.c、fs/exec.c | 公開（補強中） |
+| [同期と RCU](locking/README.md) | アトミック操作、スピンロック、mutex と rwsem、seqlock、waitqueue、lockdep、RCU（Tree、SRCU、Tasks）、per-CPU 変数、futex | kernel/locking/、kernel/rcu/、kernel/futex/、kernel/sched/wait.c、kernel/sched/swait.c、kernel/sched/wait_bit.c | 公開（補強中） |
+| [割り込みと時間](irq-time/README.md) | genirq、MSI ドメイン、softirq と irq_work、workqueue、タイマーホイールと timer migration、hrtimer、tick と NO_HZ、tick broadcast、クロックソース、NTP 補正、POSIX タイマー | kernel/irq/、kernel/time/、kernel/softirq.c、kernel/workqueue.c | 公開（補強中） |
+| メモリ管理 | memblock、バディアロケータ、SLUB、folio、VMA と Maple Tree、ページフォールト、rmap、LRU と MGLRU、回収とコンパクション、THP、memcg、swap、NUMA バランシングの fault 側 | mm/ | 計画 |
 | VFS とページキャッシュ | パス解決と dcache、inode、マウント、ページキャッシュ、writeback、読み書きの経路 | fs/（コア部分）、mm/filemap.c | 計画 |
 | 個別ファイルシステム | ext4、btrfs、XFS 概観、overlayfs、tmpfs、procfs と sysfs | fs/ext4/、fs/btrfs/ ほか | 計画 |
 | ブロック層と io_uring | bio と request、blk-mq、I/O スケジューラ、io_uring、NVMe ドライバ概観、device mapper | block/、io_uring/、drivers/nvme/ | 計画 |
 | ネットワーク | sk_buff、ソケット層、TCP/IP、netfilter、ルーティング、GRO と XDP などの高速化 | net/ | 計画 |
-| namespace と cgroup | 各種 namespace、cgroup v2 コア、主要コントローラ、コンテナ実行の土台 | kernel/cgroup/、kernel/nsproxy.c、ipc/ | 計画 |
+| namespace と cgroup | 各種 namespace（time namespace を含む）、cgroup v2 コア、主要コントローラ、コンテナ実行の土台 | kernel/cgroup/、kernel/nsproxy.c、kernel/time/namespace.c、ipc/ | 計画 |
+| 電源管理と CPU ライフサイクル | suspend と hibernate、freezer、PM QoS、cpufreq と cpuidle、CPU hotplug | kernel/power/、kernel/cpu.c、drivers/cpuidle/、drivers/cpufreq/ | 計画 |
 | セキュリティ | LSM フック、capabilities、seccomp、Landlock、keys（SELinux 本体の詳細は [SELinux userspace](../selinux/README.md) と接続する） | security/ | 計画 |
 | 仮想化（KVM） | KVM コア、x86 の VMX と SVM、vhost 概観 | virt/kvm/、arch/x86/kvm/ | 計画 |
 | デバイスモデルとドライバ基盤 | driver core、bus と probe、sysfs、Device Tree と ACPI 概観、PCI | drivers/base/、drivers/pci/ | 計画 |
 | BPF とトレーシング | verifier、JIT、map、tracepoint、ftrace、kprobes、perf | kernel/bpf/、kernel/trace/、kernel/events/ | 計画 |
 | Rust for Linux | ビルド統合、kernel クレート、抽象レイヤー、実ドライバ例 | rust/ | 計画 |
-| x86-64 アーキテクチャ | ブート、例外と割り込みのエントリ、コンテキストスイッチ、ページテーブル、SMP と per-CPU | arch/x86/ | 計画 |
+| x86-64 アーキテクチャ | ブートの詳細（全体像と横断基盤の概観を引き継ぐ）、エントリ（システムコール、例外、割り込み）、コンテキストスイッチ、ページテーブル、SMP と per-CPU | arch/x86/ | 計画 |
 
 分冊を執筆したら、分冊名を各分冊の README へのリンクに置き換え、状態を「計画」から「公開」に更新する。
+部と章の数は対象サブシステムの実態から決め、既存分冊の章数に合わせない。
+
+## 補強計画
+
+構成監査で、公開済み4分冊に根本的なカバレッジ欠落が見つかった。
+以下を優先度順に補強 PR で追加する。
+
+- **P0（主要機構の欠落）**：sched の通常 wakeup の中核（`try_to_wake_up`、`ttwu_queue`）と sched_ext、locking の waitqueue（`wake_q`、`swait` を含む）と Tasks RCU、irq-time の MSI ドメイン、tick broadcast、timer migration、POSIX タイマー群。
+- **P1**：sched のシグナル配送、kthread、topology と PELT、locking の futex、foundation のモジュールローダ、panic と reboot、sysctl、irq-time の NTP 補正。
+- **P2（継続候補）**：sched のスケジューラ操作 API（affinity、uclamp）、cputime と loadavg と schedstats、ptrace、locking の ww_mutex と percpu-rwsem、RCU stall 診断、irq-time の IRQ affinity と vector matrix、IRQ timing 予測、foundation の livepatch。
+- **章の分割**：詰め込みすぎと判定された章（rwsem、expedited と nocb、workqueue、clocksource と clockevents、NO_HZ、Kconfig と Kbuild など）は補強 PR の中で段階的に分割する。
+- **将来分冊との境界**：x86-64 の boot とエントリ詳細、Maple Tree の VMA 適用、kobject のデバイス登録、cgroup コア、NUMA fault 側など、計画中の分冊と重なる詳細は該当分冊の執筆時に移し、それまでは参照注記で扱う。
 
 ## 7.x 系への注釈の方針
 
