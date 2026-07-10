@@ -507,4 +507,4 @@ runtime の `rcu_nocb_cpu_offload` は offline CPU だけを受け付ける。
 
 - [Tree RCU と grace period](12-tree-rcu-gp.md)
 - [call_rcu と callback 処理](15-call-rcu-callback.md)
-- [プロセスとスケジューラのプリエンプション](../../sched/part01-core/08-preemption-model.md)
+- [プロセスとスケジューラのプリエンプション](../../sched/part01-core/10-preemption-model.md)

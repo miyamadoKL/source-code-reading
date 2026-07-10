@@ -740,4 +740,4 @@ Trace は IPI と `trc_reader_nesting` で実行中 reader を取りこぼさな
 - [SRCU](13-srcu.md)
 - [call_rcu と callback 処理](15-call-rcu-callback.md)
 - [Tree RCU と grace period](12-tree-rcu-gp.md)
-- [try_to_wake_up（スケジューラ分冊）](../../sched/part01-core/07-try-to-wake-up.md)
+- [try_to_wake_up（スケジューラ分冊）](../../sched/part01-core/09-try-to-wake-up.md)

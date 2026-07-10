@@ -28,7 +28,7 @@
 ## 前提
 
 - [rwsem](06-rwsem.md) を読んでいること。
-- タスクを runnable に戻す `try_to_wake_up` の本体は [プロセスとスケジューラ第7章 try_to_wake_up](../../sched/part01-core/07-try-to-wake-up.md) の担当である。
+- タスクを runnable に戻す `try_to_wake_up` の本体は [プロセスとスケジューラ第9章 try_to_wake_up](../../sched/part01-core/09-try-to-wake-up.md) の担当である。
   本章では waitqueue がそこへ渡す入口（`default_wake_function`）までを扱う。
 
 ## wait_queue_head と wait_queue_entry
@@ -513,5 +513,5 @@ flowchart TD
 
 - [rwsem](06-rwsem.md)
 - [semaphore と completion](08-semaphore-completion.md)
-- [try_to_wake_up（スケジューラ分冊）](../../sched/part01-core/07-try-to-wake-up.md)
+- [try_to_wake_up（スケジューラ分冊）](../../sched/part01-core/09-try-to-wake-up.md)
 - [lockdep](../part03-correctness/09-lockdep.md)
