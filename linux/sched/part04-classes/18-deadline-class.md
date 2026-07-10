@@ -1,4 +1,4 @@
-# 第16章 deadline クラス
+# 第18章 deadline クラス
 
 > **本章で読むソース**
 >
@@ -15,7 +15,7 @@
 
 ## 前提
 
-[RT クラス](15-rt-class.md) を読んでいること。
+[RT クラス](17-rt-class.md) を読んでいること。
 
 ## SCHED_DEADLINE ポリシー
 
@@ -293,5 +293,5 @@ sleep 中は replenish のみで、wakeup 時の enqueue まで待つ。
 
 ## 関連する章
 
-- [RT クラス](15-rt-class.md)
-- [vruntime と eligibility](../part02-eevdf/09-vruntime-eligibility.md)
+- [RT クラス](17-rt-class.md)
+- [vruntime と eligibility](../part02-eevdf/11-vruntime-eligibility.md)

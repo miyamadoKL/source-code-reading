@@ -1,4 +1,4 @@
-# 第7章 try_to_wake_up と wakeup の中核
+# 第9章 try_to_wake_up と wakeup の中核
 
 > **本章で読むソース**
 >
@@ -21,7 +21,7 @@ waitqueue（`wait_event` や `wake_up` のキュー機構）は [同期と RCU](
 
 ## 前提
 
-[__schedule とコンテキストスイッチ](06-schedule-context-switch.md) を読んでいること。
+[__schedule とコンテキストスイッチ](08-schedule-context-switch.md) を読んでいること。
 `__schedule` がタスクを block して runqueue から外す流れと対になる処理である。
 
 ## 入口: wake_up_process
@@ -529,7 +529,7 @@ waitqueue の待ち行列機構は locking 分冊で扱う。
 
 ## 関連する章
 
-- [__schedule とコンテキストスイッチ](06-schedule-context-switch.md)
-- [プリエンプションモデル](08-preemption-model.md)
-- [ランキューとスケジューリングクラスの階層](05-runqueue-sched-class.md)
-- [ext_sched_class と sched_ext_ops](../part03-sched-ext/12-ext-sched-class-ops.md)
+- [__schedule とコンテキストスイッチ](08-schedule-context-switch.md)
+- [プリエンプションモデル](10-preemption-model.md)
+- [ランキューとスケジューリングクラスの階層](07-runqueue-sched-class.md)
+- [ext_sched_class と sched_ext_ops](../part03-sched-ext/14-ext-sched-class-ops.md)

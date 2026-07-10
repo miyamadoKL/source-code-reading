@@ -590,4 +590,4 @@ flowchart TD
 
 - [mutex と optimistic spinning](../part02-sleeping/05-mutex-osq.md)
 - [lockdep](09-lockdep.md)
-- [プロセスとスケジューラの deadline クラス](../../sched/part04-classes/16-deadline-class.md)
+- [プロセスとスケジューラの deadline クラス](../../sched/part04-classes/18-deadline-class.md)

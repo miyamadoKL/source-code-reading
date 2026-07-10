@@ -1,4 +1,4 @@
-# 第13章 DSQ とディスパッチ実行の流れ
+# 第15章 DSQ とディスパッチ実行の流れ
 
 > **本章で読むソース**
 >
@@ -19,7 +19,7 @@ BPF スケジューラが `dispatch` で DSQ を埋め、カーネルが local D
 
 ## 前提
 
-[ext_sched_class と sched_ext_ops](12-ext-sched-class-ops.md) を読んでいること。
+[ext_sched_class と sched_ext_ops](14-ext-sched-class-ops.md) を読んでいること。
 `sched_ext_ops` の `enqueue` と `dispatch` の役割分担を知っていると、本章の DSQ 経路がつながる。
 
 ## DSQ の種類
@@ -359,7 +359,7 @@ enqueue は BPF 側の論理キューか直接 DSQ 投入に分岐し、balance 
 
 ## 関連する章
 
-- [ext_sched_class と sched_ext_ops](12-ext-sched-class-ops.md)
-- [有効化と bypass](14-enable-bypass-idle.md)
-- [__schedule とコンテキストスイッチ](../part01-core/06-schedule-context-switch.md)
-- [enqueue と dequeue と pick_next_task](../part02-eevdf/10-enqueue-dequeue-pick.md)
+- [ext_sched_class と sched_ext_ops](14-ext-sched-class-ops.md)
+- [有効化と bypass](16-enable-bypass-idle.md)
+- [__schedule とコンテキストスイッチ](../part01-core/08-schedule-context-switch.md)
+- [enqueue と dequeue と pick_next_task](../part02-eevdf/12-enqueue-dequeue-pick.md)

@@ -204,5 +204,5 @@ flowchart TD
 ## 関連する章
 
 - 次章：[fork とプロセス生成（copy_process）](02-fork-copy-process.md)
-- [ランキューとスケジューリングクラスの階層](../part01-core/05-runqueue-sched-class.md)
+- [ランキューとスケジューリングクラスの階層](../part01-core/07-runqueue-sched-class.md)
 - [全体像と横断基盤：kernel_init から init プロセス起動まで](../../foundation/part01-boot/05-kernel-init-to-init.md)

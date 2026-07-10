@@ -1,4 +1,4 @@
-# 第5章 ランキューとスケジューリングクラスの階層
+# 第7章 ランキューとスケジューリングクラスの階層
 
 > **本章で読むソース**
 >
@@ -254,5 +254,5 @@ ext クラスは fair と idle の間に位置し、SCX 有効時だけ走査対
 
 ## 関連する章
 
-- [__schedule とコンテキストスイッチ](06-schedule-context-switch.md)
-- [enqueue と dequeue と pick_next_task](../part02-eevdf/10-enqueue-dequeue-pick.md)
+- [__schedule とコンテキストスイッチ](08-schedule-context-switch.md)
+- [enqueue と dequeue と pick_next_task](../part02-eevdf/12-enqueue-dequeue-pick.md)

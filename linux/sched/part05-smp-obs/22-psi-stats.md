@@ -1,4 +1,4 @@
-# 第18章 PSI と統計
+# 第22章 PSI と統計
 
 > **本章で読むソース**
 >
@@ -16,7 +16,7 @@
 
 ## 前提
 
-[ロードバランスと NUMA](17-load-balance-numa.md) を読んでいること。
+[ロードバランスと NUMA](21-load-balance-numa.md) を読んでいること。
 
 ## seqcount による per-CPU 更新
 
@@ -288,4 +288,4 @@ PSI は stall 状態の時間積分から avg10、avg60、avg300 を導く。
 ## 関連する章
 
 - [exit と wait](../part00-process/04-exit-wait.md)
-- [__schedule とコンテキストスイッチ](../part01-core/06-schedule-context-switch.md)
+- [__schedule とコンテキストスイッチ](../part01-core/08-schedule-context-switch.md)
