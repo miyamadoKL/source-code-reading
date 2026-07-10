@@ -1,4 +1,4 @@
-# 第5章 workqueue の構造
+# 第6章 workqueue の構造
 
 > **本章で読むソース**
 >
@@ -17,7 +17,7 @@ process コンテキストで走る遅延処理の基盤である **workqueue** 
 
 ## 前提
 
-- [第4章 softirq と tasklet](04-softirq-tasklet.md) で bottom half と process コンテキストの違いを押さえていること。
+- [第5章 softirq と tasklet](05-softirq-tasklet.md) で bottom half と process コンテキストの違いを押さえていること。
 
 ## worker_pool：実際に work を実行するプール
 
@@ -234,7 +234,7 @@ static void link_pwq(struct pool_workqueue *pwq)
 }
 ```
 
-ordered workqueue では pwq が古い順に並び、`unplug_oldest_pwq()` が次の pwq を順次有効化する（第6章）。
+ordered workqueue では pwq が古い順に並び、`unplug_oldest_pwq()` が次の pwq を順次有効化する（第7章）。
 
 ## 処理の流れ：queue_work から pool 選択まで
 
@@ -260,6 +260,6 @@ flowchart TD
 
 ## 関連する章
 
-- [第4章 softirq と tasklet](04-softirq-tasklet.md)
-- [第6章 workqueue の実行と並行性管理](06-workqueue-execution.md)
+- [第5章 softirq と tasklet](05-softirq-tasklet.md)
+- [第7章 workqueue の実行と並行性管理](07-workqueue-execution.md)
 - [同期と RCU 第2章 per-CPU 変数](../../locking/part00-foundation/02-percpu.md)

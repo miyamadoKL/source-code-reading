@@ -1,4 +1,4 @@
-# 第11章 tick デバイスと周期 tick
+# 第13章 tick デバイスと周期 tick
 
 > **本章で読むソース**
 >
@@ -16,8 +16,8 @@
 
 ## 前提
 
-- [第9章 clocksource と clockevents](../part02-timer/09-clocksource-clockevents.md) で clockevent 登録を読んでいること。
-- [第10章 timekeeping](../part02-timer/10-timekeeping.md) で `update_wall_time()` を読んでいること。
+- [第10章 clocksource と clockevents](../part02-timer/10-clocksource-clockevents.md) で clockevent 登録を読んでいること。
+- [第12章 timekeeping](../part02-timer/12-timekeeping.md) で `update_wall_time()` を読んでいること。
 
 ## tick_periodic：jiffies と wall time
 
@@ -216,7 +216,7 @@ void tick_setup_sched_timer(bool hrtimer)
 ```
 
 **最適化の工夫**：周期 tick は常に HZ 回割り込むが、oneshot と NO_HZ は次に必要なイベントだけ program する。
-idle 中は sched tick 自体を止め、割り込みかタイマー満了時だけ jiffies を進める（第12章）。
+idle 中は sched tick 自体を止め、割り込みかタイマー満了時だけ jiffies を進める（第15章）。
 
 ## 処理の流れ：周期 tick から oneshot へ
 
@@ -240,6 +240,6 @@ flowchart TD
 
 ## 関連する章
 
-- [第10章 timekeeping](../part02-timer/10-timekeeping.md)
-- [第12章 NO_HZ](12-no-hz.md)
+- [第12章 timekeeping](../part02-timer/12-timekeeping.md)
+- [第15章 NO_HZ](15-no-hz.md)
 - [プロセスとスケジューラ 第4部 PSI 等](../../sched/README.md)
