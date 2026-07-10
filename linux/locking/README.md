@@ -43,6 +43,11 @@ Linux カーネル（[gregkh/linux](https://github.com/gregkh/linux)）のアト
 15. [call_rcu と callback 処理](part04-rcu/15-call-rcu-callback.md)
 16. [expedited と nocb などの発展](part04-rcu/16-expedited-nocb.md)
 
+## 第5部　futex
+
+17. [futex の基礎と wait/wake](part05-futex/17-futex-hash-wait-wake.md)
+18. [requeue と PI futex](part05-futex/18-futex-requeue-pi.md)
+
 ---
 
 > 本分冊は Linux カーネル読解ドキュメント群のコア分冊である。
