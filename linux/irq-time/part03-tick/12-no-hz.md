@@ -394,4 +394,4 @@ flowchart TD
 
 - [第11章 tick デバイスと周期 tick](11-tick-device.md)
 - [第7章 タイマーホイール](../part02-timer/07-timer-wheel.md)
-- [同期と RCU 第4部 Tree RCU](../../locking/part04-rcu/11-tree-rcu-gp.md)
+- [同期と RCU 第4部 Tree RCU](../../locking/part04-rcu/12-tree-rcu-gp.md)

@@ -26,20 +26,22 @@ Linux カーネル（[gregkh/linux](https://github.com/gregkh/linux)）のアト
 
 5. [mutex と optimistic spinning](part02-sleeping/05-mutex-osq.md)
 6. [rwsem](part02-sleeping/06-rwsem.md)
-7. [semaphore と completion](part02-sleeping/07-semaphore-completion.md)
+7. [waitqueue](part02-sleeping/07-waitqueue.md)
+8. [semaphore と completion](part02-sleeping/08-semaphore-completion.md)
 
 ## 第3部　正しさの検証と RT
 
-8. [lockdep](part03-correctness/08-lockdep.md)
-9. [rt_mutex と priority inheritance](part03-correctness/09-rt-mutex-pi.md)
+9. [lockdep](part03-correctness/09-lockdep.md)
+10. [rt_mutex と priority inheritance](part03-correctness/10-rt-mutex-pi.md)
 
 ## 第4部　RCU
 
-10. [RCU の基本概念と API](part04-rcu/10-rcu-basics.md)
-11. [Tree RCU と grace period](part04-rcu/11-tree-rcu-gp.md)
-12. [SRCU](part04-rcu/12-srcu.md)
-13. [call_rcu と callback 処理](part04-rcu/13-call-rcu-callback.md)
-14. [expedited と nocb などの発展](part04-rcu/14-expedited-nocb.md)
+11. [RCU の基本概念と API](part04-rcu/11-rcu-basics.md)
+12. [Tree RCU と grace period](part04-rcu/12-tree-rcu-gp.md)
+13. [SRCU](part04-rcu/13-srcu.md)
+14. [Tasks RCU](part04-rcu/14-tasks-rcu.md)
+15. [call_rcu と callback 処理](part04-rcu/15-call-rcu-callback.md)
+16. [expedited と nocb などの発展](part04-rcu/16-expedited-nocb.md)
 
 ---
 

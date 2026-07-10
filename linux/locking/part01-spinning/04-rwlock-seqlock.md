@@ -205,4 +205,4 @@ seqlock は読み取りがロックレスだが、読み取りの再試行コス
 
 - [spinlock と qspinlock](03-spinlock-qspinlock.md)
 - [rwsem](../part02-sleeping/06-rwsem.md)
-- [RCU の基本概念と API](../part04-rcu/10-rcu-basics.md)
+- [RCU の基本概念と API](../part04-rcu/11-rcu-basics.md)

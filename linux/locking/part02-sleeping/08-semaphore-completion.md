@@ -1,4 +1,4 @@
-# 第7章 semaphore と completion
+# 第8章 semaphore と completion
 
 > **本章で読むソース**
 >
@@ -16,7 +16,7 @@ mutex ほど厳密なデバッグ支援はない semaphore の位置づけと、
 
 ## 前提
 
-- [mutex と optimistic spinning](05-mutex-osq.md) を読んでいること。
+- [waitqueue](07-waitqueue.md) と [mutex と optimistic spinning](05-mutex-osq.md) を読んでいること。
 
 ## semaphore の実装メモ
 
@@ -188,7 +188,7 @@ flowchart TD
 ## semaphore と completion の使い分け
 
 semaphore は N 並列のリソース枠に向くが、カーネル内部では利用が縮小している。
-completion は「作業完了の一回限りの通知」に特化し、RCU の `synchronize_srcu` 内部でも `completion` が使われる（第12章）。
+completion は「作業完了の一回限りの通知」に特化し、RCU の `synchronize_srcu` 内部でも `completion` が使われる（第13章）。
 
 ## まとめ
 
@@ -199,5 +199,5 @@ completion は「作業完了の一回限りの通知」に特化し、RCU の `
 ## 関連する章
 
 - [mutex と optimistic spinning](05-mutex-osq.md)
-- [SRCU](../part04-rcu/12-srcu.md)
-- [Tree RCU と grace period](../part04-rcu/11-tree-rcu-gp.md)
+- [SRCU](../part04-rcu/13-srcu.md)
+- [Tree RCU と grace period](../part04-rcu/12-tree-rcu-gp.md)

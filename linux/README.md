@@ -70,7 +70,7 @@ graph TD
 構成監査で、公開済み4分冊に根本的なカバレッジ欠落が見つかった。
 以下を優先度順に補強 PR で追加する。
 
-- **P0（主要機構の欠落）**：locking の waitqueue（`wake_q`、`swait` を含む）と Tasks RCU、irq-time の MSI ドメイン、tick broadcast、timer migration、POSIX タイマー群。
+- **P0（主要機構の欠落）**：irq-time の MSI ドメイン、tick broadcast、timer migration、POSIX タイマー群。
 - **P1**：sched のシグナル配送、kthread、topology と PELT、locking の futex、foundation のモジュールローダ、panic と reboot、sysctl、irq-time の NTP 補正。
 - **P2（継続候補）**：sched のスケジューラ操作 API（affinity、uclamp）、cputime と loadavg と schedstats、ptrace、locking の ww_mutex と percpu-rwsem、RCU stall 診断、irq-time の IRQ affinity と vector matrix、IRQ timing 予測、foundation の livepatch。
 - **章の分割**：詰め込みすぎと判定された章（rwsem、expedited と nocb、workqueue、clocksource と clockevents、NO_HZ、Kconfig と Kbuild など）は補強 PR の中で段階的に分割する。
