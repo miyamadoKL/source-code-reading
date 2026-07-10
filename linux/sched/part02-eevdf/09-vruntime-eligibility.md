@@ -1,4 +1,4 @@
-# 第8章 vruntime と eligibility（CFS から EEVDF への転換）
+# 第9章 vruntime と eligibility（CFS から EEVDF への転換）
 
 > **本章で読むソース**
 >
@@ -220,5 +220,5 @@ eligible は `v_i <= V`、pick は `pick_eevdf` が担う。
 
 ## 関連する章
 
-- [enqueue と dequeue と pick_next_task](09-enqueue-dequeue-pick.md)
-- [プリエンプションモデル](../part01-core/07-preemption-model.md)
+- [enqueue と dequeue と pick_next_task](10-enqueue-dequeue-pick.md)
+- [プリエンプションモデル](../part01-core/08-preemption-model.md)

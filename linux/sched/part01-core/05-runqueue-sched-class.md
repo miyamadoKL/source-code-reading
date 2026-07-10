@@ -255,4 +255,4 @@ ext クラスは fair と idle の間に位置し、SCX 有効時だけ走査対
 ## 関連する章
 
 - [__schedule とコンテキストスイッチ](06-schedule-context-switch.md)
-- [enqueue と dequeue と pick_next_task](../part02-eevdf/09-enqueue-dequeue-pick.md)
+- [enqueue と dequeue と pick_next_task](../part02-eevdf/10-enqueue-dequeue-pick.md)

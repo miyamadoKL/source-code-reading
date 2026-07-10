@@ -292,5 +292,6 @@ flowchart TD
 
 ## 関連する章
 
-- [プリエンプションモデル](07-preemption-model.md)
-- [vruntime と eligibility](../part02-eevdf/08-vruntime-eligibility.md)
+- [try_to_wake_up と wakeup の中核](07-try-to-wake-up.md)
+- [プリエンプションモデル](08-preemption-model.md)
+- [vruntime と eligibility](../part02-eevdf/09-vruntime-eligibility.md)
