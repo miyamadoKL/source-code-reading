@@ -44,9 +44,7 @@ Linux カーネル（[gregkh/linux](https://github.com/gregkh/linux)）のブロ
 16. [device mapper と dm-table](part04-driver-stack/16-device-mapper.md)
 17. [ブロック統計と throttling 概観](part04-driver-stack/17-blk-stats-throttling.md)
 
-## v7.1.3 との差分（監査）
-
-`v6.18.38` と `v7.1.3` の主要ファイルを `diff` と関数本体の逐語比較で確認した（2026-07-12）。
+**v7.1.3 との差分監査**として、`v6.18.38` と `v7.1.3` の主要ファイルを関数本体の比較で確認した。
 本文のコード引用は `v6.18.38` に固定し、下表は読解に影響する変更の有無を示す。
 
 | 領域 | ファイル | サイズ変化 | 本章で引用する関数 | 判定 |
@@ -55,7 +53,7 @@ Linux カーネル（[gregkh/linux](https://github.com/gregkh/linux)）のブロ
 | blk-mq 完了 | `block/blk-mq.c` | 同上 | `blk_mq_complete_request_remote`（[L1319-L1343](https://github.com/gregkh/linux/blob/v7.1.3/block/blk-mq.c#L1319-L1343)）、`blk_mq_complete_need_ipi`（[L1272-L1297](https://github.com/gregkh/linux/blob/v7.1.3/block/blk-mq.c#L1272-L1297)） | 本文と同一 |
 | スケジューラ merge | `block/blk-mq-sched.c` | 微差 | `blk_mq_sched_bio_merge` | 本文と同一 |
 | io_uring 発行 | `io_uring/io_uring.c` | −22623 バイト（リファクタ） | `io_queue_sqe`（[L1646-L1661](https://github.com/gregkh/linux/blob/v7.1.3/io_uring/io_uring.c#L1646-L1661)） | 本文と同一 |
-| io_uring 発行 | 同上 | 同上 | `io_submit_sqe`（[L1886-L1939](https://github.com/gregkh/linux/blob/v7.1.3/io_uring/io_uring.c#L1886-L1939)） | `io_init_req` に `left` 引数追加。`ctx->bpf_filters` と `io_uring_run_bpf_filters()` による発行前拒否分岐が増加（inline/io-wq 後段は維持） |
+| io_uring 発行 | 同上 | 同上 | `io_submit_sqe`（[L1886-L1939](https://github.com/gregkh/linux/blob/v7.1.3/io_uring/io_uring.c#L1886-L1939)） | `io_init_req` に `left` 引数が追加され、`ctx->bpf_filters` と `io_uring_run_bpf_filters()` による発行前拒否分岐が増加（inline/io-wq 後段は維持） |
 | io_uring io-wq punt | `io_uring/io_uring.c` | 同上 | `io_queue_iowq`（[L407-L433](https://github.com/gregkh/linux/blob/v7.1.3/io_uring/io_uring.c#L407-L433)） | 本体は同一、`io_req_queue_iowq_tw` の引数型が変更 |
 | NVMe | `drivers/nvme/host/pci.c` | 微差 | `nvme_queue_rq`（[L1431-L1458](https://github.com/gregkh/linux/blob/v7.1.3/drivers/nvme/host/pci.c#L1431-L1458)） | 本文と同一、行番号のみずれる |
 | device mapper | `drivers/md/dm.c` | +654 バイト | `__map_bio`（[L1397-L1452](https://github.com/gregkh/linux/blob/v7.1.3/drivers/md/dm.c#L1397-L1452)）、`__split_and_process_bio`（[L1721-L1762](https://github.com/gregkh/linux/blob/v7.1.3/drivers/md/dm.c#L1721-L1762)） | `__map_bio` は同一、分割処理は周辺コメント等で微差 |
