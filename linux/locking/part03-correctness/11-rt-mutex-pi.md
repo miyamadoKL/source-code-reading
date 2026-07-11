@@ -1,4 +1,4 @@
-# 第10章 rt_mutex と priority inheritance
+# 第11章 rt_mutex と priority inheritance
 
 > **本章で読むソース**
 >
@@ -19,7 +19,7 @@
 
 ## 前提
 
-- [mutex と optimistic spinning](../part02-sleeping/05-mutex-osq.md) と [lockdep](09-lockdep.md) を読んでいること。
+- [mutex と optimistic spinning](../part02-sleeping/05-mutex-osq.md) と [lockdep](10-lockdep.md) を読んでいること。
 
 ## 優先度調整の単一ステップ
 
@@ -589,5 +589,5 @@ flowchart TD
 ## 関連する章
 
 - [mutex と optimistic spinning](../part02-sleeping/05-mutex-osq.md)
-- [lockdep](09-lockdep.md)
-- [プロセスとスケジューラの deadline クラス](../../sched/part04-classes/18-deadline-class.md)
+- [lockdep](10-lockdep.md)
+- [プロセスとスケジューラの deadline クラス](../../sched/part04-classes/19-deadline-class.md)

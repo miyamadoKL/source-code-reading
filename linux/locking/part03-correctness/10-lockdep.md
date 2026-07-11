@@ -1,4 +1,4 @@
-# 第9章 lockdep
+# 第10章 lockdep
 
 > **本章で読むソース**
 >
@@ -559,6 +559,6 @@ flowchart TD
 
 ## 関連する章
 
-- [rt_mutex と priority inheritance](10-rt-mutex-pi.md)
-- [RCU の基本概念と API](../part04-rcu/11-rcu-basics.md)
+- [rt_mutex と priority inheritance](11-rt-mutex-pi.md)
+- [RCU の基本概念と API](../part04-rcu/12-rcu-basics.md)
 - [mutex と optimistic spinning](../part02-sleeping/05-mutex-osq.md)
