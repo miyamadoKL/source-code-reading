@@ -9,7 +9,7 @@
 > - [`lib/kobject_uevent.c` L463-L491](https://github.com/gregkh/linux/blob/v6.18.38/lib/kobject_uevent.c#L463-L491)
 > - [`lib/kobject.c` L266-L297](https://github.com/gregkh/linux/blob/v6.18.38/lib/kobject.c#L266-L297)
 > - [`fs/sysfs/dir.c` L40-L68](https://github.com/gregkh/linux/blob/v6.18.38/fs/sysfs/dir.c#L40-L68)
-> - [`fs/kernfs/inode.c` L249-L257](https://github.com/gregkh/linux/blob/v6.18.38/fs/kernfs/inode.c#L249-L257)
+> - [`fs/kernfs/inode.c` L249-L258](https://github.com/gregkh/linux/blob/v6.18.38/fs/kernfs/inode.c#L249-L258)
 
 ## この章の狙い
 
@@ -443,7 +443,7 @@ int sysfs_create_dir_ns(struct kobject *kobj, const void *ns)
 VFS がパスを辿って dentry を要求したときだけ、対応する `kernfs_node` から inode を生成する。
 常駐 inode を全ノード分確保しない。
 
-[`fs/kernfs/inode.c` L249-L257](https://github.com/gregkh/linux/blob/v6.18.38/fs/kernfs/inode.c#L249-L257)
+[`fs/kernfs/inode.c` L249-L258](https://github.com/gregkh/linux/blob/v6.18.38/fs/kernfs/inode.c#L249-L258)
 
 ```c
 struct inode *kernfs_get_inode(struct super_block *sb, struct kernfs_node *kn)

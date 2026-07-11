@@ -41,6 +41,12 @@ Linux カーネル（[gregkh/linux](https://github.com/gregkh/linux)）のソー
 13. [kobject と sysfs](part04-infra/13-kobject-sysfs.md)
 14. [printk](part04-infra/14-printk.md)
 
+## 第5部　ランタイム制御
+
+15. [モジュールローダ](part05-runtime/15-module-loader.md)
+16. [sysctl とカーネルパラメータ](part05-runtime/16-sysctl-kernel-parameters.md)
+17. [panic と reboot](part05-runtime/17-panic-reboot.md)
+
 ---
 
 > 本分冊は Linux カーネル読解ドキュメント群の入口である。

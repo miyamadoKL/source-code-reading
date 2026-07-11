@@ -8,7 +8,7 @@
 > - [`include/linux/xarray.h` L58-L74](https://github.com/gregkh/linux/blob/v6.18.38/include/linux/xarray.h#L58-L74)
 > - [`lib/xarray.c` L1-L40](https://github.com/gregkh/linux/blob/v6.18.38/lib/xarray.c#L1-L40)
 > - [`lib/xarray.c` L200-L230](https://github.com/gregkh/linux/blob/v6.18.38/lib/xarray.c#L200-L230)
-> - [`include/linux/fs.h` L484-L508](https://github.com/gregkh/linux/blob/v6.18.38/include/linux/fs.h#L484-L508)
+> - [`include/linux/fs.h` L484-L511](https://github.com/gregkh/linux/blob/v6.18.38/include/linux/fs.h#L484-L511)
 > - [`mm/filemap.c` L1900-L1929](https://github.com/gregkh/linux/blob/v6.18.38/mm/filemap.c#L1900-L1929)
 
 ## この章の狙い
@@ -209,7 +209,7 @@ static __always_inline void *xas_descend(struct xa_state *xas,
 
 `address_space` の `i_pages` メンバが XArray である。
 
-[`include/linux/fs.h` L484-L508](https://github.com/gregkh/linux/blob/v6.18.38/include/linux/fs.h#L484-L508)
+[`include/linux/fs.h` L484-L511](https://github.com/gregkh/linux/blob/v6.18.38/include/linux/fs.h#L484-L511)
 
 ```c
 /**
