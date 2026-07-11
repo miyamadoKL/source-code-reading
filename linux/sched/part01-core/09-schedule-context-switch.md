@@ -1,4 +1,4 @@
-# 第8章 __schedule とコンテキストスイッチ
+# 第9章 __schedule とコンテキストスイッチ
 
 > **本章で読むソース**
 >
@@ -17,7 +17,7 @@
 
 ## 前提
 
-[ランキューとスケジューリングクラスの階層](07-runqueue-sched-class.md) を読んでいること。
+[ランキューとスケジューリングクラスの階層](08-runqueue-sched-class.md) を読んでいること。
 
 ## __schedule の呼び出し契約
 
@@ -292,6 +292,6 @@ flowchart TD
 
 ## 関連する章
 
-- [try_to_wake_up と wakeup の中核](09-try-to-wake-up.md)
-- [プリエンプションモデル](10-preemption-model.md)
-- [vruntime と eligibility](../part02-eevdf/11-vruntime-eligibility.md)
+- [try_to_wake_up と wakeup の中核](10-try-to-wake-up.md)
+- [プリエンプションモデル](11-preemption-model.md)
+- [vruntime と eligibility](../part02-eevdf/12-vruntime-eligibility.md)

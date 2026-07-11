@@ -1,4 +1,4 @@
-# 第17章 RT クラス
+# 第18章 RT クラス
 
 > **本章で読むソース**
 >
@@ -15,7 +15,7 @@
 
 ## 前提
 
-[ランキューとスケジューリングクラスの階層](../part01-core/07-runqueue-sched-class.md) を読んでいること。
+[ランキューとスケジューリングクラスの階層](../part01-core/08-runqueue-sched-class.md) を読んでいること。
 
 ## RT ポリシー定数
 
@@ -233,5 +233,5 @@ RT クラスは EEVDF より厳格に優先される。
 
 ## 関連する章
 
-- [deadline クラス](18-deadline-class.md)
-- [ロードバランスと NUMA](../part05-smp-obs/21-load-balance-numa.md)
+- [deadline クラス](19-deadline-class.md)
+- [ロードバランスと NUMA](../part05-smp-obs/22-load-balance-numa.md)

@@ -228,5 +228,5 @@ reparent は `forget_original_parent` から `find_new_reaper`、`reparent_leade
 ## 関連する章
 
 - 前章：[exec とプログラム実行](03-exec-program.md)
-- [__schedule とコンテキストスイッチ](../part01-core/08-schedule-context-switch.md)
-- [PSI と統計](../part05-smp-obs/22-psi-stats.md)
+- [__schedule とコンテキストスイッチ](../part01-core/09-schedule-context-switch.md)
+- [PSI と統計](../part05-smp-obs/23-psi-stats.md)
