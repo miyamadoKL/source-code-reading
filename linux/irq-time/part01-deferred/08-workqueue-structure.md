@@ -1,4 +1,4 @@
-# 第6章 workqueue の構造
+# 第8章 workqueue の構造
 
 > **本章で読むソース**
 >
@@ -17,7 +17,7 @@ process コンテキストで走る遅延処理の基盤である **workqueue** 
 
 ## 前提
 
-- [第5章 softirq と tasklet](05-softirq-tasklet.md) で bottom half と process コンテキストの違いを押さえていること。
+- [第7章 softirq と tasklet](07-softirq-tasklet.md) で bottom half と process コンテキストの違いを押さえていること。
 
 ## worker_pool：実際に work を実行するプール
 
@@ -260,6 +260,6 @@ flowchart TD
 
 ## 関連する章
 
-- [第5章 softirq と tasklet](05-softirq-tasklet.md)
-- [第7章 workqueue の実行と並行性管理](07-workqueue-execution.md)
+- [第7章 softirq と tasklet](07-softirq-tasklet.md)
+- [第9章 workqueue の実行と並行性管理](09-workqueue-execution.md)
 - [同期と RCU 第2章 per-CPU 変数](../../locking/part00-foundation/02-percpu.md)

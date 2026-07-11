@@ -1,4 +1,4 @@
-# 第9章 hrtimer
+# 第11章 hrtimer
 
 > **本章で読むソース**
 >
@@ -16,8 +16,8 @@
 
 ## 前提
 
-- [第8章 タイマーホイール](08-timer-wheel.md) で jiffies ベースの `timer_list` を読んでいること。
-- [第10章 clocksource と clockevents](10-clocksource-clockevents.md) で `clock_event_device` の役割を先読みしてもよい。
+- [第10章 タイマーホイール](10-timer-wheel.md) で jiffies ベースの `timer_list` を読んでいること。
+- [第12章 clocksource と clockevents](12-clocksource-clockevents.md) で `clock_event_device` の役割を先読みしてもよい。
 
 ## enqueue_hrtimer：timerqueue への挿入
 
@@ -322,6 +322,6 @@ flowchart TD
 
 ## 関連する章
 
-- [第8章 タイマーホイール](08-timer-wheel.md)
-- [第10章 clocksource と clockevents](10-clocksource-clockevents.md)
-- [第14章 tick デバイスと周期 tick](../part03-tick/14-tick-device.md)
+- [第10章 タイマーホイール](10-timer-wheel.md)
+- [第12章 clocksource と clockevents](12-clocksource-clockevents.md)
+- [第16章 tick デバイスと周期 tick](../part03-tick/16-tick-device.md)

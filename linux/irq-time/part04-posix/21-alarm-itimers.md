@@ -1,4 +1,4 @@
-# 第19章 alarmtimer と itimer
+# 第21章 alarmtimer と itimer
 
 > **本章で読むソース**
 >
@@ -18,8 +18,8 @@
 
 ## 前提
 
-- [第17章 POSIX タイマー](17-posix-timers.md) で hrtimer ベース POSIX API を読んでいること。
-- [第18章 POSIX CPU タイマー](18-posix-cpu-timers.md) で cputime ベース itimer の土台を押さえていること。
+- [第19章 POSIX タイマー](19-posix-timers.md) で hrtimer ベース POSIX API を読んでいること。
+- [第20章 POSIX CPU タイマー](20-posix-cpu-timers.md) で cputime ベース itimer の土台を押さえていること。
 
 ## alarmtimer の alarm_base
 
@@ -216,7 +216,7 @@ void posixtimer_rearm_itimer(struct task_struct *tsk)
 }
 ```
 
-`ITIMER_VIRTUAL` と `ITIMER_PROF` は `cpu_itimer` 構造体で cputime ベース管理され、第18章の POSIX CPU タイマーと同型の tick 依存 path を共有する。
+`ITIMER_VIRTUAL` と `ITIMER_PROF` は `cpu_itimer` 構造体で cputime ベース管理され、第20章の POSIX CPU タイマーと同型の tick 依存 path を共有する。
 残り時間読み取りは hrtimer または cputime サンプルから計算する。
 
 [`kernel/time/itimer.c` L29-L45](https://github.com/gregkh/linux/blob/v6.18.38/kernel/time/itimer.c#L29-L45)
@@ -277,6 +277,6 @@ itimer は signal サブシステムと一体のため、カーネルが signal 
 
 ## 関連する章
 
-- [第17章 POSIX タイマー](17-posix-timers.md)
-- [第18章 POSIX CPU タイマー](18-posix-cpu-timers.md)
-- [第21章 ユーザー空間への時刻提供](../part05-ipc-time/21-userspace-time-vdso.md)
+- [第19章 POSIX タイマー](19-posix-timers.md)
+- [第20章 POSIX CPU タイマー](20-posix-cpu-timers.md)
+- [第23章 ユーザー空間への時刻提供](../part05-ipc-time/23-userspace-time-vdso.md)
