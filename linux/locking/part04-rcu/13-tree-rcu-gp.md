@@ -1,4 +1,4 @@
-# 第12章 Tree RCU と grace period
+# 第13章 Tree RCU と grace period
 
 > **本章で読むソース**
 >
@@ -19,7 +19,7 @@ Tree RCU が **grace period** をどう開始し、各 CPU の **quiescent state
 
 ## 前提
 
-- [RCU の基本概念と API](11-rcu-basics.md) を読んでいること。
+- [RCU の基本概念と API](12-rcu-basics.md) を読んでいること。
 
 ## rcu_gp_kthread のループ
 
@@ -459,7 +459,8 @@ flowchart TD
 
 ## 関連する章
 
-- [RCU の基本概念と API](11-rcu-basics.md)
-- [Tasks RCU](14-tasks-rcu.md)
-- [call_rcu と callback 処理](15-call-rcu-callback.md)
-- [expedited と nocb などの発展](16-expedited-nocb.md)
+- [RCU の基本概念と API](12-rcu-basics.md)
+- [RCU CPU stall 警告の診断](14-rcu-stall-diagnosis.md)
+- [Tasks RCU](16-tasks-rcu.md)
+- [call_rcu と callback 処理](17-call-rcu-callback.md)
+- [expedited と nocb などの発展](18-expedited-nocb.md)

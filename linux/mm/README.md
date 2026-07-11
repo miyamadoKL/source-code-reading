@@ -56,4 +56,4 @@ per-CPU 変数の一般論は [同期と RCU](../locking/part00-foundation/02-pe
 
 > 本分冊は Linux カーネル読解ドキュメント群のコア分冊である。
 > コード引用は `v6.18.38` に固定し、7.x 系の注釈のみ `v7.1.3` を使う。
-> NUMA のスケジューラ側（`task_numa_fault` 等）は [プロセスとスケジューラ](../sched/part05-smp-obs/21-load-balance-numa.md) と境界を分ける。
+> NUMA のスケジューラ側（`task_numa_fault` 等）は [プロセスとスケジューラ](../sched/part05-smp-obs/22-load-balance-numa.md) と境界を分ける。

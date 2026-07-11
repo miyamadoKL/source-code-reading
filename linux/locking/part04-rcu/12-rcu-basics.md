@@ -1,4 +1,4 @@
-# 第11章 RCU の基本概念と API
+# 第12章 RCU の基本概念と API
 
 > **本章で読むソース**
 >
@@ -16,7 +16,7 @@
 
 ## 前提
 
-- [アトミック操作とメモリバリア](../part00-foundation/01-atomic-barrier.md) と [lockdep](../part03-correctness/09-lockdep.md) を読んでいること。
+- [アトミック操作とメモリバリア](../part00-foundation/01-atomic-barrier.md) と [lockdep](../part03-correctness/10-lockdep.md) を読んでいること。
 
 ## 公開 API の一覧
 
@@ -150,7 +150,7 @@ flowchart TD
 
 本章の Tree RCU はビルトインの `rcu` を扱う。
 `rcu_bh` と `rcu_sched` は lockdep 用の互換名であり、現行 Tree RCU では独立したビルトイン変種ではなく通常 RCU へ統合済みの意味論を指す。
-サブシステム限定の寿命管理には第13章の SRCU を使う。
+サブシステム限定の寿命管理には第15章の SRCU を使う。
 
 ## まとめ
 
@@ -160,7 +160,7 @@ flowchart TD
 
 ## 関連する章
 
-- [Tree RCU と grace period](12-tree-rcu-gp.md)
-- [Tasks RCU](14-tasks-rcu.md)
-- [call_rcu と callback 処理](15-call-rcu-callback.md)
-- [SRCU](13-srcu.md)
+- [Tree RCU と grace period](13-tree-rcu-gp.md)
+- [Tasks RCU](16-tasks-rcu.md)
+- [call_rcu と callback 処理](17-call-rcu-callback.md)
+- [SRCU](15-srcu.md)
