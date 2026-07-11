@@ -46,6 +46,7 @@ Linux カーネル（[gregkh/linux](https://github.com/gregkh/linux)）のソー
 15. [モジュールローダ](part05-runtime/15-module-loader.md)
 16. [sysctl とカーネルパラメータ](part05-runtime/16-sysctl-kernel-parameters.md)
 17. [panic と reboot](part05-runtime/17-panic-reboot.md)
+18. [livepatch](part05-runtime/18-livepatch.md)
 
 ---
 
