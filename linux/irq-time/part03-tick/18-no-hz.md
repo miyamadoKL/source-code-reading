@@ -1,4 +1,4 @@
-# 第16章 NO_HZ
+# 第18章 NO_HZ
 
 > **本章で読むソース**
 >
@@ -19,8 +19,8 @@
 
 ## 前提
 
-- [第14章 tick デバイスと周期 tick](14-tick-device.md) で `tick_nohz_handler()` を読んでいること。
-- [第9章 hrtimer](../part02-timer/09-hrtimer.md) で clockevent 再 program を読んでいること。
+- [第16章 tick デバイスと周期 tick](16-tick-device.md) で `tick_nohz_handler()` を読んでいること。
+- [第11章 hrtimer](../part02-timer/11-hrtimer.md) で clockevent 再 program を読んでいること。
 
 ## NO_HZ の有効化
 
@@ -392,6 +392,6 @@ flowchart TD
 
 ## 関連する章
 
-- [第14章 tick デバイスと周期 tick](14-tick-device.md)
-- [第8章 タイマーホイール](../part02-timer/08-timer-wheel.md)
+- [第16章 tick デバイスと周期 tick](16-tick-device.md)
+- [第10章 タイマーホイール](../part02-timer/10-timer-wheel.md)
 - [同期と RCU 第4部 Tree RCU](../../locking/part04-rcu/13-tree-rcu-gp.md)

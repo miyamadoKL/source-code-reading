@@ -1,4 +1,4 @@
-# 第13章 NTP 補正と adjtimex
+# 第15章 NTP 補正と adjtimex
 
 > **本章で読むソース**
 >
@@ -18,11 +18,11 @@
 ## この章の狙い
 
 ユーザー空間の NTP デーモンや `adjtimex` システムコールが、カーネル内部の **NTP 状態**と **timekeeper** の周波数補正へどう届くかを読む。
-`ntp_tick_length` が [第12章 timekeeping](12-timekeeping.md) の `tkr_mono.mult` 調整へ接続する経路を、入口から `second_overflow`、うるう秒、PPS まで追う。
+`ntp_tick_length` が [第14章 timekeeping](14-timekeeping.md) の `tkr_mono.mult` 調整へ接続する経路を、入口から `second_overflow`、うるう秒、PPS まで追う。
 
 ## 前提
 
-- [第12章 timekeeping](12-timekeeping.md) で `update_wall_time()`、`__timekeeping_advance()`、`timekeeping_adjust()` の存在を押さえていること。
+- [第14章 timekeeping](14-timekeeping.md) で `update_wall_time()`、`__timekeeping_advance()`、`timekeeping_adjust()` の存在を押さえていること。
 - `struct timekeeper` の `tkr_mono.mult` が clocksource cycle をナノ秒へ換算する倍率であること（mult を大きくすると同じ cycle 差分がより多くのナノ秒として加算され、時計は速く進む）。
 
 ## adjtimex システムコールから do_adjtimex
@@ -591,6 +591,6 @@ PPS の周波数は `STA_PPSFREQ` かつ `STA_FREQHOLD` なしのときだけ `n
 
 ## 関連する章
 
-- [第12章 timekeeping](12-timekeeping.md)
-- [第14章 tick デバイスと周期 tick](../part03-tick/14-tick-device.md)
-- [第21章 ユーザー空間への時刻提供](../part05-ipc-time/21-userspace-time-vdso.md)
+- [第14章 timekeeping](14-timekeeping.md)
+- [第16章 tick デバイスと周期 tick](../part03-tick/16-tick-device.md)
+- [第23章 ユーザー空間への時刻提供](../part05-ipc-time/23-userspace-time-vdso.md)

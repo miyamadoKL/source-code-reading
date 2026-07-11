@@ -1,4 +1,4 @@
-# 第20章 IPI と smp_call_function
+# 第22章 IPI と smp_call_function
 
 > **本章で読むソース**
 >

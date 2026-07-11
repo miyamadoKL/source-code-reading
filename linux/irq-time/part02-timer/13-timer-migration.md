@@ -1,4 +1,4 @@
-# 第11章 timer migration
+# 第13章 timer migration
 
 > **本章で読むソース**
 >
@@ -14,12 +14,12 @@
 ## この章の狙い
 
 **timer migration** は idle CPU を起こさず、housekeeping 側 CPU がリモートの migratable タイマーを処理する階層機構である。
-`tmigr_group` の timerqueue と migrator 役割の委譲を読み、[第8章 タイマーホイール](../part02-timer/08-timer-wheel.md) の per-CPU `timer_base` と NO_HZ idle 経路との接続を押さえる。
+`tmigr_group` の timerqueue と migrator 役割の委譲を読み、[第10章 タイマーホイール](../part02-timer/10-timer-wheel.md) の per-CPU `timer_base` と NO_HZ idle 経路との接続を押さえる。
 
 ## 前提
 
-- [第8章 タイマーホイール](../part02-timer/08-timer-wheel.md) で `timer_base` と `run_timer_softirq()` を読んでいること。
-- [第16章 NO_HZ](../part03-tick/16-no-hz.md) で idle CPU が local clockevent を止める流れを先読みしてもよい。
+- [第10章 タイマーホイール](../part02-timer/10-timer-wheel.md) で `timer_base` と `run_timer_softirq()` を読んでいること。
+- [第18章 NO_HZ](../part03-tick/18-no-hz.md) で idle CPU が local clockevent を止める流れを先読みしてもよい。
 
 ## 階層グループと migrator
 
@@ -350,7 +350,7 @@ flowchart TD
   tick --> check --> walk --> remote --> expire --> cb
 ```
 
-[第8章](../part02-timer/08-timer-wheel.md) の `run_timer_softirq()` は local `timer_base` を処理したあと `tmigr_handle_remote()` を呼び、idle 先の migratable タイマーを同一 softirq コンテキストで完結させる。
+[第10章](../part02-timer/10-timer-wheel.md) の `run_timer_softirq()` は local `timer_base` を処理したあと `tmigr_handle_remote()` を呼び、idle 先の migratable タイマーを同一 softirq コンテキストで完結させる。
 
 ## 高速化と最適化の工夫
 
@@ -395,6 +395,6 @@ static int __init tmigr_init(void)
 
 ## 関連する章
 
-- [第8章 タイマーホイール](../part02-timer/08-timer-wheel.md)
-- [第16章 NO_HZ](../part03-tick/16-no-hz.md)
-- [第9章 hrtimer](../part02-timer/09-hrtimer.md)
+- [第10章 タイマーホイール](../part02-timer/10-timer-wheel.md)
+- [第18章 NO_HZ](../part03-tick/18-no-hz.md)
+- [第11章 hrtimer](../part02-timer/11-hrtimer.md)
