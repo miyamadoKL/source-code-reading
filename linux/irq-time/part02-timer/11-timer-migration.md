@@ -19,7 +19,7 @@
 ## 前提
 
 - [第8章 タイマーホイール](../part02-timer/08-timer-wheel.md) で `timer_base` と `run_timer_softirq()` を読んでいること。
-- [第15章 NO_HZ](../part03-tick/15-no-hz.md) で idle CPU が local clockevent を止める流れを先読みしてもよい。
+- [第16章 NO_HZ](../part03-tick/16-no-hz.md) で idle CPU が local clockevent を止める流れを先読みしてもよい。
 
 ## 階層グループと migrator
 
@@ -396,5 +396,5 @@ static int __init tmigr_init(void)
 ## 関連する章
 
 - [第8章 タイマーホイール](../part02-timer/08-timer-wheel.md)
-- [第15章 NO_HZ](../part03-tick/15-no-hz.md)
+- [第16章 NO_HZ](../part03-tick/16-no-hz.md)
 - [第9章 hrtimer](../part02-timer/09-hrtimer.md)

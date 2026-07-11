@@ -324,4 +324,4 @@ flowchart TD
 
 - [第8章 タイマーホイール](08-timer-wheel.md)
 - [第10章 clocksource と clockevents](10-clocksource-clockevents.md)
-- [第13章 tick デバイスと周期 tick](../part03-tick/13-tick-device.md)
+- [第14章 tick デバイスと周期 tick](../part03-tick/14-tick-device.md)

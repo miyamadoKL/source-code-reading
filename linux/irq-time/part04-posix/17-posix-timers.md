@@ -1,4 +1,4 @@
-# 第16章 POSIX タイマー
+# 第17章 POSIX タイマー
 
 > **本章で読むソース**
 >
@@ -342,5 +342,5 @@ static const struct k_clock clock_realtime = {
 ## 関連する章
 
 - [第9章 hrtimer](../part02-timer/09-hrtimer.md)
-- [第17章 POSIX CPU タイマー](../part04-posix/17-posix-cpu-timers.md)
-- [第18章 alarmtimer と itimer](../part04-posix/18-alarm-itimers.md)
+- [第18章 POSIX CPU タイマー](../part04-posix/18-posix-cpu-timers.md)
+- [第19章 alarmtimer と itimer](../part04-posix/19-alarm-itimers.md)

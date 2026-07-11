@@ -296,7 +296,7 @@ static __latent_entropy void run_timer_softirq(void)
 ```
 
 **最適化の工夫**：多段ホイールは満了が近いタイマーを浅いレベルに、遠いタイマーを深いレベルに置く。
-tick や softirq は `next_expiry` だけを見て早期 return でき、idle CPU ではタイマー処理自体をスキップできる（第15章）。
+tick や softirq は `next_expiry` だけを見て早期 return でき、idle CPU ではタイマー処理自体をスキップできる（第16章）。
 
 ## 処理の流れ：mod_timer から callback まで
 
@@ -323,4 +323,4 @@ flowchart TD
 
 - [第5章 softirq と tasklet](../part01-deferred/05-softirq-tasklet.md)
 - [第9章 hrtimer](../part02-timer/09-hrtimer.md)
-- [第15章 NO_HZ](../part03-tick/15-no-hz.md)
+- [第16章 NO_HZ](../part03-tick/16-no-hz.md)
