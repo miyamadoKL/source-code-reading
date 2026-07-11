@@ -1,4 +1,4 @@
-# 第8章 mq-deadline スケジューラ
+# 第10章 mq-deadline スケジューラ
 
 > **本章で読むソース**
 >
@@ -16,7 +16,7 @@
 
 ## 前提
 
-- [第7章](07-elevator-framework.md) で elevator フレームワークを読んでいること。
+- [第9章](09-elevator-framework.md) で elevator フレームワークを読んでいること。
 
 ## deadline_data の構造
 
@@ -261,5 +261,5 @@ blk-mq では全 hctx で状態を共有し、`dispatch_request` が横断的に
 
 ## 関連する章
 
-- [第9章 BFQ 概観](09-bfq-overview.md)
-- [第10章 plug と merge](10-plug-merge.md)
+- [第11章 BFQ 概観](11-bfq-overview.md)
+- [第12章 plug と merge](12-plug-merge.md)

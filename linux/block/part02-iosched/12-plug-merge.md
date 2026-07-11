@@ -1,4 +1,4 @@
-# 第10章 plug と merge
+# 第12章 plug と merge
 
 > **本章で読むソース**
 >
@@ -17,7 +17,7 @@
 
 ## 前提
 
-- [第5章](../part01-blk-mq/05-blk-mq-submit-tags.md) で plug への追加を読んでいること。
+- [第6章](../part01-blk-mq/06-blk-mq-submit-tags.md) で plug への追加を読んでいること。
 
 ## blk_plug の初期化
 
@@ -261,4 +261,4 @@ io_uring からの連続 submit でも同様のメリットが期待できる。
 ## 関連する章
 
 - [第1章 ブロック層の全体像](../part00-overview/01-block-layer-overview.md)
-- [第12章 SQE の発行](../part03-io-uring/12-sqe-submission.md)
+- [第14章 SQE の発行](../part03-io-uring/14-sqe-submission.md)

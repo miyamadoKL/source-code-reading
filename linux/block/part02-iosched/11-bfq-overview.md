@@ -1,4 +1,4 @@
-# 第9章 BFQ 概観
+# 第11章 BFQ 概観
 
 > **本章で読むソース**
 >
@@ -16,7 +16,7 @@
 
 ## 前提
 
-- [第7章](07-elevator-framework.md) と [第8章](08-mq-deadline.md) を読んでいること。
+- [第9章](09-elevator-framework.md) と [第10章](10-mq-deadline.md) を読んでいること。
 
 ## BFQ の位置づけ
 
@@ -224,5 +224,5 @@ BFQ は blk-mq elevator として登録され、`bfq_data` と per-process `bfq_
 
 ## 関連する章
 
-- [第10章 plug と merge](10-plug-merge.md)
-- [第17章 ブロック統計と throttling 概観](../part04-driver-stack/17-blk-stats-throttling.md)
+- [第12章 plug と merge](12-plug-merge.md)
+- [第26章 blk-cgroup QoS](../part05-dm-control/26-blk-cgroup-qos.md)
