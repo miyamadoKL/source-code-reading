@@ -218,7 +218,6 @@ sequenceDiagram
 **cacheline 分割された io_ring_ctx** は定数フラグと uring_lock 下の mutable 状態の false sharing を減らす。
 SQPOLL や IOPOLL ではこの分離がより効く。
 
-
 > **v7.1.3 注記**：`io_uring/io_uring.c` は v7.1.3 で大規模リファクタされているが、本章が引用する範囲の分岐変更は限定的である。
 > 行番号は v7.1.3 側でずれる（監査は [README](../README.md#v713-との差分監査)）。
 
