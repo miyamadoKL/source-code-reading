@@ -1,4 +1,4 @@
-# 第15章 overlayfs の upper/lower とコピーアップ
+# 第21章 overlayfs の upper/lower とコピーアップ
 
 > **本章で読むソース**
 >
@@ -297,5 +297,5 @@ overlayfs は lower を読取元、upper を書き込み先として合成し、
 
 ## 関連する章
 
-- [tmpfs と shmem](16-tmpfs-shmem.md)
+- [tmpfs と shmem](23-tmpfs-shmem.md)
 - [VFS 層の位置づけ](../../vfs/part00-overview/01-vfs-layer-overview.md)
