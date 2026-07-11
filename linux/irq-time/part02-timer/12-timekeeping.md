@@ -125,7 +125,7 @@ ktime_t ktime_get(void)
 ```
 
 **最適化の工夫**：`ktime_get_mono_fast_ns()` 等は `tk_fast` の seqcount と cycle 読み取りだけで NMI 安全な fast path を提供する（同ファイル内）。
-vDSO はこの fast path と同型のデータをユーザー空間へ公開する（第20章）。
+vDSO はこの fast path と同型のデータをユーザー空間へ公開する（第21章）。
 
 ## update_wall_time：tick からの更新
 
@@ -286,5 +286,6 @@ flowchart TD
 ## 関連する章
 
 - [第10章 clocksource と clockevents](10-clocksource-clockevents.md)
-- [第13章 tick デバイスと周期 tick](../part03-tick/13-tick-device.md)
-- [第20章 ユーザー空間への時刻提供](../part05-ipc-time/20-userspace-time-vdso.md)
+- [第13章 NTP 補正と adjtimex](13-ntp-adjtimex.md)
+- [第14章 tick デバイスと周期 tick](../part03-tick/14-tick-device.md)
+- [第21章 ユーザー空間への時刻提供](../part05-ipc-time/21-userspace-time-vdso.md)

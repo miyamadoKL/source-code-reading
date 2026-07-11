@@ -190,7 +190,7 @@ int __clocksource_register_scale(struct clocksource *cs, u32 scale, u32 freq)
 }
 ```
 
-`vdso_clock_mode` が無効なソースは vDSO 更新から外され、ユーザー空間 fast path が TSC 読み取りできなくなる（第20章）。
+`vdso_clock_mode` が無効なソースは vDSO 更新から外され、ユーザー空間 fast path が TSC 読み取りできなくなる（第21章）。
 
 ## clockevent の登録
 
@@ -292,4 +292,4 @@ flowchart TD
 
 - [第9章 hrtimer](09-hrtimer.md)
 - [第12章 timekeeping](12-timekeeping.md)
-- [第13章 tick デバイスと周期 tick](../part03-tick/13-tick-device.md)
+- [第14章 tick デバイスと周期 tick](../part03-tick/14-tick-device.md)

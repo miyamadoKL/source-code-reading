@@ -32,23 +32,24 @@ Linux カーネル（[gregkh/linux](https://github.com/gregkh/linux)）の genir
 10. [clocksource と clockevents](part02-timer/10-clocksource-clockevents.md)
 11. [timer migration](part02-timer/11-timer-migration.md)
 12. [timekeeping](part02-timer/12-timekeeping.md)
+13. [NTP 補正と adjtimex](part02-timer/13-ntp-adjtimex.md)
 
 ## 第3部　tick と NO_HZ
 
-13. [tick デバイスと周期 tick](part03-tick/13-tick-device.md)
-14. [tick broadcast](part03-tick/14-tick-broadcast.md)
-15. [NO_HZ](part03-tick/15-no-hz.md)
+14. [tick デバイスと周期 tick](part03-tick/14-tick-device.md)
+15. [tick broadcast](part03-tick/15-tick-broadcast.md)
+16. [NO_HZ](part03-tick/16-no-hz.md)
 
 ## 第4部　POSIX タイマー
 
-16. [POSIX タイマー](part04-posix/16-posix-timers.md)
-17. [POSIX CPU タイマー](part04-posix/17-posix-cpu-timers.md)
-18. [alarmtimer と itimer](part04-posix/18-alarm-itimers.md)
+17. [POSIX タイマー](part04-posix/17-posix-timers.md)
+18. [POSIX CPU タイマー](part04-posix/18-posix-cpu-timers.md)
+19. [alarmtimer と itimer](part04-posix/19-alarm-itimers.md)
 
 ## 第5部　連携
 
-19. [IPI と smp_call_function](part05-ipc-time/19-ipi-smp-call.md)
-20. [ユーザー空間への時刻提供](part05-ipc-time/20-userspace-time-vdso.md)
+20. [IPI と smp_call_function](part05-ipc-time/20-ipi-smp-call.md)
+21. [ユーザー空間への時刻提供](part05-ipc-time/21-userspace-time-vdso.md)
 
 ---
 
