@@ -1,4 +1,4 @@
-# 第15章 NVMe と blk-mq キュー対応
+# 第21章 NVMe の queue_rq とドアベル
 
 > **本章で読むソース**
 >
@@ -16,7 +16,7 @@
 
 ## 前提
 
-- [第4章](../part01-blk-mq/04-blk-mq-queues-hctx-ctx.md) と [第6章](../part01-blk-mq/06-blk-mq-completion-poll.md) を読んでいること。
+- [第20章 NVMe コントローラのライフサイクル](../part04-nvme-zoned/20-nvme-controller-lifecycle.md) を読んでいること。
 
 ## nvme_queue 構造
 
@@ -242,9 +242,9 @@ NVMe はドアベル書き込みがホット path の固定費になりやすい
 
 NVMe ドライバは blk-mq の hctx ごとに `nvme_queue` を割り当て、request を NVMe コマンドに変換する。
 `queue_rq` と `queue_rqs` は SQ 投入とドアベル通知の最適化を担う。
-次章ではその下層または上層でよく使う device mapper を読む。
+コントローラの probe とキュー作成は第20章で読んでいる。
 
 ## 関連する章
 
-- [第16章 device mapper と dm-table](16-device-mapper.md)
-- [第14章 登録リソースと polling](../part03-io-uring/14-fixed-buffer-poll.md)
+- [第20章 NVMe コントローラのライフサイクル](20-nvme-controller-lifecycle.md)
+- [第19章 IOPOLL と CQ 完了](../part03-io-uring/19-iopoll-cq-completion.md)

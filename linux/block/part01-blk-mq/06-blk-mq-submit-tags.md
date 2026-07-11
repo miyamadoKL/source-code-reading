@@ -1,4 +1,4 @@
-# 第5章 blk_mq_submit_bio とタグ割り当て
+# 第6章 blk_mq_submit_bio とタグ割り当て
 
 > **本章で読むソース**
 >
@@ -19,7 +19,7 @@
 
 ## 前提
 
-- [第4章](04-blk-mq-queues-hctx-ctx.md) で ctx、hctx、タグの概観を読んでいること。
+- [第5章](05-blk-mq-queues-hctx-ctx.md) で ctx、hctx、タグの概観を読んでいること。
 
 ## blk_mq_submit_bio の全体像
 
@@ -303,5 +303,5 @@ flowchart TD
 
 ## 関連する章
 
-- [第6章 完了処理、IRQ、polling](06-blk-mq-completion-poll.md)
-- [第10章 plug と merge](../part02-iosched/10-plug-merge.md)
+- [第8章 完了処理、IRQ、polling](08-blk-mq-completion-poll.md)
+- [第12章 plug と merge](../part02-iosched/12-plug-merge.md)

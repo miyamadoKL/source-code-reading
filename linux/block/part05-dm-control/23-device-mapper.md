@@ -1,4 +1,4 @@
-# 第16章 device mapper と dm-table
+# 第23章 device mapper と dm-table
 
 > **本章で読むソース**
 >
@@ -368,9 +368,10 @@ flowchart TD
 
 device mapper は dm-table でセクタ範囲を target に割り当て、仮想 gendisk として I/O を受ける。
 `__split_and_process_bio` が分割と clone 生成を行い、`__map_bio` が target map の戻り値で再投入か所有権移譲を決める。
-次章では cgroup ベースの統計と throttling を概観する。
+次章では dm-crypt と blk-cgroup QoS を読む。
 
 ## 関連する章
 
-- [第17章 ブロック統計と throttling 概観](17-blk-stats-throttling.md)
-- [第15章 NVMe と blk-mq](15-nvme-queues.md)
+- [第24章 dm-crypt と target->map](24-dm-crypt.md)
+- [第25章 ブロック統計](25-blk-stats.md)
+- [第21章 NVMe の queue_rq](../part04-nvme-zoned/21-nvme-queue-rq-doorbell.md)

@@ -1,4 +1,4 @@
-# 第13章 io-wq による非同期実行
+# 第15章 io-wq による非同期実行
 
 > **本章で読むソース**
 >
@@ -18,7 +18,7 @@
 
 ## 前提
 
-- [第12章](12-sqe-submission.md) で `io_submit_sqe`、`io_queue_sqe`、`io_queue_async` まで読んでいること。
+- [第14章](14-sqe-submission.md) で `io_submit_sqe`、`io_queue_sqe`、`io_queue_async` まで読んでいること。
 
 ## io_queue_sqe_fallback から io-wq へ
 
@@ -88,7 +88,7 @@ static void io_queue_iowq(struct io_kiocb *req)
 }
 ```
 
-第12章の `io_queue_async` でも `-EAGAIN` 後の poll が `IO_APOLL_ABORTED` なら同じ `io_queue_iowq` へ進む。
+第14章の `io_queue_async` でも `-EAGAIN` 後の poll が `IO_APOLL_ABORTED` なら同じ `io_queue_iowq` へ進む。
 
 > **v7.1.3 注記**：`io_queue_iowq` 本体は [v7.1.3 L407-L433](https://github.com/gregkh/linux/blob/v7.1.3/io_uring/io_uring.c#L407-L433) で同一だが、`io_req_queue_iowq_tw` の引数型が `struct io_tw_req` に変わっている。
 
@@ -306,5 +306,5 @@ io-wq は io_uring の非同期実行エンジンであり、`io_queue_sqe_fallb
 
 ## 関連する章
 
-- [第14章 登録リソースと polling](14-fixed-buffer-poll.md)
-- [第6章 完了処理と polling](../part01-blk-mq/06-blk-mq-completion-poll.md)
+- [第18章 登録リソースと buffer ring](18-fixed-resources-buffer-ring.md)
+- [第8章 完了処理と polling](../part01-blk-mq/08-blk-mq-completion-poll.md)

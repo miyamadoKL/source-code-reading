@@ -1,4 +1,4 @@
-# 第6章 完了処理、IRQ、polling
+# 第8章 完了処理、IRQ、polling
 
 > **本章で読むソース**
 >
@@ -18,7 +18,7 @@
 
 ## 前提
 
-- [第5章](05-blk-mq-submit-tags.md) で request 発行を読んでいること。
+- [第6章](06-blk-mq-submit-tags.md) で request 発行を読んでいること。
 
 ## blk_mq_complete_request の分岐
 
@@ -316,9 +316,9 @@ NVMe の割り込み coalescing と組み合わさると効果が大きい。
 
 完了は `blk_mq_complete_request` から入り、CPU 配置に応じて IPI、softirq、直接完了が選ばれる。
 `blk_mq_end_request` が request とタグを解放し、bio へ結果が伝播する。
-polling 経路は第14章の `io_uring` IOPOLL と接続する。
+polling 経路は第18章の `io_uring` IOPOLL と接続する。
 
 ## 関連する章
 
-- [第14章 登録リソースと polling](../part03-io-uring/14-fixed-buffer-poll.md)
-- [第15章 NVMe と blk-mq キュー対応](../part04-driver-stack/15-nvme-queues.md)
+- [第18章 登録リソースと buffer ring](../part03-io-uring/18-fixed-resources-buffer-ring.md)
+- [第21章 NVMe の queue_rq とドアベル](../part04-nvme-zoned/21-nvme-queue-rq-doorbell.md)
