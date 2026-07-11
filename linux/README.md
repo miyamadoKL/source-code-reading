@@ -70,7 +70,7 @@ graph TD
 構成監査で、公開済み4分冊に根本的なカバレッジ欠落が見つかった。
 以下を優先度順に補強 PR で追加する。
 
-- **P1**：locking の futex、foundation のモジュールローダ、panic と reboot、sysctl、irq-time の NTP 補正。
+- **P1**：foundation のモジュールローダ、panic と reboot、sysctl、irq-time の NTP 補正。
 - **P2（継続候補）**：sched のスケジューラ操作 API（affinity、uclamp）、cputime と loadavg と schedstats、ptrace、locking の ww_mutex と percpu-rwsem、RCU stall 診断、irq-time の IRQ affinity と vector matrix、IRQ timing 予測、foundation の livepatch。
 - **章の分割**：詰め込みすぎと判定された章（rwsem、expedited と nocb、workqueue、clocksource と clockevents、NO_HZ、Kconfig と Kbuild など）は補強 PR の中で段階的に分割する。
 - **将来分冊との境界**：x86-64 の boot とエントリ詳細、Maple Tree の VMA 適用、kobject のデバイス登録、cgroup コア、NUMA fault 側など、計画中の分冊と重なる詳細は該当分冊の執筆時に移し、それまでは参照注記で扱う。
