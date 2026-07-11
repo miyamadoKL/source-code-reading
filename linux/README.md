@@ -50,7 +50,7 @@ graph TD
 | [割り込みと時間](irq-time/README.md) | genirq、MSI ドメイン、softirq と irq_work、workqueue、タイマーホイールと timer migration、hrtimer、tick と NO_HZ、tick broadcast、クロックソース、NTP 補正、POSIX タイマー | kernel/irq/、kernel/time/、kernel/softirq.c、kernel/workqueue.c | 公開（補強中） |
 | [メモリ管理](mm/README.md) | memblock、バディアロケータ、SLUB、folio、VMA と Maple Tree、ページフォールト、rmap、LRU と MGLRU、回収とコンパクション、THP、memcg、swap、NUMA バランシングの fault 側 | mm/ | 公開 |
 | [VFS とページキャッシュ](vfs/README.md) | パス解決と dcache、inode、マウント、ページキャッシュ、writeback、読み書きの経路 | fs/（コア部分）、mm/filemap.c | 公開 |
-| [個別ファイルシステム](fs/README.md) | ext4、btrfs、XFS 概観、overlayfs、tmpfs、procfs と sysfs | fs/ext4/、fs/btrfs/ ほか | 公開 |
+| [個別ファイルシステム](fs/README.md) | ext4、btrfs、XFS、overlayfs、tmpfs、procfs と kernfs（25章、directory/htree、mballoc、transaction/tree-log、inode fork など補強済み） | fs/ext4/、fs/btrfs/、fs/xfs/、fs/overlayfs/ ほか | 公開（補強済み） |
 | [ブロック層と io_uring](block/README.md) | bio と request、blk-mq、I/O スケジューラ、io_uring、NVMe ドライバ概観、device mapper | block/、io_uring/、drivers/nvme/ | 公開 |
 | ネットワーク | sk_buff、ソケット層、TCP/IP、netfilter、ルーティング、GRO と XDP などの高速化 | net/ | 計画 |
 | namespace と cgroup | 各種 namespace（time namespace を含む）、cgroup v2 コア、主要コントローラ、コンテナ実行の土台 | kernel/cgroup/、kernel/nsproxy.c、kernel/time/namespace.c、ipc/ | 計画 |

@@ -1,4 +1,4 @@
-# 第9章 btrfs の B-tree とキー
+# 第10章 btrfs の B-tree とキー
 
 > **本章で読むソース**
 >
@@ -16,7 +16,7 @@ ext4 の固定レイアウトとは異なり、すべてのメタデータがキ
 
 ## 前提
 
-- [ディスクレイアウトの読み方](../part00-overview/03-on-disk-layout-reading.md)
+- [ディスクレイアウトの読み方](../part00-overview/02-on-disk-layout-reading.md)
 - [全体像と横断基盤](../../foundation/part03-datastructures/12-maple-tree.md) の木構造一般論
 
 ## btrfs_key の三要素
@@ -249,5 +249,5 @@ ext4 のテーブル型レイアウトより柔軟だが、すべての操作が
 
 ## 関連する章
 
-- 次章：[btrfs の CoW と extent 管理](10-btrfs-cow-extent.md)
-- [ディスクレイアウトの読み方](../part00-overview/03-on-disk-layout-reading.md)
+- 次章：[btrfs の CoW と extent 管理](13-btrfs-cow-extent.md)
+- [ディスクレイアウトの読み方](../part00-overview/02-on-disk-layout-reading.md)

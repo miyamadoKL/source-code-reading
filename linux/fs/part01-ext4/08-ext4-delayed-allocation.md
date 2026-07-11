@@ -329,3 +329,4 @@ ext4 の delayed allocation は write_begin で物理割当を先送りし、フ
 - [ext4 の extent ツリー](06-ext4-extent-tree.md)
 - [jbd2 のジャーナリング](07-jbd2-journaling.md)
 - [書き込み経路](../../vfs/part03-file-io/12-write-path.md)
+- 次章：[ext4 の multiblock allocator](09-ext4-multiblock-allocator.md)

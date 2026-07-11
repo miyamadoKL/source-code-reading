@@ -1,4 +1,4 @@
-# 第3章 ディスクレイアウトの読み方
+# 第2章 ディスクレイアウトの読み方
 
 > **本章で読むソース**
 >
@@ -16,7 +16,7 @@ ext4、btrfs、XFS で共通する「固定オフセットの super block を読
 
 ## 前提
 
-- 前章：[fill_super とマウント接続の流れ](02-fill-super-mount-flow.md)
+- 前章：[fill_super とマウント接続の流れ](01-fs-registration-mount-entry.md)
 - [bio とブロック I/O](../../block/README.md) はブロック層分冊の対象とする。
 
 ## buffer_head によるブロック読取
@@ -252,6 +252,6 @@ ext4 は group descriptor、XFS は AG、btrfs は B-tree と chunk マップが
 
 ## 関連する章
 
-- 次章：[ext4 の super block と block group](../part01-ext4/04-ext4-super-block-group.md)
-- [fill_super とマウント接続の流れ](02-fill-super-mount-flow.md)
-- [XFS のアロケーショングループ](../part03-xfs/13-xfs-allocation-groups.md)
+- 次章：[ext4 の super block と block group](../part01-ext4/03-ext4-super-block-group.md)
+- [fill_super とマウント接続の流れ](01-fs-registration-mount-entry.md)
+- [XFS のアロケーショングループ](../part03-xfs/18-xfs-allocation-groups.md)
