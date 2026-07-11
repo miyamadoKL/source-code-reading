@@ -263,4 +263,4 @@ flowchart TD
 
 - 前章：[task_struct の構造](01-task-struct.md)
 - 次章：[exec とプログラム実行](03-exec-program.md)
-- [enqueue と dequeue と pick_next_task](../part02-eevdf/12-enqueue-dequeue-pick.md)
+- [enqueue と dequeue と pick_next_task](../part02-eevdf/13-enqueue-dequeue-pick.md)

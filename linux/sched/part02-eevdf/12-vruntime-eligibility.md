@@ -1,4 +1,4 @@
-# 第11章 vruntime と eligibility（CFS から EEVDF への転換）
+# 第12章 vruntime と eligibility（CFS から EEVDF への転換）
 
 > **本章で読むソース**
 >
@@ -15,7 +15,7 @@
 
 ## 前提
 
-[ランキューとスケジューリングクラスの階層](../part01-core/07-runqueue-sched-class.md) を読んでいること。
+[ランキューとスケジューリングクラスの階層](../part01-core/08-runqueue-sched-class.md) を読んでいること。
 
 ## calc_delta_fair と重み
 
@@ -220,5 +220,5 @@ eligible は `v_i <= V`、pick は `pick_eevdf` が担う。
 
 ## 関連する章
 
-- [enqueue と dequeue と pick_next_task](12-enqueue-dequeue-pick.md)
-- [プリエンプションモデル](../part01-core/10-preemption-model.md)
+- [enqueue と dequeue と pick_next_task](13-enqueue-dequeue-pick.md)
+- [プリエンプションモデル](../part01-core/11-preemption-model.md)

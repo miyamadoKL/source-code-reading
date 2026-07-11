@@ -1,4 +1,4 @@
-# 第12章 enqueue と dequeue と pick_next_task
+# 第13章 enqueue と dequeue と pick_next_task
 
 > **本章で読むソース**
 >
@@ -15,7 +15,7 @@ Runnable になったタスクがランキューに載り、pick され、降ろ
 
 ## 前提
 
-[vruntime と eligibility](11-vruntime-eligibility.md) を読んでいること。
+[vruntime と eligibility](12-vruntime-eligibility.md) を読んでいること。
 
 ## enqueue_task_fair
 
@@ -210,5 +210,5 @@ eligibility 判定は `pick_eevdf` に集約され、yield 末尾の条件分岐
 
 ## 関連する章
 
-- [group scheduling と cgroup 階層](13-group-scheduling-cgroup.md)
-- [__schedule とコンテキストスイッチ](../part01-core/08-schedule-context-switch.md)
+- [group scheduling と cgroup 階層](14-group-scheduling-cgroup.md)
+- [__schedule とコンテキストスイッチ](../part01-core/09-schedule-context-switch.md)
