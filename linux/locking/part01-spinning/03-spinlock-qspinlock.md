@@ -407,4 +407,4 @@ flowchart TD
 
 - [rwlock と seqlock](04-rwlock-seqlock.md)
 - [mutex と optimistic spinning](../part02-sleeping/05-mutex-osq.md)
-- [lockdep](../part03-correctness/09-lockdep.md)
+- [lockdep](../part03-correctness/10-lockdep.md)

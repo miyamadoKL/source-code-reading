@@ -221,4 +221,4 @@ flowchart TD
 
 - [per-CPU 変数](02-percpu.md)
 - [spinlock と qspinlock](../part01-spinning/03-spinlock-qspinlock.md)
-- [RCU の基本概念と API](../part04-rcu/11-rcu-basics.md)
+- [RCU の基本概念と API](../part04-rcu/12-rcu-basics.md)

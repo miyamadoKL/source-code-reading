@@ -12,7 +12,7 @@
 ## この章の狙い
 
 **NUMA バランシング**のうち、ページフォールト時にミス配置を検出し移動を検討する fault 側を読む。
-`task_numa_fault` 等のスケジューラ統計は [sched 分冊](../../sched/part05-smp-obs/21-load-balance-numa.md) が主説明であり、本章は mm 側の判定に留める。
+`task_numa_fault` 等のスケジューラ統計は [sched 分冊](../../sched/part05-smp-obs/22-load-balance-numa.md) が主説明であり、本章は mm 側の判定に留める。
 
 ## 前提
 
@@ -197,5 +197,5 @@ mempolicy と tiering は同一チェックに組み込まれる。
 
 ## 関連する章
 
-- [プロセスとスケジューラ：load balance と NUMA](../../sched/part05-smp-obs/21-load-balance-numa.md)
+- [プロセスとスケジューラ：load balance と NUMA](../../sched/part05-smp-obs/22-load-balance-numa.md)
 - [watermark とゾーン fallback](../part01-physical/05-watermark-zone-fallback.md)

@@ -713,5 +713,6 @@ writer は排他的で、reader が存在する間は writer fast path は失敗
 
 - [mutex と optimistic spinning](05-mutex-osq.md)
 - [rwlock と seqlock](../part01-spinning/04-rwlock-seqlock.md)
-- [waitqueue](07-waitqueue.md)
-- [lockdep](../part03-correctness/09-lockdep.md)
+- [ww_mutex と percpu-rwsem](07-ww-mutex-percpu-rwsem.md)
+- [waitqueue](08-waitqueue.md)
+- [lockdep](../part03-correctness/10-lockdep.md)

@@ -1,4 +1,4 @@
-# 第18章 requeue と PI futex
+# 第20章 requeue と PI futex
 
 > **本章で読むソース**
 >
@@ -22,11 +22,11 @@
 `FUTEX_REQUEUE` は待ち手を別アドレスのハッシュバケットへ移す condvar 型の操作である。
 `FUTEX_LOCK_PI` 系は **PI futex** と呼ばれ、所有者の優先度継承を `rt_mutex` へ委譲する。
 本章では `requeue.c` と `pi.c` を読み、通常 requeue と requeue_pi の分岐、owner died、退出中 owner 待ちまでを追う。
-`rt_mutex` の連鎖伝播本体は [第10章 rt_mutex と priority inheritance](../part03-correctness/10-rt-mutex-pi.md) の担当であり、本章は futex 側の接続に境界を置く。
+`rt_mutex` の連鎖伝播本体は [第11章 rt_mutex と priority inheritance](../part03-correctness/11-rt-mutex-pi.md) の担当であり、本章は futex 側の接続に境界を置く。
 
 ## 前提
 
-- [futex の基礎と wait/wake](17-futex-hash-wait-wake.md) と [rt_mutex と priority inheritance](../part03-correctness/10-rt-mutex-pi.md) を読んでいること。
+- [futex の基礎と wait/wake](19-futex-hash-wait-wake.md) と [rt_mutex と priority inheritance](../part03-correctness/11-rt-mutex-pi.md) を読んでいること。
 - `CONFIG_FUTEX_PI` が無効なカーネルでは PI 系システムコールは `-ENOSYS` になる。
 
 ## futex_pi_state と rt_mutex の接続
@@ -600,7 +600,7 @@ retry:
 ```
 
 ブロック本体は `__rt_mutex_start_proxy_lock` と `rt_mutex_wait_proxy_lock` である。
-ここから先の優先度連鎖は第10章の `task_blocks_on_rt_mutex` 側が担う。
+ここから先の優先度連鎖は第11章の `task_blocks_on_rt_mutex` 側が担う。
 
 [`kernel/futex/pi.c` L1028-L1048](https://github.com/gregkh/linux/blob/v6.18.38/kernel/futex/pi.c#L1028-L1048)
 
@@ -708,10 +708,10 @@ PI futex はユーザー空間の fast path 失敗時だけ `rt_mutex` に落と
 `futex_requeue` は二つの鍵に対応するバケットを同時にロックし、wake 件数と requeue 件数に従って `futex_q` を移動する。
 PI futex は `futex_pi_state` 内の `rt_mutex` を実体とし、futex 層はユーザー空間値と hb 待ち行列を橋渡しする。
 owner died と退出中 owner は、それぞれ `attach_to_pi_state` と `wait_for_owner_exiting` で明示的に扱う。
-`rt_mutex` の連鎖調整の詳細は第10章へ委ねる。
+`rt_mutex` の連鎖調整の詳細は第11章へ委ねる。
 
 ## 関連する章
 
-- [futex の基礎と wait/wake](17-futex-hash-wait-wake.md)
-- [rt_mutex と priority inheritance](../part03-correctness/10-rt-mutex-pi.md)
+- [futex の基礎と wait/wake](19-futex-hash-wait-wake.md)
+- [rt_mutex と priority inheritance](../part03-correctness/11-rt-mutex-pi.md)
 - [mutex と optimistic spinning](../part02-sleeping/05-mutex-osq.md)

@@ -26,27 +26,29 @@ Linux カーネル（[gregkh/linux](https://github.com/gregkh/linux)）のアト
 
 5. [mutex と optimistic spinning](part02-sleeping/05-mutex-osq.md)
 6. [rwsem](part02-sleeping/06-rwsem.md)
-7. [waitqueue](part02-sleeping/07-waitqueue.md)
-8. [semaphore と completion](part02-sleeping/08-semaphore-completion.md)
+7. [ww_mutex と percpu-rwsem](part02-sleeping/07-ww-mutex-percpu-rwsem.md)
+8. [waitqueue](part02-sleeping/08-waitqueue.md)
+9. [semaphore と completion](part02-sleeping/09-semaphore-completion.md)
 
 ## 第3部　正しさの検証と RT
 
-9. [lockdep](part03-correctness/09-lockdep.md)
-10. [rt_mutex と priority inheritance](part03-correctness/10-rt-mutex-pi.md)
+10. [lockdep](part03-correctness/10-lockdep.md)
+11. [rt_mutex と priority inheritance](part03-correctness/11-rt-mutex-pi.md)
 
 ## 第4部　RCU
 
-11. [RCU の基本概念と API](part04-rcu/11-rcu-basics.md)
-12. [Tree RCU と grace period](part04-rcu/12-tree-rcu-gp.md)
-13. [SRCU](part04-rcu/13-srcu.md)
-14. [Tasks RCU](part04-rcu/14-tasks-rcu.md)
-15. [call_rcu と callback 処理](part04-rcu/15-call-rcu-callback.md)
-16. [expedited と nocb などの発展](part04-rcu/16-expedited-nocb.md)
+12. [RCU の基本概念と API](part04-rcu/12-rcu-basics.md)
+13. [Tree RCU と grace period](part04-rcu/13-tree-rcu-gp.md)
+14. [RCU CPU stall 警告の診断](part04-rcu/14-rcu-stall-diagnosis.md)
+15. [SRCU](part04-rcu/15-srcu.md)
+16. [Tasks RCU](part04-rcu/16-tasks-rcu.md)
+17. [call_rcu と callback 処理](part04-rcu/17-call-rcu-callback.md)
+18. [expedited と nocb などの発展](part04-rcu/18-expedited-nocb.md)
 
 ## 第5部　futex
 
-17. [futex の基礎と wait/wake](part05-futex/17-futex-hash-wait-wake.md)
-18. [requeue と PI futex](part05-futex/18-futex-requeue-pi.md)
+19. [futex の基礎と wait/wake](part05-futex/19-futex-hash-wait-wake.md)
+20. [requeue と PI futex](part05-futex/20-futex-requeue-pi.md)
 
 ---
 
