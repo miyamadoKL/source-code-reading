@@ -1,4 +1,4 @@
-# 第5章 softirq と tasklet
+# 第7章 softirq と tasklet
 
 > **本章で読むソース**
 >
@@ -315,5 +315,5 @@ flowchart TD
 ## 関連する章
 
 - [第3章 request_irq からハンドラ実行まで](../part00-genirq/03-request-irq-handler.md)
-- [第6章 workqueue の構造](../part01-deferred/06-workqueue-structure.md)
-- [第8章 タイマーホイール](../part02-timer/08-timer-wheel.md)
+- [第8章 workqueue の構造](../part01-deferred/08-workqueue-structure.md)
+- [第10章 タイマーホイール](../part02-timer/10-timer-wheel.md)

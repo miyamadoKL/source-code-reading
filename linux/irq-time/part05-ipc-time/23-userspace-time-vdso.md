@@ -1,4 +1,4 @@
-# 第21章 ユーザー空間への時刻提供
+# 第23章 ユーザー空間への時刻提供
 
 > **本章で読むソース**
 >
@@ -12,12 +12,12 @@
 ## この章の狙い
 
 `clock_gettime()` と `gettimeofday()` が **vDSO** 経由でユーザー空間から時刻を読む経路を追う。
-[全体像と横断基盤 第9章 vDSO](../../foundation/part02-syscall/08-vdso.md) で触れた入口から、timekeeper が公開するデータページとの接続を読む。
+[全体像と横断基盤 第11章 vDSO](../../foundation/part02-syscall/08-vdso.md) で触れた入口から、timekeeper が公開するデータページとの接続を読む。
 
 ## 前提
 
-- [第12章 timekeeping](../part02-timer/12-timekeeping.md) で `ktime_get_real_ts64()` と `tk_fast` を読んでいること。
-- [全体像と横断基盤 第8章 entry 64 システムコール入口](../../foundation/part02-syscall/07-entry-64-syscall-entry-exit.md) で syscall 入口を読んでいること。
+- [第14章 timekeeping](../part02-timer/14-timekeeping.md) で `ktime_get_real_ts64()` と `tk_fast` を読んでいること。
+- [全体像と横断基盤 第10章 entry 64 システムコール入口](../../foundation/part02-syscall/07-entry-64-syscall-entry-exit.md) で syscall 入口を読んでいること。
 
 ## __cvdso_clock_gettime_common：vDSO 内の分岐
 
@@ -275,6 +275,6 @@ flowchart TD
 
 ## 関連する章
 
-- [第12章 timekeeping](../part02-timer/12-timekeeping.md)
-- [全体像と横断基盤 第9章 vDSO](../../foundation/part02-syscall/08-vdso.md)
-- [第10章 clocksource と clockevents](../part02-timer/10-clocksource-clockevents.md)
+- [第14章 timekeeping](../part02-timer/14-timekeeping.md)
+- [全体像と横断基盤 第11章 vDSO](../../foundation/part02-syscall/08-vdso.md)
+- [第12章 clocksource と clockevents](../part02-timer/12-clocksource-clockevents.md)

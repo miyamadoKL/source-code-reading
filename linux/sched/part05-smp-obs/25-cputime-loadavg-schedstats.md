@@ -21,7 +21,7 @@
 ## 前提
 
 [task_struct の構造](../part00-process/01-task-struct.md) で `utime` と `stime` を押さえていること。
-POSIX CPU タイマーが cputime を消費する応用例は [割り込みと時間の POSIX CPU タイマー](../../irq-time/part04-posix/18-posix-cpu-timers.md) を参照する。
+POSIX CPU タイマーが cputime を消費する応用例は [割り込みと時間の POSIX CPU タイマー](../../irq-time/part04-posix/20-posix-cpu-timers.md) を参照する。
 
 ## tick ベースの account_process_tick
 
@@ -432,4 +432,4 @@ schedstats は runtime 無効時でも static key 分岐を通るが、通常は
 
 - [task_struct の構造](../part00-process/01-task-struct.md)
 - [PSI と統計](23-psi-stats.md)
-- [割り込みと時間：POSIX CPU タイマー](../../irq-time/part04-posix/18-posix-cpu-timers.md)
+- [割り込みと時間：POSIX CPU タイマー](../../irq-time/part04-posix/20-posix-cpu-timers.md)

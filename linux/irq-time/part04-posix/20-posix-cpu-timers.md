@@ -1,4 +1,4 @@
-# 第18章 POSIX CPU タイマー
+# 第20章 POSIX CPU タイマー
 
 > **本章で読むソース**
 >
@@ -23,7 +23,7 @@ wall clock ではなく **cputime** サンプルに基づき `timerqueue` で満
 
 ## 前提
 
-- [第17章 POSIX タイマー](17-posix-timers.md) で `k_itimer` と `k_clock` を読んでいること。
+- [第19章 POSIX タイマー](19-posix-timers.md) で `k_itimer` と `k_clock` を読んでいること。
 - [プロセスとスケジューラ 第1章 task_struct](../../sched/part00-process/01-task-struct.md) で `task_cputime` の存在を押さえていること。
 
 ## 作成と timer_base
@@ -371,6 +371,6 @@ void posix_cputimers_group_init(struct posix_cputimers *pct, u64 cpu_limit)
 
 ## 関連する章
 
-- [第17章 POSIX タイマー](17-posix-timers.md)
-- [第19章 alarmtimer と itimer](19-alarm-itimers.md)
-- [第14章 tick デバイスと周期 tick](../part03-tick/14-tick-device.md)
+- [第19章 POSIX タイマー](19-posix-timers.md)
+- [第21章 alarmtimer と itimer](21-alarm-itimers.md)
+- [第16章 tick デバイスと周期 tick](../part03-tick/16-tick-device.md)

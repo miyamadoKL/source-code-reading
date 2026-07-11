@@ -460,5 +460,5 @@ flowchart TD
 ## 関連する章
 
 - [第2章 フローハンドラと irq_chip](02-flow-handler-chip.md)
-- [第5章 softirq と tasklet](../part01-deferred/05-softirq-tasklet.md)
+- [第7章 softirq と tasklet](../part01-deferred/07-softirq-tasklet.md)
 - [プロセスとスケジューラ 第5部 RT クラス](../../sched/README.md)

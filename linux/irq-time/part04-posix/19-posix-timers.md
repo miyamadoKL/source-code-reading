@@ -1,4 +1,4 @@
-# 第17章 POSIX タイマー
+# 第19章 POSIX タイマー
 
 > **本章で読むソース**
 >
@@ -17,8 +17,8 @@
 
 ## 前提
 
-- [第9章 hrtimer](../part02-timer/09-hrtimer.md) で `hrtimer_start` と `HRTIMER_MODE_ABS` を読んでいること。
-- [第12章 timekeeping](../part02-timer/12-timekeeping.md) で `CLOCK_REALTIME` と `CLOCK_MONOTONIC` の違いを押さえていること。
+- [第11章 hrtimer](../part02-timer/11-hrtimer.md) で `hrtimer_start` と `HRTIMER_MODE_ABS` を読んでいること。
+- [第14章 timekeeping](../part02-timer/14-timekeeping.md) で `CLOCK_REALTIME` と `CLOCK_MONOTONIC` の違いを押さえていること。
 
 ## timer_create と k_itimer
 
@@ -341,6 +341,6 @@ static const struct k_clock clock_realtime = {
 
 ## 関連する章
 
-- [第9章 hrtimer](../part02-timer/09-hrtimer.md)
-- [第18章 POSIX CPU タイマー](../part04-posix/18-posix-cpu-timers.md)
-- [第19章 alarmtimer と itimer](../part04-posix/19-alarm-itimers.md)
+- [第11章 hrtimer](../part02-timer/11-hrtimer.md)
+- [第20章 POSIX CPU タイマー](../part04-posix/20-posix-cpu-timers.md)
+- [第21章 alarmtimer と itimer](../part04-posix/21-alarm-itimers.md)
