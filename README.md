@@ -21,6 +21,7 @@
 | [MySQL](mysql/README.md) | 8.4.10 | プラガブルなストレージエンジンを持つリレーショナルデータベース。InnoDB を中心に詳説。全7部・40章。 | GPL-2.0 |
 | [nginx](nginx/README.md) | 1.31.2 | イベント駆動の Web サーバーとリバースプロキシ。コア基盤、イベントエンジン、HTTP エンジン、upstream、HTTP/2、HTTP/3 まで全6部18章。 | BSD-2-Clause |
 | [OpenSSH](openssh/README.md) | V_10_3_P1 | SSH プロトコルの標準実装。トランスポート層、認証、チャネル、権限分離まで全5部12章。 | BSD 系 |
+| [Apache Parquet](parquet/README.md) | 2.13.0 | 列指向ストレージフォーマットの仕様。ファイル構造、型と論理型、エンコーディング、ページと圧縮、統計とインデックス、暗号化、Variant、地理空間、後方互換まで全8部17章。 | Apache-2.0 |
 | [PostgreSQL](postgresql/README.md) | 18.4 | MVCC と WAL を備えるリレーショナルデータベース。全11部・44章と付録。 | PostgreSQL License |
 | [Prometheus](prometheus/README.md) | v3.12.0 | プル型監視システムと時系列データベース。スクレイプ、TSDB、PromQL、アラート、リモート連携まで全6部16章。 | Apache-2.0 |
 | [ProxySQL](proxysql/README.md) | 3.0.9 | MySQL/PostgreSQL 向け高性能プロキシ。スレッドモデル、プロトコル、セッションとクエリ処理、コネクションプール、高可用性、Admin/Cluster まで全8部25章。 | GPL-3.0 |
