@@ -337,4 +337,4 @@ mmap fault と read の統合はディスクからの二重読み込みを避け
 ## 関連する章
 
 - [readahead と file_ra_state](15-readahead.md)
-- [ページフォールトと handle_mm_fault](../../mm/part03-virtual/11-page-fault.md)
+- [ページフォールトと handle_mm_fault](../../mm/part03-virtual/16-page-table-walk-missing-fault.md)

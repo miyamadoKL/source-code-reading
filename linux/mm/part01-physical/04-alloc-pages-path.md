@@ -254,7 +254,7 @@ restart:
 ```
 
 連続物理ページが散在しているとき、回収だけでは穴が埋まらない。
-compaction がページを移動して大きな free block を作る（[第6章](06-percpu-pageset-compaction.md)）。
+compaction がページを移動して大きな free block を作る（[第8章](08-compaction.md)）。
 
 ## 公開 API 層
 
@@ -310,5 +310,5 @@ GFP フラグは direct reclaim や compaction の可否を決める契約であ
 ## 関連する章
 
 - [watermark とゾーン fallback](05-watermark-zone-fallback.md)
-- [per-CPU pageset と compaction](06-percpu-pageset-compaction.md)
-- [vmscan と回収経路](../part04-reclaim/15-vmscan-reclaim.md)
+- [per-CPU pageset の refill と drain](06-pcp-refill-drain.md)
+- [reclaim orchestration と direct/kswapd](../part04-reclaim/25-reclaim-orchestration.md)

@@ -4,6 +4,11 @@ name: mermaid
 # GitHub の rich display と同じ Mermaid エンジン(mermaid-cli)でパースするため、
 # 「Unable to render rich display」になる壊れた図を CI で検出できる。
 # 検査ロジックは .github/scripts/check-mermaid.sh に置き、ローカルでも同じスクリプトで実行できる。
+#
+# リポジトリ全体を走査すると Mermaid 含有ファイルが多く時間がかかるため、
+# 変更のあった Markdown のトップレベルディレクトリだけに絞って検査する。
+# 検査ロジック自体(スクリプト/ワークフロー)を変えたときや、差分の基点が取れないときは
+# 全体検査にフォールバックする。
 
 on:
   push:
@@ -25,11 +30,52 @@ jobs:
   mermaid:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+        with:
+          # 差分を計算するため全履歴を取得する。
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
         with:
           node-version: "22"
       - name: Install mermaid-cli
         run: npm install -g @mermaid-js/mermaid-cli@11
+      - name: Determine scan targets
+        id: scan
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+            head="${{ github.event.pull_request.head.sha }}"
+            diff_range=("${base}...${head}")
+          else
+            base="${{ github.event.before }}"
+            head="${{ github.sha }}"
+            diff_range=("${base}" "${head}")
+          fi
+          # 基点が取れない(初回 push、force-push、浅い履歴など)ときは全体検査へ。
+          if [ -z "${base}" ] || [ "${base}" = "0000000000000000000000000000000000000000" ] \
+             || ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+            echo "targets=." >> "$GITHUB_OUTPUT"
+            echo "基点不明のため全体を検査します。"
+            exit 0
+          fi
+          changed="$(git diff --name-only --diff-filter=d "${diff_range[@]}")"
+          # 検査ロジック自体が変わったときは全体を検査する。
+          if printf '%s\n' "${changed}" | grep -qE '^\.github/(scripts/check-mermaid\.sh|workflows/mermaid\.yml)$'; then
+            echo "targets=." >> "$GITHUB_OUTPUT"
+            echo "検査ロジックの変更を検出したため全体を検査します。"
+            exit 0
+          fi
+          # 変更された *.md のトップレベルディレクトリ(ルート直下の *.md はファイル名)を対象にする。
+          targets="$(printf '%s\n' "${changed}" | grep -E '\.md$' \
+            | awk -F/ 'NF>1{print $1} NF==1{print $0}' | sort -u | tr '\n' ' ')"
+          echo "targets=${targets}" >> "$GITHUB_OUTPUT"
+          echo "検査対象: ${targets:-(なし)}"
       - name: Validate mermaid diagrams render
-        run: bash .github/scripts/check-mermaid.sh
+        run: |
+          targets="${{ steps.scan.outputs.targets }}"
+          if [ -z "${targets// /}" ]; then
+            echo "変更された Markdown がないため Mermaid 検査をスキップします。"
+            exit 0
+          fi
+          bash .github/scripts/check-mermaid.sh ${targets}
