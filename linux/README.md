@@ -52,7 +52,7 @@ graph TD
 | [VFS とページキャッシュ](vfs/README.md) | パス解決と dcache、inode、マウント、ページキャッシュ、writeback、読み書きの経路 | fs/（コア部分）、mm/filemap.c | 公開 |
 | [個別ファイルシステム](fs/README.md) | ext4、btrfs、XFS、overlayfs、tmpfs、procfs と kernfs（25章、directory/htree、mballoc、transaction/tree-log、inode fork など補強済み） | fs/ext4/、fs/btrfs/、fs/xfs/、fs/overlayfs/ ほか | 公開（補強済み） |
 | [ブロック層と io_uring](block/README.md) | bio と request、blk-mq、I/O スケジューラ、io_uring、NVMe ドライバ概観、device mapper | block/、io_uring/、drivers/nvme/ | 公開 |
-| ネットワーク | sk_buff、ソケット層、TCP/IP、netfilter、ルーティング、GRO と XDP などの高速化 | net/ | 計画 |
+| [ネットワーク](net/README.md) | sk_buff、ソケット層、TCP/IP、netfilter、ルーティング、GRO と XDP などの高速化 | net/ | 公開 |
 | namespace と cgroup | 各種 namespace（time namespace を含む）、cgroup v2 コア、主要コントローラ、コンテナ実行の土台 | kernel/cgroup/、kernel/nsproxy.c、kernel/time/namespace.c、ipc/ | 計画 |
 | 電源管理と CPU ライフサイクル | suspend と hibernate、freezer、PM QoS、cpufreq と cpuidle、CPU hotplug | kernel/power/、kernel/cpu.c、drivers/cpuidle/、drivers/cpufreq/ | 計画 |
 | セキュリティ | LSM フック、capabilities、seccomp、Landlock、keys（SELinux 本体の詳細は [SELinux userspace](../selinux/README.md) と接続する） | security/ | 計画 |
