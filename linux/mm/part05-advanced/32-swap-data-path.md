@@ -1,4 +1,4 @@
-# 第19章 swap とスワップアウト
+# 第32章 swap-out と swap-in データパス
 
 > **本章で読むソース**
 >
@@ -11,13 +11,13 @@
 
 ## この章の狙い
 
-メモリ不足時に匿名 folio を **swap** デバイスへ退避し、PTE をスワップエントリに差し替える流れを読む。
-スワップインは `do_swap_page` が担う。
+本章はスワップアウトとスワップインのデータパスに限定する。
+swap 領域の管理は [swap area、cluster、zswap](33-swap-area-zswap.md) が扱う。
 
 ## 前提
 
-- [vmscan と回収経路](../part04-reclaim/15-vmscan-reclaim.md)
-- [ページフォールトと handle_mm_fault](../part03-virtual/11-page-fault.md)
+- [reclaim orchestration と direct/kswapd](../part04-reclaim/25-reclaim-orchestration.md)
+- [page-table walk と missing fault](../part03-virtual/16-page-table-walk-missing-fault.md)
 
 ## shrink_folio_list：スワップアウトの入口
 
@@ -272,5 +272,5 @@ swap は vmscan が `folio_alloc_swap` でスロットを取り、`try_to_unmap`
 
 ## 関連する章
 
-- [memcg とメモリ cgroup](18-memcg.md)
-- [ページフォールトと handle_mm_fault](../part03-virtual/11-page-fault.md)
+- [memcg とメモリ cgroup](31-memcg.md)
+- [ページテーブル走査と missing fault](../part03-virtual/16-page-table-walk-missing-fault.md)

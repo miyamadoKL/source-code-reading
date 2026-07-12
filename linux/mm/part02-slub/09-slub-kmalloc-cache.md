@@ -1,4 +1,4 @@
-# 第7章 SLUB と kmem_cache、kmalloc
+# 第9章 SLUB と kmem_cache、kmalloc
 
 > **本章で読むソース**
 >
@@ -232,5 +232,5 @@ memcg 課金は post_alloc hook で後付けされる。
 
 ## 関連する章
 
-- [per-CPU slab と freelist](08-slub-percpu-freelist.md)
-- [memcg とメモリ cgroup](../part05-advanced/18-memcg.md)
+- [per-CPU slab と freelist](10-slub-percpu-freelist.md)
+- [memcg とメモリ cgroup](../part05-advanced/31-memcg.md)

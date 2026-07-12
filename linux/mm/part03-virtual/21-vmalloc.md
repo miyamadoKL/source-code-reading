@@ -1,4 +1,4 @@
-# 第12章 vmalloc
+# 第21章 vmalloc
 
 > **本章で読むソース**
 >
@@ -229,4 +229,4 @@ kmalloc と違いスラブではなくページアロケータと vmap 機構を
 ## 関連する章
 
 - [`__alloc_pages` の fast path と slow path](../part01-physical/04-alloc-pages-path.md)
-- [ページフォールトと handle_mm_fault](11-page-fault.md)
+- [ページテーブル走査と missing fault](16-page-table-walk-missing-fault.md)

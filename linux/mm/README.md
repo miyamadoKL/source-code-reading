@@ -24,33 +24,48 @@ per-CPU 変数の一般論は [同期と RCU](../locking/part00-foundation/02-pe
 
 4. [`__alloc_pages` の fast path と slow path](part01-physical/04-alloc-pages-path.md)
 5. [watermark とゾーン fallback](part01-physical/05-watermark-zone-fallback.md)
-6. [per-CPU pageset と compaction](part01-physical/06-percpu-pageset-compaction.md)
+6. [per-CPU pageset の refill と drain](part01-physical/06-pcp-refill-drain.md)
+7. [page migration](part01-physical/07-page-migration.md)
+8. [compaction](part01-physical/08-compaction.md)
 
 ## 第2部　スラブ
 
-7. [SLUB と kmem_cache、kmalloc](part02-slub/07-slub-kmalloc-cache.md)
-8. [per-CPU slab と freelist](part02-slub/08-slub-percpu-freelist.md)
+9. [SLUB と kmem_cache、kmalloc](part02-slub/09-slub-kmalloc-cache.md)
+10. [per-CPU slab と freelist](part02-slub/10-slub-percpu-freelist.md)
 
 ## 第3部　仮想メモリ
 
-9. [VMA と Maple Tree](part03-virtual/09-vma-maple-tree.md)
-10. [mmap と munmap](part03-virtual/10-mmap-munmap.md)
-11. [ページフォールトと `handle_mm_fault`](part03-virtual/11-page-fault.md)
-12. [vmalloc](part03-virtual/12-vmalloc.md)
+11. [VMA と Maple Tree](part03-virtual/11-vma-maple-tree.md)
+12. [mmap と munmap](part03-virtual/12-mmap-munmap.md)
+13. [mprotect、madvise、mlock](part03-virtual/13-mprotect-madvise-mlock.md)
+14. [mremap](part03-virtual/14-mremap.md)
+15. [fork と copy_page_range](part03-virtual/15-fork-copy-page-range.md)
+16. [ページテーブル走査と missing fault](part03-virtual/16-page-table-walk-missing-fault.md)
+17. [write fault と COW](part03-virtual/17-write-fault-cow.md)
+18. [zap、mmu_gather、TLB batch](part03-virtual/18-zap-mmu-gather-tlb.md)
+19. [GUP とページピン](part03-virtual/19-gup-page-pin.md)
+20. [userfaultfd](part03-virtual/20-userfaultfd.md)
+21. [vmalloc](part03-virtual/21-vmalloc.md)
 
 ## 第4部　逆引きと回収
 
-13. [rmap と逆引き](part04-reclaim/13-rmap.md)
-14. [LRU と MGLRU](part04-reclaim/14-lru-mglru.md)
-15. [vmscan と回収経路](part04-reclaim/15-vmscan-reclaim.md)
-16. [writeback とページキャッシュ回収](part04-reclaim/16-writeback-reclaim.md)
+22. [rmap と逆引き](part04-reclaim/22-rmap.md)
+23. [LRU、MGLRU、workingset](part04-reclaim/23-lru-mglru-workingset.md)
+24. [folio reclaim decision と dirty/writeback folio](part04-reclaim/24-folio-reclaim-decision.md)
+25. [reclaim orchestration と direct/kswapd](part04-reclaim/25-reclaim-orchestration.md)
+26. [OOM killer](part04-reclaim/26-oom-killer.md)
 
 ## 第5部　大きな機能
 
-17. [Transparent Huge Pages](part05-advanced/17-thp.md)
-18. [memcg とメモリ cgroup](part05-advanced/18-memcg.md)
-19. [swap とスワップアウト](part05-advanced/19-swap.md)
-20. [NUMA バランシングの fault 側](part05-advanced/20-numa-fault-balancing.md)
+27. [THP fault と huge pmd](part05-advanced/27-thp-fault.md)
+28. [khugepaged と collapse](part05-advanced/28-khugepaged-collapse.md)
+29. [hugetlb の reservation と fault](part05-advanced/29-hugetlb-reservation-fault.md)
+30. [KSM と匿名 page dedup](part05-advanced/30-ksm.md)
+31. [memcg とメモリ cgroup](part05-advanced/31-memcg.md)
+32. [swap-out と swap-in データパス](part05-advanced/32-swap-data-path.md)
+33. [swap area、cluster、zswap](part05-advanced/33-swap-area-zswap.md)
+34. [mempolicy と mbind](part05-advanced/34-mempolicy-mbind.md)
+35. [NUMA バランシングの fault 側](part05-advanced/35-numa-fault-balancing.md)
 
 ---
 

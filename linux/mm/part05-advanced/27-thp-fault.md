@@ -1,4 +1,4 @@
-# 第17章 Transparent Huge Pages
+# 第27章 THP と fault 時の huge page
 
 > **本章で読むソース**
 >
@@ -16,7 +16,7 @@
 
 ## 前提
 
-- [ページフォールトと handle_mm_fault](../part03-virtual/11-page-fault.md)
+- [page-table walk と missing fault](../part03-virtual/16-page-table-walk-missing-fault.md)
 - [`__alloc_pages` の fast path と slow path](../part01-physical/04-alloc-pages-path.md)
 
 ## create_huge_pmd
@@ -201,5 +201,5 @@ THP はフォールト時に透明に huge マッピングを作る。
 
 ## 関連する章
 
-- [per-CPU pageset と compaction](../part01-physical/06-percpu-pageset-compaction.md)
-- [ページフォールトと handle_mm_fault](../part03-virtual/11-page-fault.md)
+- [compaction と kcompactd](../part01-physical/08-compaction.md)
+- [khugepaged collapse と deferred split](28-khugepaged-collapse.md)

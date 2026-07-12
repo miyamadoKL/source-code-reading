@@ -1,28 +1,29 @@
-# 第15章 vmscan と回収経路
+# 第25章 reclaim orchestration と direct/kswapd
 
 > **本章で読むソース**
 >
 > - [`mm/vmscan.c` L6083-L6117](https://github.com/gregkh/linux/blob/v6.18.38/mm/vmscan.c#L6083-L6117)
 > - [`mm/vmscan.c` L5816-L5832](https://github.com/gregkh/linux/blob/v6.18.38/mm/vmscan.c#L5816-L5832)
-> - [`mm/page_alloc.c` L4749-L4750](https://github.com/gregkh/linux/blob/v6.18.38/mm/page_alloc.c#L4749-L4750)
 > - [`mm/vmscan.c` L6004-L6016](https://github.com/gregkh/linux/blob/v6.18.38/mm/vmscan.c#L6004-L6016)
+> - [`mm/page_alloc.c` L4749-L4750](https://github.com/gregkh/linux/blob/v6.18.38/mm/page_alloc.c#L4749-L4750)
 > - [`mm/vmscan.c` L6119-L6129](https://github.com/gregkh/linux/blob/v6.18.38/mm/vmscan.c#L6119-L6129)
 > - [`include/linux/mmzone.h` L1427-L1428](https://github.com/gregkh/linux/blob/v6.18.38/include/linux/mmzone.h#L1427-L1428)
 
 ## この章の狙い
 
-メモリ圧迫時の **vmscan** が `shrink_node` から LRU 回収をどう進め、**kswapd** と direct reclaim の関係を理解する。
+**vmscan** の上位ループが `shrink_node` と `shrink_lruvec` で回収を編成し、**kswapd** と **direct reclaim** がどう起動するかを読む。
+folio 単位の判断は [folio reclaim decision](24-folio-reclaim-decision.md) が扱う。
 
 ## 前提
 
-- [LRU と MGLRU](14-lru-mglru.md)
+- [folio reclaim decision と dirty/writeback folio](24-folio-reclaim-decision.md)
 - [watermark とゾーン fallback](../part01-physical/05-watermark-zone-fallback.md)
 
 ## shrink_node
 
 ノード単位の回収ループは lruvec と memcg 階層を走査する。
 
-[`mm/vmscan.c` L6083-L6118](https://github.com/gregkh/linux/blob/v6.18.38/mm/vmscan.c#L6083-L6118)
+[`mm/vmscan.c` L6083-L6117](https://github.com/gregkh/linux/blob/v6.18.38/mm/vmscan.c#L6083-L6117)
 
 ```c
 static void shrink_node(pg_data_t *pgdat, struct scan_control *sc)
@@ -60,12 +61,11 @@ again:
 
 	if (nr_node_reclaimed)
 		reclaimable = true;
-
 ```
 
-kswapd 文脈では dirty ページの isolate 時に追加制御が入る。
-
 ## shrink_lruvec
+
+各 LRU リストにスキャン配分を振り、`shrink_folio_list` へ渡す。
 
 [`mm/vmscan.c` L5816-L5832](https://github.com/gregkh/linux/blob/v6.18.38/mm/vmscan.c#L5816-L5832)
 
@@ -89,20 +89,9 @@ static void shrink_lruvec(struct lruvec *lruvec, struct scan_control *sc)
 	get_scan_count(lruvec, sc, nr);
 ```
 
-各 LRU リスト（active file、inactive anon 等）にスキャン配分を振る。
-
-## kswapd 起床
-
-alloc slow path は watermark 不合格時に kswapd を起こす。
-
-[`mm/page_alloc.c` L4749-L4750](https://github.com/gregkh/linux/blob/v6.18.38/mm/page_alloc.c#L4749-L4750)
-
-```c
-	if (alloc_flags & ALLOC_KSWAPD)
-		wake_all_kswapds(order, gfp_mask, ac);
-```
-
 ## shrink_node_memcgs
+
+memcg 階層を走査し、子 cgroup へ回収を配分する。
 
 [`mm/vmscan.c` L6004-L6016](https://github.com/gregkh/linux/blob/v6.18.38/mm/vmscan.c#L6004-L6016)
 
@@ -122,9 +111,20 @@ static void shrink_node_memcgs(pg_data_t *pgdat, struct scan_control *sc)
 	 * persists across invocations. This strikes a balance between
 ```
 
-cgroup v2 下では子 memcg へ回収配分が広がる。
+## kswapd 起床
+
+alloc slow path は watermark 不合格時に kswapd を起こす。
+
+[`mm/page_alloc.c` L4749-L4750](https://github.com/gregkh/linux/blob/v6.18.38/mm/page_alloc.c#L4749-L4750)
+
+```c
+	if (alloc_flags & ALLOC_KSWAPD)
+		wake_all_kswapds(order, gfp_mask, ac);
+```
 
 ## kswapd と dirty 書き戻し
+
+kswapd 文脈では dirty isolate 時に追加制御が入る。
 
 [`mm/vmscan.c` L6119-L6129](https://github.com/gregkh/linux/blob/v6.18.38/mm/vmscan.c#L6119-L6129)
 
@@ -144,6 +144,8 @@ cgroup v2 下では子 memcg へ回収配分が広がる。
 
 ## kswapd_wait
 
+kswapd はノードごとに待機し、watermark 低下で起床する。
+
 [`include/linux/mmzone.h` L1427-L1428](https://github.com/gregkh/linux/blob/v6.18.38/include/linux/mmzone.h#L1427-L1428)
 
 ```c
@@ -151,34 +153,32 @@ cgroup v2 下では子 memcg へ回収配分が広がる。
 	wait_queue_head_t pfmemalloc_wait;
 ```
 
-kswapd はノードごとに待機し、watermark 低下で起床する。
-
 ## 処理の流れ
 
 ```mermaid
 flowchart TD
     A[watermark 不合格] --> B[wake kswapd または direct reclaim]
     B --> C[shrink_node]
-    C --> D{MGLRU?}
+    C --> D{MGLRU root?}
     D -->|はい| E[lru_gen_shrink_node]
     D -->|いいえ| F[shrink_node_memcgs]
     F --> G[shrink_lruvec]
-    G --> H[folio 解放または swap]
+    G --> H[shrink_folio_list]
 ```
 
 ## 高速化と最適化の工夫
 
-回収は **スキャン配分**（anon と file の比率）で I/O 増幅を抑える。
+回収は anon と file のスキャン配分で I/O 増幅を抑える。
 `blk_plug` で swap や writeback I/O をまとめる。
-kswapd はバックグラウンドで動き、direct reclaim は呼び出し元をブロックする。
+kswapd はバックグラウンド、direct reclaim は呼び出し元をブロックする点が対照的である。
 
 ## まとめ
 
-vmscan は LRU から folio を isolate し、解放またはスワップアウトする。
-`shrink_node` がノード単位のループであり、MGLRU と memcg が分岐を増やす。
+vmscan の編成層は shrink_node が中心で、MGLRU と memcg が分岐を増やす。
 kswapd は watermark 連動の非同期回収、direct reclaim は同期回収である。
 
 ## 関連する章
 
-- [writeback とページキャッシュ回収](16-writeback-reclaim.md)
-- [swap とスワップアウト](../part05-advanced/19-swap.md)
+- [folio reclaim decision と dirty/writeback folio](24-folio-reclaim-decision.md)
+- [OOM killer](26-oom-killer.md)
+- [swap-out と swap-in データパス](../part05-advanced/32-swap-data-path.md)

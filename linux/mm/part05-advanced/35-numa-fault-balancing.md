@@ -1,4 +1,4 @@
-# 第20章 NUMA バランシングの fault 側
+# 第35章 NUMA バランシングの fault 側
 
 > **本章で読むソース**
 >
@@ -16,7 +16,8 @@
 
 ## 前提
 
-- [ページフォールトと handle_mm_fault](../part03-virtual/11-page-fault.md)
+- [page-table walk と missing fault](../part03-virtual/16-page-table-walk-missing-fault.md)
+- [明示的 NUMA policy と mempolicy](34-mempolicy-mbind.md)
 - [ゾーン、ノード、PFN](../part00-foundation/03-zones-nodes-pfn.md)
 
 ## numa_migrate_check
