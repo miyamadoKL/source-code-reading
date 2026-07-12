@@ -228,5 +228,5 @@ fast path は order-0 向けの簡易判定と NOFRAGMENT 付き zonelist 走査
 
 ## 関連する章
 
-- [vmscan と回収経路](../part04-reclaim/15-vmscan-reclaim.md)
-- [per-CPU pageset と compaction](06-percpu-pageset-compaction.md)
+- [reclaim orchestration と direct/kswapd](../part04-reclaim/25-reclaim-orchestration.md)
+- [per-CPU pageset の refill と drain](06-pcp-refill-drain.md)

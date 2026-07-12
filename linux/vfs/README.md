@@ -13,7 +13,7 @@ Linux カーネル（[gregkh/linux](https://github.com/gregkh/linux)）の仮想
 XArray の一般論は [全体像と横断基盤](../foundation/part03-datastructures/11-xarray.md) を参照し、本分冊では address_space への適用に焦点を当てる。
 folio の一般論は [メモリ管理](../mm/part00-foundation/02-folio-page-unit.md) を参照する。
 RCU の一般論は [同期と RCU](../locking/part04-rcu/12-rcu-basics.md) を参照し、本分冊では RCU-walk に焦点を当てる。
-`balance_dirty_pages` の詳細は [メモリ管理](../mm/part04-reclaim/16-writeback-reclaim.md) と境界を分ける。
+`balance_dirty_pages` の詳細は [メモリ管理](../mm/part04-reclaim/24-folio-reclaim-decision.md) と境界を分ける。
 
 ## 第0部　VFS の全体像
 

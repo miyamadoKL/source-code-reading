@@ -291,4 +291,4 @@ dirty 制御は書き込み経路に ratelimit 付きで挿入され、ライト
 ## 関連する章
 
 - [書き込みと dirty ページ](../part04-page-cache/16-write-dirty.md)
-- [メモリ管理の writeback とページキャッシュ回収](../../mm/part04-reclaim/16-writeback-reclaim.md)
+- [メモリ管理の writeback とページキャッシュ回収](../../mm/part04-reclaim/24-folio-reclaim-decision.md)

@@ -1,4 +1,4 @@
-# 第8章 per-CPU slab と freelist
+# 第10章 per-CPU slab と freelist
 
 > **本章で読むソース**
 >
@@ -16,7 +16,7 @@ SLUB の **kmem_cache_cpu** と lockless freelist が、プリエンプション
 
 ## 前提
 
-- [SLUB と kmem_cache、kmalloc](07-slub-kmalloc-cache.md)
+- [SLUB と kmem_cache、kmalloc](09-slub-kmalloc-cache.md)
 - [同期と RCU：per-CPU 変数](../../locking/part00-foundation/02-percpu.md)
 
 ## kmem_cache_cpu のレイアウト
@@ -212,5 +212,5 @@ NUMA 指定は `node_match` で fast path の適格性を絞る。
 
 ## 関連する章
 
-- [SLUB と kmem_cache、kmalloc](07-slub-kmalloc-cache.md)
-- [NUMA バランシングの fault 側](../part05-advanced/20-numa-fault-balancing.md)
+- [SLUB と kmem_cache、kmalloc](09-slub-kmalloc-cache.md)
+- [NUMA バランシングの fault 側](../part05-advanced/35-numa-fault-balancing.md)
