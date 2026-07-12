@@ -57,7 +57,7 @@ graph TD
 | [電源管理と CPU ライフサイクル](power-cpu/README.md) | suspend と hibernate、freezer、PM QoS、cpufreq と cpuidle、CPU hotplug | kernel/power/、kernel/cpu.c、drivers/cpuidle/、drivers/cpufreq/ | 公開 |
 | [セキュリティ](security/README.md) | LSM フック、capabilities、seccomp、Landlock、keys（SELinux 本体の詳細は [SELinux userspace](../selinux/README.md) と接続する） | security/、kernel/capability.c、kernel/seccomp.c | 公開 |
 | [仮想化（KVM）](kvm/README.md) | KVM コア、x86 の VMX と SVM、vhost 概観 | virt/kvm/、arch/x86/kvm/ | 公開 |
-| デバイスモデルとドライバ基盤 | driver core、bus と probe、sysfs、Device Tree と ACPI 概観、PCI | drivers/base/、drivers/pci/ | 計画 |
+| [デバイスモデルとドライバ基盤](driver-model/README.md) | driver core、bus と probe、sysfs、Device Tree と ACPI 概観、PCI | drivers/base/、drivers/pci/ | 公開 |
 | [BPF とトレーシング](bpf/README.md) | verifier、JIT、map、tracepoint、ftrace、kprobes、perf | kernel/bpf/、kernel/trace/、kernel/events/ | 公開 |
 | Rust for Linux | ビルド統合、kernel クレート、抽象レイヤー、実ドライバ例 | rust/ | 計画 |
 | x86-64 アーキテクチャ | ブートの詳細（全体像と横断基盤の概観を引き継ぐ）、エントリ（システムコール、例外、割り込み）、コンテキストスイッチ、ページテーブル、SMP と per-CPU | arch/x86/ | 計画 |
