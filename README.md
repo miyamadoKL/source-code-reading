@@ -29,6 +29,7 @@
 | [RocksDB](rocksdb/README.md) | v11.1.1 | LSM-tree ベースの組み込み永続キーバリューストア。全11部・52章。 | Apache-2.0 / GPL-2.0 |
 | [SELinux userspace](selinux/README.md) | 3.10 | MAC ポリシーのコンパイルと運用。libsepol、libselinux、libsemanage、checkpolicy、policycoreutils まで全8部24章。 | コンポーネント別（GPL-2.0、LGPL-2.1、Public Domain、FreeBSD License） |
 | [Apache Spark](spark/README.md) | v4.1.2 | 分散データ処理フレームワーク。RDD、スケジューリング、Catalyst/Tungsten、Structured Streaming、PySpark、Kubernetes/YuniKorn 連携まで全10部28章。 | Apache-2.0 |
+| [SQLite](sqlite/README.md) | 3.53.3 | サーバーレスの組み込みリレーショナルデータベース。トークナイザからパーサ、コード生成、VDBE、B-tree、Pager/WAL、VFS、拡張（FTS5/JSON）まで全6部26章。 | Public Domain |
 | [StarRocks](starrocks/README.md) | 4.1.1 | MPP 分散分析データベース。Cascades CBO、ベクトル化パイプライン実行、列指向ストレージ、Lake モードまで全10部27章。 | Apache-2.0 |
 | [systemd](systemd/README.md) | 261.1 | Linux の init システムとサービス管理。PID 1 コア、sd-event/sd-bus、cgroup、BPF、journald、udev、logind、networkd、resolved まで全9部24章。 | LGPL-2.1-or-later（udev の一部は GPL-2.0-or-later） |
 | [TiDB エコシステム](tidb/README.md) | 8.5.6 | MySQL 互換の分散 SQL データベース。計算層（TiDB）、分散 KV（TiKV）、列指向 OLAP（TiFlash）を分冊で読む。 | Apache-2.0 |
