@@ -1,4 +1,4 @@
-# 第13章 タスクの cgroup 所属と migration
+# 第14章 タスクの cgroup 所属と migration
 
 > **本章で読むソース**
 >
@@ -16,8 +16,8 @@
 
 ## 前提
 
-- [第11章 cgroup v2 階層と kernfs](11-cgroup-hierarchy-kernfs.md)
-- [第12章 css と cgroup_subsys のライフサイクル](12-css-lifecycle.md)
+- [第12章 cgroup v2 階層と kernfs](12-cgroup-hierarchy-kernfs.md)
+- [第13章 css と cgroup_subsys のライフサイクル](13-css-lifecycle.md)
 
 ## css_set の構造
 
@@ -422,6 +422,7 @@ migration 準備では `preloaded_src_csets` と `preloaded_dst_csets` に先に
 
 ## 関連する章
 
-- [第14章 cgroup namespace と rstat](14-cgroup-ns-rstat.md)
-- [第15章 cpu コントローラと sched 連携](../part03-controllers/15-cpu-controller.md)
-- [第19章 cpuset コントローラ](../part03-controllers/19-cpuset-controller.md)
+- [第16章 cgroup namespace とパス表示](16-cgroup-namespace.md)
+- [第17章 rstat と per-CPU 統計集約](17-rstat.md)
+- [第18章 cpu コントローラと sched 連携](../part03-controllers/18-cpu-controller.md)
+- [第22章 cpuset コントローラ](../part03-controllers/22-cpuset-controller.md)

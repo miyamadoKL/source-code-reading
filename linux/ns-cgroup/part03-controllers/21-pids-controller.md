@@ -1,4 +1,4 @@
-# 第18章 pids コントローラ
+# 第21章 pids コントローラ
 
 > **本章で読むソース**
 >
@@ -16,7 +16,7 @@
 
 ## 前提
 
-- [第13章 タスクの cgroup 所属と migration](../part02-cgroup-core/13-cgroup-attach-migration.md)
+- [第14章 タスクの cgroup 所属と migration](../part02-cgroup-core/14-cgroup-attach-migration.md)
 - [第3章 clone、unshare、setns の入口](../part00-foundation/03-clone-unshare-setns.md)
 
 ## pids コントローラの目的
@@ -369,5 +369,5 @@ migration 時のカウンタ調整は `can_attach` と `cancel_attach` が担う
 
 ## 関連する章
 
-- [第19章 cpuset コントローラ](19-cpuset-controller.md)
-- [第13章 タスクの cgroup 所属と migration](../part02-cgroup-core/13-cgroup-attach-migration.md)
+- [第22章 cpuset コントローラ](22-cpuset-controller.md)
+- [第14章 タスクの cgroup 所属と migration](../part02-cgroup-core/14-cgroup-attach-migration.md)

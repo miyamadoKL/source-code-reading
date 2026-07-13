@@ -1,4 +1,4 @@
-# 第7章 UTS namespace
+# 第8章 UTS namespace
 
 > **本章で読むソース**
 >
@@ -17,7 +17,7 @@
 ## 前提
 
 - [第3章 clone、unshare、setns の入口](../part00-foundation/03-clone-unshare-setns.md)
-- [第6章 user namespace と uid map](06-user-namespace.md)
+- [第7章 user namespace と uid map](07-user-namespace.md)
 
 ## uts_namespace と new_utsname
 
@@ -253,5 +253,5 @@ UTS namespace は `new_utsname` の独立コピーでホスト名とカーネル
 
 ## 関連する章
 
-- [第8章 IPC namespace](08-ipc-namespace.md)
+- [第9章 IPC namespace](09-ipc-namespace.md)
 - [第2章 nsproxy と namespace のライフサイクル](../part00-foundation/02-nsproxy-lifecycle.md)

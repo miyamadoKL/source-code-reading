@@ -225,7 +225,7 @@ namespace 複製の頻出経路は、フラグなし fork である。
 `likely` で分岐をヒントし、通常の fork が namespace 作成コストを払わないようにしている。
 time namespace だけ親子ポインタが一致しない特殊ケースでは、フラグなしでも新 `nsproxy` が必要になる。
 
-cgroup 側も `cgroup_subsys_enabled` が static key でサブシステム無効時のフックを省略するが、第11章で扱う。
+cgroup 側も `cgroup_subsys_enabled` が static key でサブシステム無効時のフックを省略するが、第12章で扱う。
 
 ## 分冊間の境界
 
@@ -245,4 +245,4 @@ cgroup 側も `cgroup_subsys_enabled` が static key でサブシステム無効
 ## 関連する章
 
 - [第2章 nsproxy と namespace のライフサイクル](02-nsproxy-lifecycle.md)
-- [第11章 cgroup v2 階層と kernfs](../part02-cgroup-core/11-cgroup-hierarchy-kernfs.md)
+- [第12章 cgroup v2 階層と kernfs](../part02-cgroup-core/12-cgroup-hierarchy-kernfs.md)

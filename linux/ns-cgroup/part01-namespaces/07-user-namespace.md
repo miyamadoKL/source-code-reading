@@ -1,4 +1,4 @@
-# 第6章 user namespace と uid map
+# 第7章 user namespace と uid map
 
 > **本章で読むソース**
 >
@@ -497,6 +497,6 @@ user namespace は `uid map` と `gid map` で ID の見え方を分離し、`ns
 
 ## 関連する章
 
-- [第7章 UTS namespace](07-uts-namespace.md)
-- [第4章 mount namespace と propagation](04-mount-namespace.md)
-- [第5章 PID namespace の階層と translation](05-pid-namespace.md)
+- [第8章 UTS namespace](08-uts-namespace.md)
+- [第5章 mount namespace と propagation](05-mount-namespace.md)
+- [第6章 PID namespace の階層と translation](06-pid-namespace.md)

@@ -1,4 +1,4 @@
-# 第17章 io コントローラ
+# 第20章 io コントローラ
 
 > **本章で読むソース**
 >
@@ -18,8 +18,8 @@
 
 ## 前提
 
-- [第12章 css と cgroup_subsys のライフサイクル](../part02-cgroup-core/12-css-lifecycle.md)
-- [第16章 memory コントローラと memcg 境界](16-memory-controller.md)
+- [第13章 css と cgroup_subsys のライフサイクル](../part02-cgroup-core/13-css-lifecycle.md)
+- [第19章 memory コントローラと memcg 境界](19-memory-controller.md)
 
 ## blkcg と io_cgrp_subsys
 
@@ -496,5 +496,5 @@ bio は `bi_blkg` から blkcg を解決し、memory コントローラと連携
 
 ## 関連する章
 
-- [第18章 pids コントローラ](18-pids-controller.md)
-- [第16章 memory コントローラと memcg 境界](16-memory-controller.md)
+- [第21章 pids コントローラ](21-pids-controller.md)
+- [第19章 memory コントローラと memcg 境界](19-memory-controller.md)
