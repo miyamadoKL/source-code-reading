@@ -1,4 +1,4 @@
-# 第10章 seccomp モードとフィルタチェーン
+# 第11章 seccomp モードとフィルタチェーン
 
 > **本章で読むソース**
 >
@@ -337,7 +337,7 @@ flowchart TD
 ## 高速化と最適化の工夫
 
 `seccomp_assign_mode` は `smp_mb__before_atomic` のあと `SECCOMP` syscall work bit を立て、mode と filter 公開の順序を保証する。
-`__secure_computing` 側は `smp_rmb` で mode 変更の可視性を確認してからフィルタ評価へ入る（第11章の `__seccomp_filter`）。
+`__secure_computing` 側は `smp_rmb` で mode 変更の可視性を確認してからフィルタ評価へ入る（第12章の `__seccomp_filter`）。
 TSYNC 時の `smp_store_release` は他スレッドが古い filter ポインタを読まないための公開順序付けである。
 
 ## まとめ
@@ -348,5 +348,5 @@ FILTER モードでは `seccomp_filter` が `prev` で鎖なり、新規 attach 
 
 ## 関連する章
 
-- [BPF フィルタ検証、`seccomp_run_filters`、キャッシュ](11-seccomp-bpf-verify-run-cache.md)
-- [`SECCOMP_RET_USER_NOTIF` と supervisor API](12-seccomp-user-notif-supervisor.md)
+- [BPF フィルタ検証、`seccomp_run_filters`、キャッシュ](12-seccomp-bpf-verify-run-cache.md)
+- [`SECCOMP_RET_USER_NOTIF` と supervisor API](13-seccomp-user-notif-supervisor.md)

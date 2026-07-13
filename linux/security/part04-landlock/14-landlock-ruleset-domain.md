@@ -1,4 +1,4 @@
-# 第13章 Landlock ruleset と domain
+# 第14章 Landlock ruleset と domain
 
 > **本章で読むソース**
 >
@@ -273,5 +273,5 @@ ruleset は編集中の 1 layer ルール集合であり、domain は `landlock_
 
 ## 関連する章
 
-- [第12章：`SECCOMP_RET_USER_NOTIF` と supervisor API](../part03-seccomp/12-seccomp-user-notif-supervisor.md)
-- [Landlock FS アクセス制御](14-landlock-fs-access.md)
+- [第13章：`SECCOMP_RET_USER_NOTIF` と supervisor API](../part03-seccomp/13-seccomp-user-notif-supervisor.md)
+- [Landlock FS アクセス制御](15-landlock-fs-access.md)

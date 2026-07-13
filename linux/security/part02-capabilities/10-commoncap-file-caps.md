@@ -1,4 +1,4 @@
-# 第9章 `commoncap` と VFS file capabilities
+# 第10章 `commoncap` と VFS file capabilities
 
 > **本章で読むソース**
 >
@@ -20,7 +20,7 @@
 
 ## 前提
 
-- [第8章：capability ビットマップと `capget`/`capset`](08-capability-bitmap-syscalls.md)
+- [第9章：capability ビットマップと `capget`/`capset`](09-capability-bitmap-syscalls.md)
 - [第2章：`cred` と権限判定の入口](../part00-foundation/02-cred-capable-entry.md)
 
 ## cpu_vfs_cap_data と xattr 名
@@ -410,5 +410,5 @@ bounding set は file permitted の上限、ambient は file cap または setid
 
 ## 関連する章
 
-- [第8章：capability ビットマップと `capget`/`capset`](08-capability-bitmap-syscalls.md)
-- [seccomp モードとフィルタチェーン](../part03-seccomp/10-seccomp-modes-filter-chain.md)
+- [第9章：capability ビットマップと `capget`/`capset`](09-capability-bitmap-syscalls.md)
+- [seccomp モードとフィルタチェーン](../part03-seccomp/11-seccomp-modes-filter-chain.md)
