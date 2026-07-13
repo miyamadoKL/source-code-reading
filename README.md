@@ -11,6 +11,7 @@
 | [Apache Arrow](arrow/README.md) | 25.0.0 | 言語横断の列指向インメモリフォーマットの仕様と pyarrow 実装。メモリレイアウト、型、IPC、C Data Interface、Flight、Compute、Dataset、拡張型まで全6部17章。 | Apache-2.0 |
 | [Ceph](ceph/README.md) | 20.2.2 | 統合分散ストレージ。共通基盤、Messenger、CRUSH、Monitor/Paxos、OSD/PG、BlueStore、Objecter/RBD/CephFS/RGW まで全8部26章。 | LGPL-2.1 / LGPL-3.0 |
 | [Docker Engine](docker/README.md) | 29.6.1 | コンテナランタイム dockerd。containerd 連携、ストレージ、ネットワーク、BuildKit、運用機能まで全8部24章。 | Apache-2.0 |
+| [DuckDB](duckdb/README.md) | 1.5.4 | ベクトル化実行と列指向ストレージの組み込み分析データベース。パーサからバインダ、オプティマイザ、ベクトル化実行エンジン、列指向ストレージ、MVCC まで全6部32章。 | MIT |
 | [etcd](etcd/README.md) | 3.6.12 | 分散キーバリューストア。Raft、MVCC、WAL、リース、watch、gRPC API、clientv3 まで全8部24章。 | Apache-2.0 |
 | [Apache Flink](flink/README.md) | 2.3.0 | 分散ストリーム処理エンジン。コア基盤、グラフ生成、スケジューリング、タスク実行、ネットワークスタック、状態とチェックポイント、Table と SQL、Source と Sink まで全9部28章。 | Apache-2.0 |
 | [Apache Iceberg](iceberg/README.md) | 1.11.0 | Open Table Format の仕様と参照実装。型、スナップショット、マニフェスト、カタログ、Spark/Flink 連携まで全11部24章。 | Apache-2.0 |
