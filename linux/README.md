@@ -60,7 +60,7 @@ graph TD
 | [デバイスモデルとドライバ基盤](driver-model/README.md) | driver core、bus と probe、sysfs、Device Tree と ACPI 概観、PCI | drivers/base/、drivers/pci/ | 公開 |
 | [BPF とトレーシング](bpf/README.md) | verifier、JIT、map、tracepoint、ftrace、kprobes、perf | kernel/bpf/、kernel/trace/、kernel/events/ | 公開 |
 | Rust for Linux | ビルド統合、kernel クレート、抽象レイヤー、実ドライバ例 | rust/ | 計画 |
-| x86-64 アーキテクチャ | ブートの詳細（全体像と横断基盤の概観を引き継ぐ）、エントリ（システムコール、例外、割り込み）、コンテキストスイッチ、ページテーブル、SMP と per-CPU | arch/x86/ | 計画 |
+| [x86-64 アーキテクチャ](x86/README.md) | ブートの詳細（全体像と横断基盤の概観を引き継ぐ）、エントリ（システムコール、例外、割り込み）、コンテキストスイッチ、ページテーブル、SMP と per-CPU | arch/x86/ | 公開 |
 
 分冊を執筆したら、分冊名を各分冊の README へのリンクに置き換え、状態を「計画」から「公開」に更新する。
 部と章の数は対象サブシステムの実態から決め、既存分冊の章数に合わせない。
