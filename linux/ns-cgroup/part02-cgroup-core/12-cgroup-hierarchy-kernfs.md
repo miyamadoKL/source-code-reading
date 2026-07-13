@@ -1,4 +1,4 @@
-# 第11章 cgroup v2 階層と kernfs
+# 第12章 cgroup v2 階層と kernfs
 
 > **本章で読むソース**
 >
@@ -311,6 +311,6 @@ cgroup v2 の default hierarchy は `cgrp_dfl_root` に固定され、kernfs が
 
 ## 関連する章
 
-- [第12章 css と cgroup_subsys のライフサイクル](12-css-lifecycle.md)
-- [第13章 タスクの cgroup 所属と migration](13-cgroup-attach-migration.md)
-- [第16章 memory コントローラと memcg 境界](../part03-controllers/16-memory-controller.md)
+- [第13章 css と cgroup_subsys のライフサイクル](13-css-lifecycle.md)
+- [第14章 タスクの cgroup 所属と migration](14-cgroup-attach-migration.md)
+- [第19章 memory コントローラと memcg 境界](../part03-controllers/19-memory-controller.md)

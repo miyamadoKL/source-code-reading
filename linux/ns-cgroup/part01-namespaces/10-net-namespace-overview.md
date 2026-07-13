@@ -1,4 +1,4 @@
-# 第9章 network namespace の概観
+# 第10章 network namespace の概観
 
 > **本章で読むソース**
 >
@@ -375,5 +375,5 @@ network namespace は `struct net` と `pernet_operations` 初期化列で構築
 
 ## 関連する章
 
-- [第10章 time namespace](10-time-namespace.md)
+- [第11章 time namespace](11-time-namespace.md)
 - [network 分冊の README](../../net/README.md)

@@ -185,7 +185,7 @@ int copy_namespaces(u64 flags, struct task_struct *tsk)
 time namespace のオフセット継承はプロセス境界でのみ必要だからである。
 
 新規 namespace 作成には `CAP_SYS_ADMIN` が user namespace 内で必要になる。
-user namespace 内に閉じた権限モデルは第6章で読む。
+user namespace 内に閉じた権限モデルは第7章で読む。
 
 ## free_nsproxy と namespace 個体の解放
 
@@ -263,7 +263,7 @@ namespace 個体は `nsproxy` より長く生きる場合がある。
 `create_new_namespaces(0, ...)` で新規 namespace は作らず、time 同期だけを行う特殊経路である。
 
 この経路は exec のたびに走るわけではなく、不一致検出時のみ動く。
-詳細は第10章の time namespace で扱う。
+詳細は第11章の time namespace で扱う。
 
 ## 高速化と最適化の工夫
 
@@ -285,4 +285,4 @@ namespace 個体は `nsproxy` より長く生きる場合がある。
 ## 関連する章
 
 - [第3章 clone、unshare、setns の入口](03-clone-unshare-setns.md)
-- [第4章 mount namespace と propagation](../part01-namespaces/04-mount-namespace.md)
+- [第5章 mount namespace と propagation](../part01-namespaces/05-mount-namespace.md)

@@ -1,4 +1,4 @@
-# 第12章 css と cgroup_subsys のライフサイクル
+# 第13章 css と cgroup_subsys のライフサイクル
 
 > **本章で読むソース**
 >
@@ -17,7 +17,7 @@
 
 ## 前提
 
-- [第11章 cgroup v2 階層と kernfs](11-cgroup-hierarchy-kernfs.md)
+- [第12章 cgroup v2 階層と kernfs](12-cgroup-hierarchy-kernfs.md)
 - [第1章 隔離と資源制御の全体像](../part00-foundation/01-isolation-overview.md)
 
 ## css と cgroup_subsys の役割分担
@@ -449,6 +449,6 @@ css は `css_alloc` で生成され、`online_css` で cgroup に接続され、
 
 ## 関連する章
 
-- [第13章 タスクの cgroup 所属と migration](13-cgroup-attach-migration.md)
-- [第14章 cgroup namespace と rstat](14-cgroup-ns-rstat.md)
-- [第16章 memory コントローラと memcg 境界](../part03-controllers/16-memory-controller.md)
+- [第14章 タスクの cgroup 所属と migration](14-cgroup-attach-migration.md)
+- [第17章 rstat と per-CPU 統計集約](17-rstat.md)
+- [第19章 memory コントローラと memcg 境界](../part03-controllers/19-memory-controller.md)
