@@ -1,4 +1,4 @@
-# 第11章 BPF フィルタ検証と実行、キャッシュ
+# 第12章 BPF フィルタ検証と実行、キャッシュ
 
 > **本章で読むソース**
 >
@@ -21,7 +21,7 @@
 
 ## 前提
 
-- [第10章：seccomp モードとフィルタチェーン](10-seccomp-modes-filter-chain.md)
+- [第11章：seccomp モードとフィルタチェーン](11-seccomp-modes-filter-chain.md)
 - [BPF とトレーシング](../../bpf/README.md) の verifier と `bpf_prog_run`（一般論は委譲）
 
 ## seccomp_data と BPF 戻り値
@@ -454,5 +454,5 @@ seccomp BPF は `seccomp_check_filter` で命令を限定し、`bpf_prog_create_
 
 ## 関連する章
 
-- [第10章：seccomp モードとフィルタチェーン](10-seccomp-modes-filter-chain.md)
-- [`SECCOMP_RET_USER_NOTIF` と supervisor API](12-seccomp-user-notif-supervisor.md)
+- [第11章：seccomp モードとフィルタチェーン](11-seccomp-modes-filter-chain.md)
+- [`SECCOMP_RET_USER_NOTIF` と supervisor API](13-seccomp-user-notif-supervisor.md)

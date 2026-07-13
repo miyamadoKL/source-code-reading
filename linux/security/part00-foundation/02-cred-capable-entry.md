@@ -359,7 +359,7 @@ int cap_capable(const struct cred *cred, struct user_namespace *target_ns,
 ```
 
 `likely(ns == cred_ns)` は、同一 user namespace 内の判定が最頻であることを前提に分岐予測を助ける。
-user namespace の階層をまたぐ場合はループが続き、親 namespace の owner 特権など別経路で許可されうる（第8章で詳述）。
+user namespace の階層をまたぐ場合はループが続き、親 namespace の owner 特権など別経路で許可されうる（第9章で詳述）。
 
 ## 判定の接続図
 
@@ -388,6 +388,6 @@ flowchart LR
 
 ## 関連する章
 
-- [capability ビットマップと `capget`/`capset`](../part02-capabilities/08-capability-bitmap-syscalls.md)
-- [`commoncap` と VFS file capabilities](../part02-capabilities/09-commoncap-file-caps.md)
+- [capability ビットマップと `capget`/`capset`](../part02-capabilities/09-capability-bitmap-syscalls.md)
+- [`commoncap` と VFS file capabilities](../part02-capabilities/10-commoncap-file-caps.md)
 - [LSM フック定義と静的呼び出し機構](../part01-lsm/03-lsm-hooks-static-calls.md)

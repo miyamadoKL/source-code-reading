@@ -1,4 +1,4 @@
-# 第16章 `struct key` と keyring 階層
+# 第17章 `struct key` と keyring 階層
 
 > **本章で読むソース**
 >
@@ -432,5 +432,5 @@ keyring の子集合は `assoc_array` で保持され、名前付き検索を効
 
 ## 関連する章
 
-- [第15章：Landlock ネットワーク制御と `landlock_*` syscalls](../part04-landlock/15-landlock-net-syscalls.md)
-- [`keyctl` システムコール群](17-keyctl-syscalls.md)
+- [第16章：Landlock ネットワーク制御と `landlock_*` syscalls](../part04-landlock/16-landlock-net-syscalls.md)
+- [`keyctl` システムコール群](18-keyctl-syscalls.md)

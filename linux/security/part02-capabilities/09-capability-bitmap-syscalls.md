@@ -1,4 +1,4 @@
-# 第8章 capability ビットマップと `capget`/`capset`
+# 第9章 capability ビットマップと `capget`/`capset`
 
 > **本章で読むソース**
 >
@@ -485,5 +485,5 @@ flowchart TD
 
 ## 関連する章
 
-- [`commoncap` と VFS file capabilities](09-commoncap-file-caps.md)
+- [`commoncap` と VFS file capabilities](10-commoncap-file-caps.md)
 - [第2章：`cred` と権限判定の入口](../part00-foundation/02-cred-capable-entry.md)

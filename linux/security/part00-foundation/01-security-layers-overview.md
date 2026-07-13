@@ -269,8 +269,8 @@ flowchart TD
     call_inode --> allow[0 を返して続行]
 ```
 
-システムコール入口では、seccomp がカーネル関数に到達する前にフィルタする（第10章）。
-Landlock は LSM の一種として同じフック経路に載る（第13章以降）。
+システムコール入口では、seccomp がカーネル関数に到達する前にフィルタする（第11章）。
+Landlock は LSM の一種として同じフック経路に載る（第14章以降）。
 
 ## 高速化と最適化の工夫
 
@@ -288,4 +288,4 @@ LSM 側も第3章で読むとおり、従来の連結リスト走査から **sta
 
 - [`cred` と権限判定の入口](02-cred-capable-entry.md)
 - [LSM フック定義と静的呼び出し機構](../part01-lsm/03-lsm-hooks-static-calls.md)
-- [namespace と cgroup：user namespace](../../ns-cgroup/part01-namespaces/06-user-namespace.md)
+- [namespace と cgroup：user namespace](../../ns-cgroup/part01-namespaces/07-user-namespace.md)
