@@ -1,4 +1,4 @@
-# 第10章 x86 代表ドライバと core 接続
+# 第14章 x86 代表ドライバと core 接続
 
 > **本章で読むソース**
 >
@@ -17,7 +17,7 @@
 
 ## 前提
 
-- [第9章 cpufreq コアと policy](09-cpufreq-framework-policy.md) の `cpufreq_policy` と `__cpufreq_driver_target`
+- [第13章 cpufreq コアと policy](13-cpufreq-framework-policy.md) の `cpufreq_policy` と `__cpufreq_driver_target`
 - [第1章](../part00-foundation/01-power-cpu-overview.md) の `cpufreq_driver` 構造体
 
 ## cpufreq_register_driver の契約
@@ -235,6 +235,6 @@ acpi-cpufreq は `target_index` + `fast_switch`、intel_pstate は active（`set
 
 ## 関連する章
 
-- 前章：[cpufreq コアと policy](09-cpufreq-framework-policy.md)
-- 次章：[schedutil ガバナ連携](11-cpufreq-governor-schedutil.md)
+- 前章：[cpufreq コアと policy](13-cpufreq-framework-policy.md)
+- 次章：[schedutil ガバナ連携](15-cpufreq-governor-schedutil.md)
 - [第8章 Energy Model](../part01-system-pm/08-energy-model.md) の `em_dev_register_perf_domain`

@@ -1,4 +1,4 @@
-# 第14章 cpuidle ガバナと状態選択
+# 第18章 cpuidle ガバナと状態選択
 
 > **本章で読むソース**
 >
@@ -18,7 +18,7 @@ cpuidle ガバナが `->select` で idle 状態を選ぶ仕組みを、**menu** 
 
 ## 前提
 
-- [第13章 cpuidle フレームワークとドライバ登録](13-cpuidle-framework-driver.md) の `cpuidle_state` と `cpuidle_select`
+- [第17章 cpuidle フレームワークとドライバ登録](17-cpuidle-framework-driver.md) の `cpuidle_state` と `cpuidle_select`
 - [第7章 PM QoS と制約の集約](../part01-system-pm/07-pm-qos.md) の CPU latency QoS
 
 ## cpuidle_register_governor
@@ -341,6 +341,6 @@ teo は wake パターン統計で深すぎる選択を浅く修正し、latency
 
 ## 関連する章
 
-- 前章：[cpuidle フレームワークとドライバ登録](13-cpuidle-framework-driver.md)
-- 次章：[sched idle 入口と cpuidle 連携](15-sched-idle-cpuidle.md)
+- 前章：[cpuidle フレームワークとドライバ登録](17-cpuidle-framework-driver.md)
+- 次章：[sched idle 入口と cpuidle 連携](19-sched-idle-cpuidle.md)
 - [割り込みと時間の NO_HZ](../../irq-time/part03-tick/18-no-hz.md) の tick 停止詳細

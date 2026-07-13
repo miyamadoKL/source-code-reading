@@ -1,4 +1,4 @@
-# 第15章 sched idle 入口と cpuidle 連携
+# 第19章 sched idle 入口と cpuidle 連携
 
 > **本章で読むソース**
 >
@@ -20,8 +20,8 @@
 
 ## 前提
 
-- [第13章 cpuidle フレームワークとドライバ登録](13-cpuidle-framework-driver.md) の `cpuidle_register`
-- [第14章 cpuidle ガバナと状態選択](14-cpuidle-governors.md) の `menu_select` / `teo_select`
+- [第17章 cpuidle フレームワークとドライバ登録](17-cpuidle-framework-driver.md) の `cpuidle_register`
+- [第18章 cpuidle ガバナと状態選択](18-cpuidle-governors.md) の `menu_select` / `teo_select`
 
 ## do_idle から cpuidle_idle_call へ
 
@@ -346,7 +346,7 @@ s2idle は `cpuidle_enter_s2idle`、forced idle は `cpuidle_find_deepest_state`
 
 ## 関連する章
 
-- 前章：[cpuidle ガバナと状態選択](14-cpuidle-governors.md)
-- 次章：[CPU hotplug 状態機械](../part04-hotplug/16-cpuhp-state-machine.md)
+- 前章：[cpuidle ガバナと状態選択](18-cpuidle-governors.md)
+- 次章：[CPU hotplug 状態機械](../part05-hotplug/20-cpuhp-state-machine.md)
 - [プロセスとスケジューラ](../../sched/README.md) の idle タスクと `do_idle`
 - [割り込みと時間の NO_HZ](../../irq-time/part03-tick/18-no-hz.md)

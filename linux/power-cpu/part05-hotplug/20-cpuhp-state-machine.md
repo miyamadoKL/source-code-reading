@@ -1,4 +1,4 @@
-# 第16章 CPU hotplug 状態機械
+# 第20章 CPU hotplug 状態機械
 
 > **本章で読むソース**
 >
@@ -19,8 +19,8 @@
 
 ## 前提
 
-- [第9章 cpufreq コアと policy](../part02-cpufreq/09-cpufreq-framework-policy.md) の `cpufreq_online`
-- [第13章 cpuidle フレームワーク](../part03-cpuidle/13-cpuidle-framework-driver.md) の per-CPU device 登録
+- [第13章 cpufreq コアと policy](../part03-cpufreq/13-cpufreq-framework-policy.md) の `cpufreq_online`
+- [第17章 cpuidle フレームワーク](../part04-cpuidle/17-cpuidle-framework-driver.md) の per-CPU device 登録
 
 ## struct cpuhp_step
 
@@ -444,6 +444,6 @@ offline は `_cpu_down` が AP を起動し ONLINE teardown のあと `cpuhp_dow
 
 ## 関連する章
 
-- 前章：[sched idle 入口と cpuidle 連携](../part03-cpuidle/15-sched-idle-cpuidle.md)
-- 次章：[cpu maps と hotplug ロック](17-cpu-maps-hotplug-integration.md)
-- [第9章 cpufreq コアと policy](../part02-cpufreq/09-cpufreq-framework-policy.md) の `cpufreq_online`
+- 前章：[sched idle 入口と cpuidle 連携](../part04-cpuidle/19-sched-idle-cpuidle.md)
+- 次章：[cpu maps と hotplug ロック](21-cpu-maps-hotplug-integration.md)
+- [第13章 cpufreq コアと policy](../part03-cpufreq/13-cpufreq-framework-policy.md) の `cpufreq_online`
