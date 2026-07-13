@@ -22,7 +22,7 @@
 ## 前提
 
 - [第1章 電源管理と CPU ライフサイクルの全体像](../part00-foundation/01-power-cpu-overview.md) の PM QoS 概観
-- [第3部 cpufreq](../part02-cpufreq/09-cpufreq-framework-policy.md) の `cpufreq_policy`（未執筆章は README 参照）
+- [第3部 cpufreq](../part03-cpufreq/13-cpufreq-framework-policy.md) の `cpufreq_policy`（未執筆章は README 参照）
 
 ## 集約の型
 
@@ -198,7 +198,7 @@ static void cpu_latency_qos_apply(struct pm_qos_request *req,
 
 `cpu_latency_qos_apply` は集約値が変わったとき `wake_up_all_idle_cpus` を呼ぶ。
 cpuidle ガバナが idle 状態を選び直し、深すぎる状態を避けるためである。
-詳細は [第3部 cpuidle](../part03-cpuidle/14-cpuidle-governors.md) で扱う。
+詳細は [第4部 cpuidle](../part04-cpuidle/18-cpuidle-governors.md) で扱う。
 
 ## frequency QoS
 
@@ -370,4 +370,4 @@ frequency QoS は `freq_qos_apply` で plist を更新し、notifier 経由で `
 
 - 前章：[Snapshot とスワップイメージ](06-snapshot-swap-image.md)
 - 次章：[Energy Model と性能ドメイン](08-energy-model.md)
-- [第3部 cpuidle](../part03-cpuidle/14-cpuidle-governors.md) の状態選択
+- [第4部 cpuidle](../part04-cpuidle/18-cpuidle-governors.md) の状態選択

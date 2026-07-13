@@ -54,7 +54,7 @@ graph TD
 | [ブロック層と io_uring](block/README.md) | bio と request、blk-mq、I/O スケジューラ、io_uring、NVMe ドライバ概観、device mapper | block/、io_uring/、drivers/nvme/ | 公開 |
 | [ネットワーク](net/README.md) | sk_buff、ソケット層、TCP/IP、netfilter、ルーティング、GRO と XDP などの高速化 | net/ | 公開 |
 | [namespace と cgroup](ns-cgroup/README.md) | 各種 namespace（time namespace を含む）、cgroup v2 コア、主要コントローラ、コンテナ実行の土台 | kernel/cgroup/、kernel/nsproxy.c、kernel/time/namespace.c、ipc/ | 公開（補強済み） |
-| [電源管理と CPU ライフサイクル](power-cpu/README.md) | suspend と hibernate、freezer、PM QoS、cpufreq と cpuidle、CPU hotplug | kernel/power/、kernel/cpu.c、drivers/cpuidle/、drivers/cpufreq/ | 公開（補強予定） |
+| [電源管理と CPU ライフサイクル](power-cpu/README.md) | suspend と hibernate、freezer、PM QoS、device PM（runtime PM・wakeup・genpd）、cpufreq と cpuidle、CPU hotplug | kernel/power/、kernel/cpu.c、drivers/cpuidle/、drivers/cpufreq/ | 公開（補強済み） |
 | [セキュリティ](security/README.md) | LSM フック、capabilities、seccomp、Landlock、keys（SELinux 本体の詳細は [SELinux userspace](../selinux/README.md) と接続する） | security/、kernel/capability.c、kernel/seccomp.c | 公開（補強済み） |
 | [仮想化（KVM）](kvm/README.md) | KVM コア、x86 の VMX と SVM、vhost 概観 | virt/kvm/、arch/x86/kvm/ | 公開 |
 | [デバイスモデルとドライバ基盤](driver-model/README.md) | driver core、bus と probe、sysfs、Device Tree と ACPI 概観、PCI | drivers/base/、drivers/pci/ | 公開 |
@@ -73,14 +73,6 @@ P0、P1、P2 の補強は完了している。
 
 - **章の分割**：詰め込みすぎと判定された章（rwsem、expedited と nocb、workqueue、clocksource と clockevents、NO_HZ、Kconfig と Kbuild など）は補強 PR の中で段階的に分割する。
 - **将来分冊との境界**：x86-64 の boot とエントリ詳細、Maple Tree の VMA 適用、kobject のデバイス登録、cgroup コア、NUMA fault 側など、計画中の分冊と重なる詳細は該当分冊の執筆時に移し、それまでは参照注記で扱う。
-
-### 補強予定（2026-07-13 の網羅度レビューで判明）
-
-章数の少ない3分冊を codex がレビューし、宣言スコープ内の取りこぼしを検出した。状態列は「公開（補強予定）」とした。
-
-- **namespace と cgroup**：proc namespace と nsfs と namespace ioctl（`fs/nsfs.c`、`fs/proc/namespaces.c`、fd による参照寿命保持）、cgroup v2 の freezer と events と kill（`kernel/cgroup/freezer.c`、`cgroup.freeze`、`cgroup.events` の populated/frozen、`cgroup.kill`）を追加する。ch14 を「cgroup namespace」と「rstat」に分割し、余力があれば secondary controllers（hugetlb/rdma/misc/dmem）の概観を1章加える。
-- **電源管理と CPU ライフサイクル**：device PM の本体が欠落している。DPM callback 順序（`drivers/base/power/main.c` の `dpm_suspend_*`/`dpm_resume_*` と pm_domain→type→class→bus→driver 選択）、runtime PM 状態機械（`drivers/base/power/runtime.c` の `rpm_idle`/`rpm_suspend`/`rpm_resume`、usage_count、autosuspend、device link 連携）を必須とし、wakeup source と wake IRQ（`wakeup.c`/`wakeirq.c`）、generic power domain（`drivers/pmdomain/core.c`）を追加候補とする。**power-cpu と driver-model の README が runtime PM を相互委譲しており、状態機械本体がどちらにも無い循環委譲を一方へ統一する**。
-- **セキュリティ**（軽微）：LSM userspace API（`security/lsm_syscalls.c` の `lsm_set_self_attr`/`lsm_get_self_attr`/`lsm_list_modules`）と共通 LSM audit（`security/lsm_audit.c` の `common_lsm_audit`）を ch7 の後に1章追加する。SafeSetID と LoadPin の代表 enforcement path は ch7 の補強で扱う。
 
 ## 7.x 系への注釈の方針
 

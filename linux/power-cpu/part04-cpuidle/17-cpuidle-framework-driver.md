@@ -1,4 +1,4 @@
-# 第13章 cpuidle フレームワークとドライバ登録
+# 第17章 cpuidle フレームワークとドライバ登録
 
 > **本章で読むソース**
 >
@@ -298,6 +298,6 @@ cpuidle フレームワークは `cpuidle_state` 配列と per-CPU `cpuidle_devi
 
 ## 関連する章
 
-- 前章：[ondemand と conservative ガバナ](../part02-cpufreq/12-ondemand-conservative.md)
-- 次章：[cpuidle ガバナと状態選択](14-cpuidle-governors.md)
-- [第15章 sched idle 入口と cpuidle 連携](15-sched-idle-cpuidle.md) の `cpuidle_idle_call`
+- 前章：[ondemand と conservative ガバナ](../part03-cpufreq/16-ondemand-conservative.md)
+- 次章：[cpuidle ガバナと状態選択](18-cpuidle-governors.md)
+- [第19章 sched idle 入口と cpuidle 連携](19-sched-idle-cpuidle.md) の `cpuidle_idle_call`

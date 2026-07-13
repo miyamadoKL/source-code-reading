@@ -1,4 +1,4 @@
-# 第11章 schedutil ガバナ連携
+# 第15章 schedutil ガバナ連携
 
 > **本章で読むソース**
 >
@@ -20,8 +20,8 @@
 
 ## 前提
 
-- [第9章 cpufreq コアと policy](09-cpufreq-framework-policy.md) の `__cpufreq_driver_target`
-- [第10章 x86 代表ドライバ](10-cpufreq-drivers-x86.md) の `fast_switch`
+- [第13章 cpufreq コアと policy](13-cpufreq-framework-policy.md) の `__cpufreq_driver_target`
+- [第14章 x86 代表ドライバ](14-cpufreq-drivers-x86.md) の `fast_switch`
 
 ## struct cpufreq_governor
 
@@ -447,6 +447,6 @@ schedutil は `fast_switch` 対応時にその場で変更し、非対応時は 
 
 ## 関連する章
 
-- 前章：[x86 代表ドライバ](10-cpufreq-drivers-x86.md)
-- 次章：[ondemand と conservative](12-ondemand-conservative.md)
+- 前章：[x86 代表ドライバ](14-cpufreq-drivers-x86.md)
+- 次章：[ondemand と conservative](16-ondemand-conservative.md)
 - [プロセスとスケジューラ](../../sched/README.md) の利用率計算

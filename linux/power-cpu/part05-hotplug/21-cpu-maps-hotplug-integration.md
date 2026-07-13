@@ -1,4 +1,4 @@
-# 第17章 cpu maps と hotplug サブシステム連携
+# 第21章 cpu maps と hotplug サブシステム連携
 
 > **本章で読むソース**
 >
@@ -17,8 +17,8 @@ CPU hotplug 時に参照される **cpu mask** と **cpus_read_lock / cpus_write
 
 ## 前提
 
-- [第16章 CPU hotplug 状態機械](16-cpuhp-state-machine.md) の `_cpu_up` と `cpuhp_invoke_callback`
-- [第9章 cpufreq コアと policy](../part02-cpufreq/09-cpufreq-framework-policy.md) の policy online
+- [第20章 CPU hotplug 状態機械](20-cpuhp-state-machine.md) の `_cpu_up` と `cpuhp_invoke_callback`
+- [第13章 cpufreq コアと policy](../part03-cpufreq/13-cpufreq-framework-policy.md) の policy online
 
 ## cpu_possible / present / online
 
@@ -260,6 +260,6 @@ cpufreq などは `CPUHP_AP_ONLINE_DYN` にコールバックを登録し、CPU 
 
 ## 関連する章
 
-- 前章：[CPU hotplug 状態機械](16-cpuhp-state-machine.md)
-- [第9章 cpufreq コアと policy](../part02-cpufreq/09-cpufreq-framework-policy.md)
+- 前章：[CPU hotplug 状態機械](20-cpuhp-state-machine.md)
+- [第13章 cpufreq コアと policy](../part03-cpufreq/13-cpufreq-framework-policy.md)
 - [プロセスとスケジューラ](../../sched/README.md) の migration と load balance
