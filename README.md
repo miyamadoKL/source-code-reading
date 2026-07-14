@@ -8,6 +8,7 @@
 
 | OSS | 対象バージョン | 概要 | ライセンス |
 |---|---|---|---|
+| [Airlift](airlift/README.md) | 439 | Trino の基盤となる Java マイクロサービスフレームワーク。Bootstrap と Guice ライフサイクル、設定バインディング、JSON、HTTP サーバー（Jetty）、JAX-RS、HTTP クライアント、ノードとサービスディスカバリ、統計・JMX・トレーシング・ログの可観測性、並行ユーティリティまで全10部24章。 | Apache-2.0 |
 | [Apache Arrow](arrow/README.md) | 25.0.0 | 言語横断の列指向インメモリフォーマットの仕様と pyarrow 実装。メモリレイアウト、型、IPC、C Data Interface、Flight、Compute、Dataset、拡張型まで全6部17章。 | Apache-2.0 |
 | [Ceph](ceph/README.md) | 20.2.2 | 統合分散ストレージ。共通基盤、Messenger、CRUSH、Monitor/Paxos、OSD/PG、BlueStore、Objecter/RBD/CephFS/RGW まで全8部26章。 | LGPL-2.1 / LGPL-3.0 |
 | [Docker Engine](docker/README.md) | 29.6.1 | コンテナランタイム dockerd。containerd 連携、ストレージ、ネットワーク、BuildKit、運用機能まで全8部24章。 | Apache-2.0 |
